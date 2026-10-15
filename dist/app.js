@@ -6740,7 +6740,7 @@ function renderReview() {
               </div>`}
           ${isApproveUi ? '' : '<button type="button" class="rv-guide" id="rvGuide"><span class="ico i-error"></span>操作ガイド</button>'}
           </div>
-        <button type="button" class="btn" id="rvDownload"><span class="ico i-download"></span>ダウンロード</button>
+        
         </div>
       </div>
     ${flowStrip}

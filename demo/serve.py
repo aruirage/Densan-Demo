@@ -1099,6 +1099,14 @@ def apply_actor_columns_fix(src):
     return src
 
 
+def apply_review_download_removal(src):
+    """確認／承認画面のダウンロードボタンを外す（出力は「出力」工程＝出力権限の仕事）。"""
+    old = '<button type="button" class="btn" id="rvDownload"><span class="ico i-download"></span>ダウンロード</button>'
+    if old in src:
+        src = src.replace(old, '', 1)
+    return src
+
+
 def apply_approve_ui_correction_chip(src):
     """承認画面（承認者は編集不可）の「修正 N」表示を「確認者の修正 N」にし、0 件なら出さない。"""
     old = '<span>修正 <b class="accent-warm">${dirtyCount}</b></span>'
@@ -1896,6 +1904,7 @@ def patched_app_js(path):
     patched = apply_notes_to_comments(patched)
     patched = apply_mytask_filters(patched)
     patched = apply_actor_columns_fix(patched)
+    patched = apply_review_download_removal(patched)
     patched = apply_approve_ui_correction_chip(patched)
     patched = apply_result_person_columns(patched)
     patched = apply_drop_history_column(patched)
