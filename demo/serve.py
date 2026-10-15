@@ -1099,6 +1099,16 @@ def apply_actor_columns_fix(src):
     return src
 
 
+def apply_drop_flow_state_chip(src):
+    """進捗バー下の状態チップ（承認2/2 待ち 等）を削除する（ステップ自体で現在地が分かるため）。"""
+    old = ('<div class="oa-progress-foot"> <span class="oa-status ${p.state === \'returned\' ? \'ng\' : \'\'}">'
+           '${esc(p.label)}</span> </div>')
+    if old in src:
+        return src.replace(old, '', 1)
+    # 改行・空白の差異に耐えるよう正規表現でも試す
+    return re.sub(r'<div class="oa-progress-foot">\s*<span class="oa-status[\s\S]*?</div>', '', src, count=1)
+
+
 def apply_review_download_removal(src):
     """確認／承認画面のダウンロードボタンを外す（出力は「出力」工程＝出力権限の仕事）。"""
     old = '<button type="button" class="btn" id="rvDownload"><span class="ico i-download"></span>ダウンロード</button>'
@@ -1904,6 +1914,7 @@ def patched_app_js(path):
     patched = apply_notes_to_comments(patched)
     patched = apply_mytask_filters(patched)
     patched = apply_actor_columns_fix(patched)
+    patched = apply_drop_flow_state_chip(patched)
     patched = apply_review_download_removal(patched)
     patched = apply_approve_ui_correction_chip(patched)
     patched = apply_result_person_columns(patched)

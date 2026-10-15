@@ -2735,9 +2735,7 @@ function flowStepsHtml(f, opts) {
             : ''}
         </div>`).join('')}
     </div>
-    <div class="oa-progress-foot">
-      <span class="oa-status ${p.state === 'returned' ? 'ng' : ''}">${esc(p.label)}</span>
-    </div>
+    
   </div>`;
 }
 
