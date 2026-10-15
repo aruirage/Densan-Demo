@@ -701,6 +701,12 @@ RESULT_FREEZE_CSS = """
 /* 横スクロール（全列を潰さずに表示） */
 .result-content > .tablewrap, .result-panel .tablewrap { overflow-x: auto !important; }
 .result-table th, .result-table td { overflow: hidden; text-overflow: ellipsis; }
+/* 見出しと値の整列を揃える（確認者／承認者／作成日時／更新日時 の見出しも左寄せ）
+   styles.css の th 中央寄せ（:not 連鎖で詳細度が高い）を上書きする */
+.result-table thead th:nth-child(7),
+.result-table thead th:nth-child(8),
+.result-table thead th:nth-child(9),
+.result-table thead th:nth-child(10) { text-align: left !important; }
 .result-table td:nth-child(2), .result-table td:nth-child(3),
 .result-table td:nth-child(6) { white-space: nowrap; }
 
@@ -992,7 +998,7 @@ TWO_STAGE_MOCK = """
     f.history = '承認1済み（承認2待ち）';
     f.flow = [
       { action: '確認', user: '佐藤 一郎', at: '2026-10-14 10:12:00',
-        comment: '必須項目を目視確認し、誤読箇所を修正しました' },
+        comment: '確認担当者が必須項目を目視確認し、誤読箇所を修正しました' },
       { stage: 1, action: '承認1', user: '田中 実', at: '2026-10-14 15:20:00', comment: '' },
     ];
     f.confirmedAt = '2026-10-14 10:12:00';

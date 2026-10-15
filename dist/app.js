@@ -2527,7 +2527,7 @@ function ensureConfirmAudit(f) {
       action: '確認',
       user: who,
       at: f.confirmedAt,
-      comment: '必須項目を目視確認し、誤読箇所を修正しました',
+      comment: '確認担当者が必須項目を目視確認し、誤読箇所を修正しました',
       changes: sampleChanges,
       confirmedCount: OCR_FIELDS.b6.length,
     });
@@ -4001,7 +4001,7 @@ function renderAccessUrlTab() {
     f.history = '承認1済み（承認2待ち）';
     f.flow = [
       { action: '確認', user: '佐藤 一郎', at: '2026-10-14 10:12:00',
-        comment: '必須項目を目視確認し、誤読箇所を修正しました' },
+        comment: '確認担当者が必須項目を目視確認し、誤読箇所を修正しました' },
       { stage: 1, action: '承認1', user: '田中 実', at: '2026-10-14 15:20:00', comment: '' },
     ];
     f.confirmedAt = '2026-10-14 10:12:00';

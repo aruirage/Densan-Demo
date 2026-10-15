@@ -2212,7 +2212,7 @@ function ensureConfirmAudit(f) {
       action: '確認',
       user: who,
       at: f.confirmedAt,
-      comment: '必須項目を目視確認し、誤読箇所を修正しました',
+      comment: '確認担当者が必須項目を目視確認し、誤読箇所を修正しました',
       changes: sampleChanges,
       confirmedCount: OCR_FIELDS.b6.length,
     });
