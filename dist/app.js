@@ -6338,7 +6338,7 @@ function bindResultPanel() {
     };
   });
   document.querySelectorAll('[data-result-preview]').forEach((b) => {
-    b.onclick = () => openReview(b.dataset.resultPreview, { viewOnly: true, returnPage: 'result' });
+    b.onclick = () => openPreview(b.dataset.resultPreview);
   });
   const batchRead = $('#batchRead');
   if (batchRead) batchRead.onclick = () => {

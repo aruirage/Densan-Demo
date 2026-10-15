@@ -949,6 +949,16 @@ def _patch_stage_selection(src):
     return out, report
 
 
+def apply_file_click_preview(src):
+    """ファイル一覧のファイル名クリックを「画像プレビュー」にする（確認画面ではなく）。"""
+    return re.sub(
+        r"b\.onclick = \(\) => openReview\(b\.dataset\.resultPreview, \{ viewOnly: true, returnPage: 'result' \}\);",
+        "b.onclick = () => openPreview(b.dataset.resultPreview);",
+        src,
+        count=1,
+    )
+
+
 def apply_notes_to_comments(src):
     """画面の説明文（grp-note / wf-note）を HTML コメント化して非表示にする。
 
@@ -1655,6 +1665,7 @@ def patched_app_js(path):
     patched = apply_group_role_cell(patched)
     patched = apply_group_category_scope(patched)
     patched = apply_notes_to_comments(patched)
+    patched = apply_file_click_preview(patched)
     patched, _stage_report = _patch_stage_selection(patched)
     patched = apply_category_flow(patched)
     patched = apply_history_rows(patched)
