@@ -993,6 +993,24 @@ TWO_STAGE_MOCK = """
 """
 
 
+def apply_mytask_stage_column(src):
+    """マイタスクに「承認段」列を足す（要確認＝—、要承認＝承認1/承認2…）。"""
+    if '承認段</th>' in src:
+        return src
+    head_old = "<th>ファイル名</th><th>タスク種別</th><th>帳票タイプ</th>"
+    head_new = "<th>ファイル名</th><th>タスク種別</th><th style=\"width:96px\">承認段</th><th>帳票タイプ</th>"
+    if head_old in src:
+        src = src.replace(head_old, head_new, 1)
+    cell_old = ('<td><span class="task-kind ${kindMeta.cls}">${esc(kindMeta.label)}</span></td>')
+    cell_new = (cell_old
+                + '<td class="nowrap">${r.kind === \'confirm\' ? \'—\' : esc(\'承認\' + (flowOf(f).done + 1))}</td>')
+    if cell_old in src:
+        src = src.replace(cell_old, cell_new, 1)
+    src = src.replace('<td colspan="8" class="empty-cell">${tab === \'pending\' ? \'未対応のタスクはありません\'',
+                      '<td colspan="9" class="empty-cell">${tab === \'pending\' ? \'未対応のタスクはありません\'', 1)
+    return src
+
+
 def apply_two_stage_mock(src):
     """2 段承認のモック（カテゴリ設定＋承認待ちファイル）を注入する。"""
     if 'seedTwoStageApproval' in src:
@@ -1720,6 +1738,7 @@ def patched_app_js(path):
     patched = apply_group_role_cell(patched)
     patched = apply_group_category_scope(patched)
     patched = apply_notes_to_comments(patched)
+    patched = apply_mytask_stage_column(patched)
     patched = apply_two_stage_mock(patched)
     patched = apply_file_click_preview(patched)
     patched, _stage_report = _patch_stage_selection(patched)

@@ -5813,7 +5813,7 @@ function renderMyTasks() {
   const bizOpts = BUSINESS.map((b) => `<option value="${b.id}" ${F.biz === b.id ? 'selected' : ''}>${esc(b.name)}</option>`).join('');
   const catOpts = CATEGORY.map((c) => `<option value="${c.id}" ${F.cat === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
   const body = rows.length === 0
-    ? `<tr><td colspan="8" class="empty-cell">${tab === 'pending' ? '未対応のタスクはありません' : '対応済のタスクはありません'}</td></tr>`
+    ? `<tr><td colspan="9" class="empty-cell">${tab === 'pending' ? '未対応のタスクはありません' : '対応済のタスクはありません'}</td></tr>`
     : rows.map((r) => {
       const f = r.file;
       const cfg = approvalOf(f.layout);
@@ -5828,7 +5828,7 @@ function renderMyTasks() {
       const assignee = userName(assigneeUid) || assigneeUserNames(kindMeta.targets);
       return `<tr data-task="${f.id}" data-task-kind="${r.kind}">
         <td class="name"><button class="fn link" data-task-open="${f.id}">${esc(dispFileName(f.id))}</button></td>
-        <td><span class="task-kind ${kindMeta.cls}">${esc(kindMeta.label)}</span></td>
+        <td><span class="task-kind ${kindMeta.cls}">${esc(kindMeta.label)}</span></td><td class="nowrap">${r.kind === 'confirm' ? '—' : esc('承認' + (flowOf(f).done + 1))}</td>
         <td>${esc(dispLayout(f.layout))}</td>
         <td><span class="st ${stCls(f.status)}">${esc(STATUS[f.status].label)}</span></td>
         <td class="nowrap muted">${esc(f.createdAt || '—')}</td>
@@ -5860,7 +5860,7 @@ function renderMyTasks() {
       <div class="tablewrap">
         <table class="mytask-table">
           <thead><tr>
-            <th>ファイル名</th><th>タスク種別</th><th>帳票タイプ</th><th>ステータス</th><th>作成日時</th><th>更新日時</th><th>担当</th><th style="text-align:right">操作</th>
+            <th>ファイル名</th><th>タスク種別</th><th style="width:96px">承認段</th><th>帳票タイプ</th><th>ステータス</th><th>作成日時</th><th>更新日時</th><th>担当</th><th style="text-align:right">操作</th>
           </tr></thead>
           <tbody>${body}</tbody>
         </table>
