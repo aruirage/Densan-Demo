@@ -1,0 +1,10 @@
+{
+  "name": "densan-demo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "LLM OCR デモ（帳票読取／権限設定）",
+  "scripts": {
+    "build": "python3 demo/serve.py --build dist",
+    "dev": "python3 demo/serve.py 8788"
+  }
+}

@@ -12,7 +12,7 @@
 """
 import sys, functools, http.server, socketserver, os, re
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8787
+PORT = int(sys.argv[1]) if (len(sys.argv) > 1 and sys.argv[1].isdigit()) else 8787
 DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 注入しても安全な「値定義」と「関数定義」。app.js に存在しない名前だけを注入する。
@@ -569,6 +569,14 @@ GRP_TK_CSS = """
 .grp-tk-table .permcell { text-align: left; }
 .grp-cat-table td { vertical-align: middle; }
 .grp-cat-table .perm-chip { margin: 2px 4px 2px 0; display: inline-block; }
+.stage-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.stage-chip {
+  height: 24px; padding: 0 10px; border: 1px solid var(--line-d); border-radius: 3px;
+  background: #fff; color: var(--text-3); font-size: 11.5px; cursor: pointer;
+}
+.stage-chip:hover { border-color: var(--accent); color: var(--accent); }
+.stage-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.stage-chip.is-unset { border-style: dashed; }
 
 /* グループ一覧の「役割」：チップを折返して全部見せる */
 .grp-roles { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -818,6 +826,127 @@ def apply_group_category_scope(src):
     if old2 in src:
         src = src.replace(old2, new2, 1)
     return src
+
+
+STAGE_CHIPS_ROWS = r"""const ticketRows = CATEGORY.map((c, i) => {
+    const on = groupHasCategory(f, c.id);
+    const biz = byId(BUSINESS, c.business) || {};
+    const list = LAYOUT.filter((l) => (catOf(l.id) || {}).id === c.id);
+    const n = list.reduce((mx, l) => Math.max(mx, approvalStageCountOf(l.id)), 0);
+    const chips = (on ? groupOpKeysOf(f) : []).map((k) => `<span class="perm-chip">${esc(permActLabel(k))}</span>`).join('');
+    const stageHtml = n === 0
+      ? '<span class="muted">承認なし</span>'
+      : Array.from({ length: n }, (_, idx) => {
+          const k = idx + 1;
+          const isOn = list.some((l) => stageTargetsOf(l.id, idx).indexOf(f.id) >= 0);
+          const unset = !list.some((l) => stageTargetsOf(l.id, idx).length);
+          return `<button type="button" class="stage-chip${isOn ? ' on' : ''}${unset ? ' is-unset' : ''}" data-grp-stage="${c.id}:${k}" title="承認${k} の担当にする">承認${k}</button>`;
+        }).join('');
+    return `<tr${on ? ' class="is-on"' : ''}>
+      <td class="roles-no">${i + 1}</td>
+      <td>${esc(dispCat(c.id))}<div class="sub">${esc(biz.name || '')} ／ 帳票タイプ ${list.length} 件</div></td>
+      <td class="permcell"><label class="grp-tk"><input type="checkbox" class="cb" data-grp-cat="${c.id}" ${on ? 'checked' : ''} /><span class="grp-tk-l">担当する</span></label></td>
+      <td class="permcell"><div class="stage-chips">${stageHtml}</div></td>
+      <td>${chips || '<span class="muted">—</span>'}</td>
+    </tr>`;
+  }).join('');"""
+
+STAGE_HEADER = r"""<thead><tr><th style="width:56px">番号</th><th>帳票カテゴリ</th><th style="width:130px">担当</th><th style="width:240px">承認の段</th><th>付与される権限</th></tr></thead>"""
+
+STAGE_HANDLER = r"""    /* 承認の段：カテゴリ内の全帳票タイプのその段だけに、グループを入れ／外しする */
+    document.querySelectorAll('[data-grp-stage]').forEach((b) => {
+      b.onclick = () => {
+        const g = state.groupForm;
+        if (!g) return;
+        const parts = String(b.dataset.grpStage).split(':');
+        const catId = parts[0];
+        const stageIdx = Math.max(0, (Number(parts[1]) || 1) - 1);
+        const joined = LAYOUT.some((l) => (catOf(l.id) || {}).id === catId
+          && stageTargetsOf(l.id, stageIdx).indexOf(g.id) >= 0);
+        if (!joined) applyGroupCategoryOps(g, catId, true);
+        setGroupCategoryStage(g, catId, stageIdx, !joined);
+        render();
+      };
+    });
+"""
+
+NEW_APPLY = r"""function applyGroupCategoryOps(g, catId, on) {
+  const ops = groupOpKeysOf(g).filter((k) => k !== 'approve' && k !== 'reapprove');
+  LAYOUT.forEach((l) => {
+    const c = catOf(l.id) || {};
+    if (c.id !== catId) return;
+    const p = permsOf(l.id);
+    ops.forEach((k) => {
+      if (!Array.isArray(p[k])) p[k] = [];
+      if (on) { if (p[k].indexOf(g.id) < 0) p[k].push(g.id); }
+      else { p[k] = p[k].filter((x) => x !== g.id); }
+    });
+  });
+  return ops;
+}
+/** カテゴリ内の全帳票タイプの、指定した段だけにグループを入れ／外しする */
+function setGroupCategoryStage(g, catId, stageIdx, on) {
+  LAYOUT.forEach((l) => {
+    const c = catOf(l.id) || {};
+    if (c.id !== catId) return;
+    const cur = stageTargetsOf(l.id, stageIdx);
+    if (on) { if (cur.indexOf(g.id) < 0) setStageTargets(l.id, stageIdx, cur.concat([g.id])); }
+    else if (cur.indexOf(g.id) >= 0) setStageTargets(l.id, stageIdx, cur.filter((x) => x !== g.id));
+  });
+}
+/** カテゴリ担当の on/off（操作権限のみ。承認の段は段チップで明示的に決める） */
+function applyGroupCategory(g, catId, on) {
+  return applyGroupCategoryOps(g, catId, on);
+}"""
+
+OLD_HAS_CAT = "const groupHasCategory = (g, catId) => LAYOUT.some((l) => { const c = catOf(l.id) || {}; if (c.id !== catId) return false; const p = permsOf(l.id); return groupOpKeysOf(g).some((k) => (p[k] || []).indexOf(g.id) >= 0); });"
+NEW_HAS_CAT = ("const groupHasApprovalStageOf = (g, layoutId) => { const n = Math.max(1, approvalStageCountOf(layoutId)); "
+               "for (let si = 0; si < n; si++) if (stageTargetsOf(layoutId, si).indexOf(g.id) >= 0) return true; return false; };\n"
+               "const groupHasCategory = (g, catId) => LAYOUT.some((l) => { const c = catOf(l.id) || {}; if (c.id !== catId) return false; "
+               "const p = permsOf(l.id); if (groupOpKeysOf(g).some((k) => (p[k] || []).indexOf(g.id) >= 0)) return true; "
+               "return groupHasApprovalStageOf(g, l.id); });")
+
+OLD_LOOP = "groupsOfUser(me).forEach((g) => { const kind = GROUP_KINDS.find((k) => k.label === g.kind); (kind && kind.ops ? kind.ops : []).forEach(add); });"
+NEW_LOOP = ("groupsOfUser(me).forEach((g) => { String(g.kind || '').split(/[、,]/).map((x) => x.trim()).filter(Boolean)"
+            ".forEach((label) => { const kind = GROUP_KINDS.find((k) => k.label === label); (kind && kind.ops ? kind.ops : []).forEach(add); "
+            "const key = (typeof GROUP_ROLE_OP_KEY !== 'undefined') && GROUP_ROLE_OP_KEY[label]; if (key && key !== 'settings') add(key); }); "
+            "/* 帳票権限表の承認段に入っていれば 承認／再承認 を付与する */ "
+            "LAYOUT.forEach((l) => { const n = Math.max(1, approvalStageCountOf(l.id)); for (let si = 0; si < n; si++) { "
+            "if (stageTargetsOf(l.id, si).indexOf(g.id) >= 0) add(si === 0 ? 'approve' : 'reapprove'); } }); });")
+
+def _patch_stage_selection(src):
+    out = src
+    report = []
+    # A) 操作権限を 4 項目に（承認・再承認を外す）
+    a_old = "const GROUP_NODES = ['閲覧', 'アップロード', '確認', '承認', '出力']"
+    a_new = "const GROUP_NODES = ['閲覧', 'アップロード', '確認', '出力']"
+    if a_old in out:
+        out = out.replace(a_old, a_new, 1); report.append('A GROUP_NODES 4項目')
+    # B) groupHasCategory に段を考慮
+    mb = re.search(r"const groupHasCategory = \(g, catId\) => LAYOUT\.some\(\(l\) => \{[\s\S]*?\n\}\);", out)
+    if mb:
+        out = out[:mb.start()] + NEW_HAS_CAT + out[mb.end():]; report.append('B groupHasCategory')
+    # C) applyGroupCategory を分割
+    m = re.search(r"function applyGroupCategory\(g, catId, on\) \{[\s\S]*?\n\}", out)
+    if m:
+        out = out[:m.start()] + NEW_APPLY + out[m.end():]; report.append('C applyGroupCategory 分割')
+    # D) カテゴリ表に行を追加
+    m2 = re.search(r"const ticketRows = CATEGORY\.map[\s\S]*?\n  \}\)\.join\(''\);", out)
+    if m2:
+        out = out[:m2.start()] + STAGE_CHIPS_ROWS + out[m2.end():]; report.append('D ticketRows')
+    # D2) ヘッダに「承認の段」列
+    h_old = '<thead><tr><th style="width:56px">番号</th><th>帳票カテゴリ</th><th style="width:130px">担当</th><th>付与される権限</th></tr></thead>'
+    if h_old in out:
+        out = out.replace(h_old, STAGE_HEADER, 1); report.append('D2 ヘッダ')
+    # E) 段チップのハンドラ
+    m3 = re.search(r"(document\.querySelectorAll\('\[data-grp-cat\]'\)\.forEach[\s\S]*?\n    \}\);\n)", out)
+    if m3:
+        out = out[:m3.end()] + STAGE_HANDLER + out[m3.end():]; report.append('E 段ハンドラ')
+    # F) userOpsOf：複数ラベル＋段から承認
+    mf = re.search(r"groupsOfUser\(me\)\.forEach\(\(g\) => \{[\s\S]*?forEach\(add\);\s*\}\);", out)
+    if mf:
+        out = out[:mf.start()] + NEW_LOOP + out[mf.end():]; report.append('F userOps ループ')
+    return out, report
 
 
 def apply_notes_to_comments(src):
@@ -1391,6 +1520,11 @@ def apply_grp_attr(src):
     return src.replace('data-user-grp=', 'data-userGrp=')
 
 
+def apply_menu_label_fix(src):
+    """メニュー権限ツリーのノード名を調整する（帳票削除 → タイプ削除）。"""
+    return src.replace("label: '帳票削除'", "label: 'タイプ削除'")
+
+
 def apply_menu_trim(src):
     """メニュー権限ツリーから不要な項目を削除する（帳票追加）。"""
     if 'settings-type-form-add' not in src:
@@ -1521,6 +1655,7 @@ def patched_app_js(path):
     patched = apply_group_role_cell(patched)
     patched = apply_group_category_scope(patched)
     patched = apply_notes_to_comments(patched)
+    patched, _stage_report = _patch_stage_selection(patched)
     patched = apply_category_flow(patched)
     patched = apply_history_rows(patched)
     patched = apply_stage_count_authoritative(patched)
@@ -1540,6 +1675,7 @@ def patched_app_js(path):
     patched = apply_perm_markup(patched)
     patched = apply_demo_badge(patched)
     patched = apply_grp_attr(patched)
+    patched = apply_menu_label_fix(patched)
     patched = apply_menu_trim(patched)
     patched = apply_group_kind_input(patched)
     patched = apply_full_perm_acts(patched)
@@ -1552,7 +1688,7 @@ def patched_app_js(path):
         patched = patched[:m_anchor.start()] + GROUP_MODEL + "\n" + patched[m_anchor.start():]
     # 閲覧権限の判定に必要な実データを __demo から読めるようにする
     if 'window.__demo = {' in patched and 'GROUPS,' not in patched.split('window.__demo = {')[1][:400]:
-        patched = re.sub(r"(window\.__demo = \{)", r"\1\n  GROUPS, ROLE_MEMBERS, USER_OPS, LAYOUT, CATEGORY, BUSINESS, UPLOAD_PERMS, ROLES,", patched, count=1)
+        patched = re.sub(r"(window\.__demo = \{)", r"\1\n  GROUPS, ROLE_MEMBERS, USER_OPS, LAYOUT, CATEGORY, BUSINESS, UPLOAD_PERMS, ROLES, catStagesOf, setCatStages, approvalStageCountOf, maxApprovalStageCount, stageTargetsOf, setStageTargets,", patched, count=1)
     # 万能角色は ROLES / MENU_PERMS の定義直後に差し込む（前方参照で TDZ を踏まないよう）
     m_perms = re.search(r"((?:var|let|const) MENU_PERMS = \{[\s\S]*?\n\};)", patched)
     if m_perms and 'SUPER_ROLE_ID' not in patched:
@@ -1636,9 +1772,60 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         sys.stderr.write('%s - %s\n' % (self.address_string(), fmt % args))
 
 
+def build_static(outdir):
+    """配信時に注入している内容を反映した静的ファイル一式を出力する（Vercel 等の静的ホスティング用）。"""
+    import shutil
+    out = os.path.abspath(outdir)
+    os.makedirs(out, exist_ok=True)
+
+    # ① app.js（パッチ適用済み）
+    with open(os.path.join(DIR, 'app.js'), 'rb') as f:
+        js = patched_app_js(os.path.join(DIR, 'app.js'))
+    with open(os.path.join(out, 'app.js'), 'wb') as f:
+        f.write(js)
+
+    # ② index.html（CSS 注入・admin-mode.js の読み込み込み）
+    with open(os.path.join(DIR, 'index.html'), 'rb') as f:
+        html = f.read().decode('utf-8')
+    if 'type-assignee.css' not in html:
+        html = html.replace('</head>', '<link rel="stylesheet" href="./type-assignee.css" />\n</head>')
+    html = apply_html_title(html)
+    html = apply_flow_hide(html)
+    html = apply_perm_table(html)
+    html = apply_result_freeze(html)
+    if 'admin-mode.js' not in html:
+        html = html.replace('</body>', '<script src="./admin-mode.js"></script>\n</body>')
+    with open(os.path.join(out, 'index.html'), 'wb') as f:
+        f.write(html.encode('utf-8'))
+
+    # ③ 動的配信していた JS
+    with open(os.path.join(out, 'admin-mode.js'), 'wb') as f:
+        f.write((FULL_ADMIN_MODE + FOLDER_VISIBILITY).encode('utf-8'))
+    with open(os.path.join(out, 'folder-visibility.js'), 'wb') as f:
+        f.write(FOLDER_VISIBILITY.encode('utf-8'))
+
+    # ④ 静的ファイル（CSS・overlay・assets）
+    for name in ('styles.css', 'prompt-bar-fix.css', 'export-dialog.css', 'type-assignee.css',
+                 'permissions-groups.css', 'brand-densan.css', 'review-focus-fix.js'):
+        src = os.path.join(DIR, name)
+        if os.path.isfile(src):
+            shutil.copy2(src, os.path.join(out, name))
+    assets_src = os.path.join(DIR, 'assets')
+    if os.path.isdir(assets_src):
+        shutil.copytree(assets_src, os.path.join(out, 'assets'), dirs_exist_ok=True)
+
+    print('built static site -> %s' % out, flush=True)
+    for name in sorted(os.listdir(out)):
+        print('  %s' % name, flush=True)
+
+
 Handler.extensions_map.update({'.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8'})
 handler = functools.partial(Handler, directory=DIR)
 socketserver.TCPServer.allow_reuse_address = True
+if len(sys.argv) >= 3 and sys.argv[1] == '--build':
+    build_static(sys.argv[2])
+    sys.exit(0)
+
 with socketserver.TCPServer(('127.0.0.1', PORT), handler) as httpd:
     print(f'serving {DIR} at http://127.0.0.1:{PORT}/', flush=True)
     httpd.serve_forever()

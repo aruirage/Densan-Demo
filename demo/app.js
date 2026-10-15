@@ -550,7 +550,7 @@ const MENU_TREE = [
         { id: 'settings-type-edit', label: 'タイプ編集' },
         { id: 'settings-type-workflow', label: 'ワークフロー編集' },
         { id: 'settings-type-form-add', label: '帳票追加' },
-        { id: 'settings-type-form-del', label: '帳票削除' },
+        { id: 'settings-type-form-del', label: 'タイプ削除' },
       ] },
       { id: 'settings-scenes', label: '業務シーン設定', children: [
         { id: 'settings-scenes-add', label: '業務シーン追加' },

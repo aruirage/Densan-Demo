@@ -6,9 +6,9 @@ Thumbs.db
 
 # dependencies / build output
 node_modules/
-dist/
 dist-ssr/
 build/
+# dist/ は Vercel 配信用のビルド成果物なのでコミットする（除外しない）
 *.local
 
 # logs / caches

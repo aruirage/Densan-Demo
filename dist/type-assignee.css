@@ -1,0 +1,309 @@
+/**
+ * 帳票タイプ フロー担当（確認／承認／再承認）の複数選択ドロップダウン。
+ * 権限者／ユーザーは上部の药丸スイッチで切替え（同時選択不可）。
+ * 権限者を選んだ場合は、所属ユーザーの誰かにランダムで割当する。
+ *
+ * styles.css が再生成されても効くように別ファイル（styles.css の後に読込）。
+ */
+.asg-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.asg-mode-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line-d);
+  border-radius: 999px;
+  background: #fff;
+  align-self: flex-start;
+}
+.asg-mode-pill {
+  height: 26px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.asg-mode-pill:hover {
+  color: var(--accent);
+}
+.asg-mode-pill.on {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.perm-mode-pills {
+  margin: 0 0 12px;
+}
+
+.asg-select {
+  position: relative;
+  width: 100%;
+}
+
+.asg-control {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  padding: 5px 34px 5px 8px;
+  border: 1px solid var(--line-d);
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  white-space: normal;
+}
+.asg-control > .asg-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+}
+.asg-control:hover {
+  border-color: var(--accent);
+}
+.asg-select.is-open .asg-control {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(23, 92, 211, 0.12);
+}
+
+.asg-caret {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--text-3);
+  transform: translateY(-40%);
+}
+.asg-select.is-open .asg-caret {
+  transform: translateY(-40%) rotate(180deg);
+}
+
+.asg-placeholder {
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+
+.asg-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 6px 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #f5f7fa;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.asg-tag.is-role {
+  background: #eaf7ef;
+  border-color: #cfe8d8;
+  color: #1f7a44;
+}
+.asg-tag-kind {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+.asg-tag-x {
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 14px;
+  line-height: 1;
+}
+.asg-tag-x:hover {
+  color: var(--red);
+}
+
+.asg-panel {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 280px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  box-shadow: 0 8px 24px rgba(40, 45, 55, 0.12);
+  padding: 6px 0;
+}
+.asg-select.is-open .asg-panel {
+  display: block;
+}
+
+.asg-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 7px 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+.asg-opt:hover {
+  background: #f3f7ff;
+}
+.asg-opt.on {
+  background: #e8f1fc;
+}
+.asg-opt-kind {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: #1f7a44;
+  background: #eaf7ef;
+  border-radius: 2px;
+  padding: 2px 6px;
+}
+.asg-opt-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.asg-opt-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.asg-opt-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asg-opt-check {
+  flex: 0 0 auto;
+  opacity: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+.asg-opt.on .asg-opt-check {
+  opacity: 1;
+}
+
+/* ══ インタラクション改善：滑らかさ・間隔・検索欄 ══ */
+.asg-panel {
+  padding: 0 0 6px;
+  max-height: 320px;
+  will-change: opacity, transform;
+  animation: asg-fade .12s ease-out;
+}
+@keyframes asg-fade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* パネル内の検索欄（JS が注入。入力中は再描画しない） */
+.asg-search {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+  padding: 8px 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.asg-search input {
+  width: 100%;
+  height: 30px;
+  padding: 0 10px 0 30px;
+  border: 1px solid var(--line-d);
+  border-radius: 3px;
+  font-size: 12.5px;
+  background: #fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20' fill='none' stroke='%235b7086' stroke-width='1.6'><circle cx='8.5' cy='8.5' r='5.5'/><path d='m13 13 4 4'/></svg>") no-repeat 9px center;
+}
+.asg-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+/* 選択肢：行全体を押しやすく、状態が分かるように */
+.asg-opt {
+  margin: 1px 6px;
+  border-radius: 3px;
+  padding: 8px 10px;
+  transition: background-color .12s;
+}
+.asg-opt:hover { background: #f2f7fd; }
+.asg-opt.on { background: var(--accent-bg); }
+.asg-opt.on .asg-opt-name { font-weight: 600; color: var(--accent); }
+.asg-opt:active { background: #e6f0fb; }
+
+.asg-opt-hidden { display: none !important; }
+
+/* 見出しは小さく・控えめに */
+.asg-group-title {
+  padding: 8px 14px 4px;
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+/* 何も見つからないときのメッセージ */
+.asg-empty {
+  padding: 14px 14px 16px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* タグは押しやすく、ホバーで解除が見えるように */
+.asg-tag { transition: background-color .12s, border-color .12s; }
+.asg-tag:hover { border-color: var(--accent); }
+.asg-tag-x {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+}
+.asg-tag-x:hover { background: rgba(47, 102, 160, .16); opacity: 1; }
+
+/* ══ ユーザー権限（操作権限）：ユーザー追加／編集ダイアログ ══ */
+.user-ops {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin-top: 2px;
+}
+.user-op {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.user-op input { flex: none; }
+.user-op:hover { color: var(--accent); }
