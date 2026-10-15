@@ -540,12 +540,18 @@ var MOCK_EXTRA_APPLIED = true;
     var readAt = (['done', 'confirmed', 'approved', 'returned', 'exported', 'failed'].indexOf(st) >= 0) ? stamp2 : null;
     var confAt = (['confirmed', 'approved', 'returned', 'exported'].indexOf(st) >= 0) ? stamp2 : null;
     var apprAt = (['approved', 'exported'].indexOf(st) >= 0) ? stamp2 : null;
+    /* 操作・処理履歴＝「誰が何をしたか」の記録。状態そのものは入れない（処理中は空） */
+    var names = ['佐藤 一郎', '鈴木 花子', '高橋 健', '田中 実', '伊藤 由美', '渡辺 修', '山本 彩', '中村 亮'];
     var hist = {
-      done: '読取完了', confirmed: '確認済み（承認待ち）', approved: '承認済み',
-      exported: '出力済み', failed: '帳票の処理中にエラーが発生',
-      returned: '差戻中（確認者より差戻）', checking: '確認中（確認者作業中）',
-      reading: '読取処理中（' + (1 + (k % 8)) + '/' + (8 + (k % 12)) + 'ページ）'
-    }[st] || '読取完了';
+      done: '',
+      confirmed: '確認担当者: ' + names[k % names.length],
+      approved: '承認担当者: ' + names[(k + 3) % names.length] + '（2段目まで完了）',
+      exported: '出力担当者: ' + names[(k + 5) % names.length] + '（CSV）',
+      failed: '読取に失敗しました（再読取が必要）',
+      returned: '差戻: 確認者へ（記載不備）',
+      checking: '',
+      reading: ''
+    }[st] || '';
     var u = users[k % users.length];
     FILES.push([id, nm, lay.id, size, st, hist, stamp, stamp2, readAt, confAt, apprAt, u, u, u]);
   }
@@ -688,7 +694,7 @@ RESULT_FREEZE_CSS = """
 .result-table th:nth-child(6),  .result-table td:nth-child(6)  { width: 168px; }
 .result-table th:nth-child(7),  .result-table td:nth-child(7)  { width: 138px; }
 .result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 138px; }
-.result-table th:nth-child(9),  .result-table td:nth-child(9)  { width: 108px; }
+.result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 108px; }
 .result-table th, .result-table td { overflow: hidden; text-overflow: ellipsis; }
 .result-table td:nth-child(2), .result-table td:nth-child(3),
 .result-table td:nth-child(6) { white-space: nowrap; }
@@ -1038,6 +1044,63 @@ def apply_mytask_filters(src):
     if anchor in src:
         src = src.replace(anchor, MYTASK_KIND_STAGE_FILTERS + anchor, 1)
     return src
+
+
+HISTORY_NORMALIZE = """
+/* ══ 一覧の「操作・処理履歴」を操作記録に正規化（serve.py 注入） ══
+   状態そのもの（読取完了／出力済み／読取中…）は履歴ではないので空にし、
+   確認・承認・出力などの実行者が分かる記録だけを残す。 */
+(function normalizeFileHistory() {
+  var STATUS_TEXT = /^(読取完了|読取中|読取待ち|確認中|確認済み（承認待ち）|承認済み|出力済み|分類中|差戻中|読取失敗|—|-)$/;
+  var PROGRESS_TEXT = /(処理中|作業中|より差戻|ページ）$)/;
+  FILES_DATA.forEach(function (f) {
+    var h = String(f.history || '').trim();
+    if (!h || h === '—') { f.history = ''; return; }
+    if (STATUS_TEXT.test(h) || PROGRESS_TEXT.test(h)) {
+      /* 操作記録があればそれを使い、無ければ空欄（＝まだ操作されていない） */
+      var recs = (f.flow || []).filter(function (x) { return !x.voided; });
+      f.history = recs.length ? recordText(recs[recs.length - 1]) : '';
+      return;
+    }
+    if (/^[^:：]*(担当者|実行者)[:：]/.test(h)) return;   /* すでに操作記録 */
+    f.history = h;                                        /* 失敗・差戻などの事象は残す */
+  });
+  /* 操作記録の文言：確認担当者: ○○ ／ 承認1担当者: ○○ ／ 出力担当者: ○○（CSV） */
+  function recordText(r) {
+    var who = r.user || '';
+    var act = String(r.action || '');
+    if (!act) return who ? '実行者: ' + who : '';
+    if (act.indexOf('差戻') === 0) return '差戻: 確認者へ' + (r.comment ? '（' + r.comment + '）' : '');
+    if (act === '出力' || act === 'CSV出力') return '出力担当者: ' + who + '（CSV）';
+    if (act === '確認') return '確認担当者: ' + who;
+    return act + '担当者: ' + who;                        /* 承認1 / 承認2 … */
+  }
+  window.__recordText = recordText;
+})();
+"""
+
+
+def apply_drop_history_column(src):
+    """ファイル一覧の「操作・処理履歴」列を削除する（履歴はマイタスク／ファイル詳細で見る）。"""
+    if '"hist " +' in src or 'class="hist ' not in src:
+        return src
+    # 見出し
+    src = src.replace("${th('history', '操作・処理履歴')}", "", 1)
+    # セル
+    src = re.sub(r'<td class="hist \$\{histCls\(f\.status\)\}"[^>]*>\$\{[^<]*?</td>', '', src, count=1)
+    # colgroup（履歴列＝6 番目の col）… 実際は width:200 の 1 つ目
+    src = src.replace('<col style="width:120px">\n        <col style="width:200px">', '<col style="width:120px">', 1)
+    return src
+
+
+def apply_history_normalize(src):
+    """一覧の「操作・処理履歴」を操作記録に正規化するブロックを注入する。"""
+    if 'normalizeFileHistory' in src:
+        return src
+    anchor = "function renderUserAddDialog"
+    if anchor not in src:
+        return src
+    return src.replace(anchor, HISTORY_NORMALIZE + "\n" + anchor, 1)
 
 
 def apply_two_stage_mock(src):
@@ -1768,6 +1831,8 @@ def patched_app_js(path):
     patched = apply_group_category_scope(patched)
     patched = apply_notes_to_comments(patched)
     patched = apply_mytask_filters(patched)
+    patched = apply_drop_history_column(patched)
+    patched = apply_history_normalize(patched)
     patched = apply_two_stage_mock(patched)
     patched = apply_file_click_preview(patched)
     patched, _stage_report = _patch_stage_selection(patched)

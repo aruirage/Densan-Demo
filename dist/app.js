@@ -883,12 +883,18 @@ var MOCK_EXTRA_APPLIED = true;
     var readAt = (['done', 'confirmed', 'approved', 'returned', 'exported', 'failed'].indexOf(st) >= 0) ? stamp2 : null;
     var confAt = (['confirmed', 'approved', 'returned', 'exported'].indexOf(st) >= 0) ? stamp2 : null;
     var apprAt = (['approved', 'exported'].indexOf(st) >= 0) ? stamp2 : null;
+    /* 操作・処理履歴＝「誰が何をしたか」の記録。状態そのものは入れない（処理中は空） */
+    var names = ['佐藤 一郎', '鈴木 花子', '高橋 健', '田中 実', '伊藤 由美', '渡辺 修', '山本 彩', '中村 亮'];
     var hist = {
-      done: '読取完了', confirmed: '確認済み（承認待ち）', approved: '承認済み',
-      exported: '出力済み', failed: '帳票の処理中にエラーが発生',
-      returned: '差戻中（確認者より差戻）', checking: '確認中（確認者作業中）',
-      reading: '読取処理中（' + (1 + (k % 8)) + '/' + (8 + (k % 12)) + 'ページ）'
-    }[st] || '読取完了';
+      done: '',
+      confirmed: '確認担当者: ' + names[k % names.length],
+      approved: '承認担当者: ' + names[(k + 3) % names.length] + '（2段目まで完了）',
+      exported: '出力担当者: ' + names[(k + 5) % names.length] + '（CSV）',
+      failed: '読取に失敗しました（再読取が必要）',
+      returned: '差戻: 確認者へ（記載不備）',
+      checking: '',
+      reading: ''
+    }[st] || '';
     var u = users[k % users.length];
     FILES.push([id, nm, lay.id, size, st, hist, stamp, stamp2, readAt, confAt, apprAt, u, u, u]);
   }
@@ -2887,7 +2893,7 @@ function renderTable() {
         <td class="result-type" title="${esc(dispLayout(f.layout))}">${esc(dispLayout(f.layout))}</td>
         <td class="result-size">${fmtSize(f.size)}</td>
         <td><span class="st ${stCls(f.status)}" title="${esc(STATUS[f.status].label)}">${esc(STATUS[f.status].label)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td>
-        <td class="hist ${histCls(f.status)}" title="${esc(f.history)}">${f.status === 'done' ? '' : esc(f.history)}</td>
+        
         <td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>
         <td style="white-space:nowrap;color:var(--text-2)">${esc(f.updatedAt)}</td>
         <td class="result-actions-cell"><div class="acts act-icons">${(() => {
@@ -2936,14 +2942,13 @@ function renderTable() {
         <col style="width:190px">
         <col style="width:110px">
         <col style="width:120px">
+        <col style="width:160px">
+        <col style="width:160px">
         <col style="width:170px">
-        <col style="width:160px">
-        <col style="width:160px">
-        <col style="width:200px">
       </colgroup>
       <thead><tr>
         <th><input type="checkbox" class="cb" data-pickall="1" aria-label="このページを全選択" ${rows.length && rows.every((f) => state.picked[f.id]) ? 'checked' : ''} /></th>
-        <th data-sort="name" class="col-name" style="cursor:pointer">ファイル名${arrow('name')}</th>${th('layout', '帳票タイプ')}${th('size', 'ファイルサイズ')}${th('status', 'ステータス')}${th('history', '操作・処理履歴')}${th('createdAt', '作成日時', 'class="col-created"')}${th('updatedAt', '更新日時')}<th class="result-actions-cell centered">操作・処理</th>
+        <th data-sort="name" class="col-name" style="cursor:pointer">ファイル名${arrow('name')}</th>${th('layout', '帳票タイプ')}${th('size', 'ファイルサイズ')}${th('status', 'ステータス')}${th('createdAt', '作成日時', 'class="col-created"')}${th('updatedAt', '更新日時')}<th class="result-actions-cell centered">操作・処理</th>
       </tr></thead>
       <tbody>${body}</tbody>
     </table>
@@ -3932,6 +3937,38 @@ function renderAccessUrlTab() {
 }
 
 /** ユーザー追加／編集ダイアログ（製品の「ユーザー追加」に合わせる） */
+
+/* ══ 一覧の「操作・処理履歴」を操作記録に正規化（serve.py 注入） ══
+   状態そのもの（読取完了／出力済み／読取中…）は履歴ではないので空にし、
+   確認・承認・出力などの実行者が分かる記録だけを残す。 */
+(function normalizeFileHistory() {
+  var STATUS_TEXT = /^(読取完了|読取中|読取待ち|確認中|確認済み（承認待ち）|承認済み|出力済み|分類中|差戻中|読取失敗|—|-)$/;
+  var PROGRESS_TEXT = /(処理中|作業中|より差戻|ページ）$)/;
+  FILES_DATA.forEach(function (f) {
+    var h = String(f.history || '').trim();
+    if (!h || h === '—') { f.history = ''; return; }
+    if (STATUS_TEXT.test(h) || PROGRESS_TEXT.test(h)) {
+      /* 操作記録があればそれを使い、無ければ空欄（＝まだ操作されていない） */
+      var recs = (f.flow || []).filter(function (x) { return !x.voided; });
+      f.history = recs.length ? recordText(recs[recs.length - 1]) : '';
+      return;
+    }
+    if (/^[^:：]*(担当者|実行者)[:：]/.test(h)) return;   /* すでに操作記録 */
+    f.history = h;                                        /* 失敗・差戻などの事象は残す */
+  });
+  /* 操作記録の文言：確認担当者: ○○ ／ 承認1担当者: ○○ ／ 出力担当者: ○○（CSV） */
+  function recordText(r) {
+    var who = r.user || '';
+    var act = String(r.action || '');
+    if (!act) return who ? '実行者: ' + who : '';
+    if (act.indexOf('差戻') === 0) return '差戻: 確認者へ' + (r.comment ? '（' + r.comment + '）' : '');
+    if (act === '出力' || act === 'CSV出力') return '出力担当者: ' + who + '（CSV）';
+    if (act === '確認') return '確認担当者: ' + who;
+    return act + '担当者: ' + who;                        /* 承認1 / 承認2 … */
+  }
+  window.__recordText = recordText;
+})();
+
 
 /* ══ 2 段承認のモックデータ（serve.py 注入） ══
    帳票タイプを 2 段承認にし、1 段目だけ承認済みのファイルを数件用意する。 */
