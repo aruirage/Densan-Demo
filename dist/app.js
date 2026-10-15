@@ -2629,7 +2629,7 @@ function renderApproveAudit(f, fieldsHtml) {
         ${conf && conf.comment ? `<p class="rv-approve-comment">「${esc(conf.comment)}」</p>` : ''}
         <div class="rv-approve-summary">
           <span class="rv-approve-chip">確認済み <b>${audit.confirmedCount || OCR_FIELDS.b6.length}</b></span>
-          <span class="rv-approve-chip is-mod">修正 <b>${audit.changes.length}</b></span>
+          ${audit.changes.length > 0 ? `<span class="rv-approve-chip is-mod">確認者の修正 <b>${audit.changes.length}</b></span>` : ''}
         </div>
       </div>
       ${returnRows ? `<div class="rv-approve-returns"><div class="rv-approve-prev-head"><b>差戻記録</b></div>${returnRows}</div>` : ''}
@@ -6728,7 +6728,7 @@ function renderReview() {
           ${isApproveUi
             ? `<div class="rv-stat-group">
                 <span>${esc(phaseLabel)}中</span>
-                <span>修正 <b class="accent-warm">${dirtyCount}</b></span>
+                ${dirtyCount > 0 ? `<span>確認者の修正 ${dirtyCount}</span>` : ''}
               </div>`
             : `<div class="rv-stat-group">
                 <span>確認待ち <b class="accent">: ${pending}</b></span>

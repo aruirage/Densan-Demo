@@ -1099,6 +1099,20 @@ def apply_actor_columns_fix(src):
     return src
 
 
+def apply_approve_ui_correction_chip(src):
+    """承認画面（承認者は編集不可）の「修正 N」表示を「確認者の修正 N」にし、0 件なら出さない。"""
+    old = '<span>修正 <b class="accent-warm">${dirtyCount}</b></span>'
+    new = ('${dirtyCount > 0 ? `<span>確認者の修正 ${dirtyCount}</span>` : \'\'}')
+    if old in src:
+        src = src.replace(old, new, 1)
+    # 承認サマリ側のチップも「確認者の修正」に（0 件なら出さない）
+    old2 = '<span class="rv-approve-chip is-mod">修正 <b>${audit.changes.length}</b></span>'
+    new2 = ('${audit.changes.length > 0 ? `<span class="rv-approve-chip is-mod">確認者の修正 <b>${audit.changes.length}</b></span>` : \'\'}')
+    if old2 in src:
+        src = src.replace(old2, new2, 1)
+    return src
+
+
 def apply_result_person_columns(src):
     """ファイル一覧に「確認者」「承認者」列を足す（誰が処理したか。作成者/確認者/承認者で絞り込み可能）。"""
     if '確認者</th>' in src:
@@ -1882,6 +1896,7 @@ def patched_app_js(path):
     patched = apply_notes_to_comments(patched)
     patched = apply_mytask_filters(patched)
     patched = apply_actor_columns_fix(patched)
+    patched = apply_approve_ui_correction_chip(patched)
     patched = apply_result_person_columns(patched)
     patched = apply_drop_history_column(patched)
     patched = apply_history_normalize(patched)
