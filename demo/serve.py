@@ -684,21 +684,22 @@ GRP_TK_CSS = """
 
 RESULT_FREEZE_CSS = """
 /* ══ ファイル一覧：末尾の「操作・処理」列だけ横スクロールでも固定する ══ */
-.result-table { table-layout: fixed !important; min-width: 0 !important; width: 100% !important; }
+.result-table { table-layout: fixed !important; min-width: 1720px !important; width: 100% !important; }
 .result-table col { width: auto !important; }
+/* 列幅（チェック / ファイル名 / 帳票タイプ / サイズ / ステータス / 作成者 / 確認者 / 承認者 / 作成日時 / 更新日時 / 操作・処理） */
 .result-table th:nth-child(1),  .result-table td:nth-child(1)  { width: 40px; }
-.result-table th:nth-child(2),  .result-table td:nth-child(2)  { width: 196px; }
-.result-table th:nth-child(3),  .result-table td:nth-child(3)  { width: 188px; }
-.result-table th:nth-child(4),  .result-table td:nth-child(4)  { width: 94px; }
-.result-table th:nth-child(5),  .result-table td:nth-child(5)  { width: 104px; }
-.result-table th:nth-child(6),  .result-table td:nth-child(6)  { width: 168px; }
-.result-table th:nth-child(7),  .result-table td:nth-child(7)  { width: 138px; }
-.result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 138px; }
-.result-table th:nth-child(6),  .result-table td:nth-child(6)  { width: 120px; }
-.result-table th:nth-child(7),  .result-table td:nth-child(7)  { width: 120px; }
-.result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 128px; }
-.result-table th:nth-child(9),  .result-table td:nth-child(9)  { width: 128px; }
-.result-table th:nth-child(10), .result-table td:nth-child(10) { width: 128px; }
+.result-table th:nth-child(2),  .result-table td:nth-child(2)  { width: 240px; }
+.result-table th:nth-child(3),  .result-table td:nth-child(3)  { width: 200px; }
+.result-table th:nth-child(4),  .result-table td:nth-child(4)  { width: 100px; }
+.result-table th:nth-child(5),  .result-table td:nth-child(5)  { width: 110px; }
+.result-table th:nth-child(6),  .result-table td:nth-child(6)  { width: 130px; }
+.result-table th:nth-child(7),  .result-table td:nth-child(7)  { width: 130px; }
+.result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 130px; }
+.result-table th:nth-child(9),  .result-table td:nth-child(9)  { width: 150px; }
+.result-table th:nth-child(10), .result-table td:nth-child(10) { width: 150px; }
+.result-table th:nth-child(11), .result-table td:nth-child(11) { width: 150px; }
+/* 横スクロール（全列を潰さずに表示） */
+.result-content > .tablewrap, .result-panel .tablewrap { overflow-x: auto !important; }
 .result-table th, .result-table td { overflow: hidden; text-overflow: ellipsis; }
 .result-table td:nth-child(2), .result-table td:nth-child(3),
 .result-table td:nth-child(6) { white-space: nowrap; }
@@ -1099,12 +1100,14 @@ def apply_result_person_columns(src):
     # ① colgroup：ステータス(120px)の後ろに 2 列
     col_old = '<col style="width:120px">\n        <col style="width:160px">'
     col_new = ('<col style="width:120px">\n        <col style="width:132px">\n        '
-               '<col style="width:132px">\n        <col style="width:160px">')
+               '<col style="width:132px">\n        <col style="width:132px">\n        '
+               '<col style="width:160px">')
     if col_old in src:
         src = src.replace(col_old, col_new, 1)
     # ② 見出し
     th_old = "${th('status', 'ステータス')}"
     th_new = (th_old
+              + '<th style="width:132px">作成者</th>'
               + '<th style="width:132px">確認者</th>'
               + '<th style="width:132px">承認者</th>')
     if th_old in src:
@@ -1114,6 +1117,7 @@ def apply_result_person_columns(src):
     if m:
         cell = m.group(1)
         add = (cell
+               + '<td class="sub" title="${esc(userName(f.createdBy) || \'\')}">${esc(userName(f.createdBy) || \'—\')}</td>'
                + '<td class="sub" title="${esc(userName(f.confirmedBy) || \'\')}">${esc(userName(f.confirmedBy) || \'—\')}</td>'
                + '<td class="sub" title="${esc(userName(f.approvedBy) || \'\')}">${esc(userName(f.approvedBy) || \'—\')}</td>')
         src = src.replace(cell, add, 1)
