@@ -1,0 +1,329 @@
+/* ============================================================================
+ * 権限設定／ユーザー管理：ユーザーグループ関連の見た目
+ * styles.css の後に読み込む（--accent 系は styles.css / brand-densan.css の定義を使う）
+ *
+ * 追加している画面は 3 つ。
+ *   ① 権限設定のタブ（権限 / ユーザーグループ）
+ *   ② ユーザーグループ一覧とグループ編集ダイアログ（基本情報・帳票権限）
+ *   ③ ユーザー管理の「所属グループ」列とユーザー追加／編集ダイアログの所属グループ
+ * ========================================================================== */
+
+/* ── ① 権限設定のタブ ─────────────────────────────────────────────────── */
+
+.perm-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin: 0 0 14px;
+}
+
+.perm-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 9px 14px 10px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+  border-radius: 2px 2px 0 0;
+}
+
+.perm-tab:hover { background: var(--accent-bg); color: var(--accent); }
+
+.perm-tab.on {
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 0 var(--accent);
+}
+
+.perm-tab-sub {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.perm-tab.on .perm-tab-sub { color: var(--accent); opacity: .75; }
+
+.perm-tabs.is-inner {
+  margin: 0 0 12px;
+  padding: 0 18px;
+  background: #fafbfc;
+}
+
+.perm-tab-hint {
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-bg);
+  border-radius: 0 2px 2px 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+
+.perm-tab-hint b { color: var(--accent); font-weight: 600; }
+
+/* ── ② ユーザーグループ ──────────────────────────────────────────────── */
+
+.grp-name { font-size: 13px; font-weight: 600; color: var(--text); }
+
+.grp-kind {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 2px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.grp-kind.is-view { background: #eef2f7; color: #4a5a70; }
+.grp-kind.is-conf { background: #e8f1fb; color: #1a5f9e; }
+.grp-kind.is-appr { background: #eaf7ef; color: #1f7a44; }
+.grp-kind.is-reappr { background: #eef6e8; color: #3d6b1f; }
+.grp-kind.is-upload { background: #f3eef8; color: #5a3d7a; }
+
+.grp-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.grp-members .pill {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grp-members .pill.more {
+  background: transparent;
+  border: 1px dashed var(--line-d);
+  color: var(--text-3);
+}
+
+.grp-pill.is-view { background: #eef2f7; color: #4a5a70; }
+.grp-pill.is-conf { background: #e8f1fb; color: #1a5f9e; }
+.grp-pill.is-appr { background: #eaf7ef; color: #1f7a44; }
+.grp-pill.is-reappr { background: #eef6e8; color: #3d6b1f; }
+.grp-pill.is-upload { background: #f3eef8; color: #5a3d7a; }
+
+/* グループ編集ダイアログ */
+
+.grp-modal { width: min(940px, 100%); }
+
+.grp-users {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 8px;
+  max-height: 232px;
+  overflow: auto;
+}
+
+.grp-users.is-compact { grid-template-columns: minmax(0, 1fr); max-height: 168px; }
+
+/* .perm-row は grid（ラベル 104px ＋ 内容 1fr）なので、
+   説明文は内容側の列に落とす。放っておくと 2 行目 1 列目に回り込んで細く潰れる。 */
+.perm-row.is-col > .grp-note { grid-column: 2; }
+
+.grp-note {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--text-3);
+}
+
+.grp-note.is-top {
+  margin: 0 0 10px;
+  padding: 0 18px;
+}
+
+.grp-note.is-top b { color: var(--accent); font-weight: 600; }
+
+/* 帳票権限タブ（グループ側から見た帳票権限表） */
+
+.perm-body.is-flush { padding: 0 0 8px; }
+
+.grp-tk-wrap { max-height: 420px; overflow: auto; margin: 0 18px; }
+
+/* 帳票タイプ名が長いので、幅は固定配分にして名前側だけ折り返す。
+   （auto ＋ max-content だと操作 4 列がモーダル幅を超えて隠れる） */
+.grp-tk-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+/* styles.css のメディアクエリに `.tablewrap table{min-width:1180px}` があり、
+   狭いモーダル内では操作列が画面外へ押し出される。ここだけ解除する。 */
+.grp-tk-wrap .grp-tk-table { min-width: 0; }
+
+/* 帳票タイプ列（2 列目）は残り幅で折り返す */
+.grp-tk-table th:nth-child(2),
+.grp-tk-table td:nth-child(2) { overflow-wrap: anywhere; }
+
+.grp-tk-table td:nth-child(2) .sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+.grp-tk-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fafbfc;
+  text-align: center;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.grp-tk-table td { vertical-align: middle; }
+.grp-tk-table tr.is-on td { background: #f7fbff; }
+
+.grp-tk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+
+.grp-tk-l { font-size: 11px; color: var(--text-3); }
+
+.grp-tk input:checked + .grp-tk-l { color: var(--accent); font-weight: 600; }
+
+.grp-kind-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: 0;
+}
+
+/* ── ③ ユーザー管理・担当ピッカー ─────────────────────────────────────── */
+
+/* ユーザー追加／編集：所属グループは縦積み（.user-add-field は既定で flex 横並び） */
+.user-add-field.is-col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.user-add-field.is-col .user-add-label { text-align: left; }
+
+.user-add-hint {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: var(--accent-bg, #f0f6fc);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* 担当ピッカーのグループ名に添える役割バッジ（帳票タイプ詳細） */
+.asg-opt-kind {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 400;
+  vertical-align: 1px;
+}
+
+/* ── ④ メニュー権限ダイアログ（ツリー上の 2 スイッチ） ──────────────────
+   ラベルは左、スイッチは中央、現在値は右。.tgl は共通スイッチだが、
+   ここでは文字を入れない（値はスイッチの外に出す）ので寸法を上書きする。 */
+
+.mp-block { display: block; }
+
+.mp-block-label {
+  margin: 4px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mp-panel {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+/* ツリーは枠をパネルに任せる（styles.css の .mptree は自前の枠を持つ） */
+.mp-panel .mptree {
+  border: 0;
+  border-radius: 0;
+}
+
+.mp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 32px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fafbfd;
+}
+
+.mp-sw {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mp-sw-label {
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.mp-sw-val {
+  font-size: 12.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* 文字なしのピルスイッチ（ON=アクセント色／ノブ右、OFF=グレー／ノブ左） */
+.mp-sw .tgl {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 46px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 99px;
+  background: var(--accent-2);
+  cursor: pointer;
+  transition: background-color .18s;
+}
+
+.mp-sw .tgl.off { background: #c9ced9; }
+
+.mp-sw .tgl .tgl-knob {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  left: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: right .18s, left .18s;
+}
+
+.mp-sw .tgl.off .tgl-knob { right: auto; left: 3px; }
+
+.mp-sw .tgl:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }

@@ -1,0 +1,164 @@
+/**
+ * エクスポート設定ダイアログのレイアウト（再設計版）。
+ *
+ *  - 出力方式：ラジオ「カード」3 枚（選択中は枠と背景で明示）
+ *  - CSV オプション：チェック 2 つ＋2 カラムのラベル付きフィールド
+ *  - プレビュー：ファイル名はインライン編集可（チップ内の input）、表は横スクロール
+ *  - フッターは 2 つだけ（キャンセル／保存）
+ *
+ *  注記（列名・列順は帳票タイプごとに設定／出力対象＝絞り込み結果／結合出力は最大 10000 件）は
+ *  ダイアログから外し、設計文書（権限設計 §4 の注釈）に移した。
+ *
+ * styles.css が再生成されても効くように別ファイル（styles.css の後に読込）。
+ */
+.exp-modal .modal-canvas.exp-canvas {
+  background: #fff;
+  display: block;
+  padding: 18px 20px 16px;
+}
+
+.exp-block + .exp-block {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.exp-modal .exp-sec {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── 出力方式：ラジオカード ── */
+.exp-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exp-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+.exp-radio:hover {
+  border-color: var(--accent-2);
+  background: #f7fafd;
+}
+.exp-radio.on {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.exp-radio input {
+  margin: 2px 0 0;
+  flex: none;
+}
+.exp-radio-body {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.exp-radio-body b {
+  font-size: 12.5px;
+  color: var(--text);
+}
+.exp-radio-desc {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+/* ── CSV オプション ── */
+.exp-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 22px;
+  margin-bottom: 14px;
+}
+.exp-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.exp-check input {
+  flex: none;
+}
+
+.exp-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 22px;
+}
+.exp-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.exp-field-label {
+  flex: 0 0 92px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  text-align: right;
+  white-space: nowrap;
+}
+.exp-control {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  font-size: 12.5px;
+}
+.exp-field.is-wide {
+  grid-column: 1 / -1;
+}
+
+/* ── フッター ── */
+.exp-foot {
+  gap: 10px;
+}
+.exp-foot .btn {
+  min-width: 96px;
+  justify-content: center;
+}
+.exp-foot .btn.primary {
+  min-width: 132px;
+}
+
+/* ── 出力ファイル名（ファイルツリーの名前を使用） ── */
+.exp-filefield {
+  margin-top: 16px;
+}
+.exp-filename {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #f8fbff;
+  font-size: 12.5px;
+  color: var(--text);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.exp-filename .ico {
+  color: var(--accent);
+  font-size: 14px;
+  flex: none;
+}
+.exp-file-ext {
+  color: var(--text-3);
+}

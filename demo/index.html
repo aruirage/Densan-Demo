@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LLM OCR</title>
+<link rel="stylesheet" href="./styles.css" />
+<!-- 全体プロンプト欄のレイアウト調整（styles.css の後に読み込む） -->
+<link rel="stylesheet" href="./prompt-bar-fix.css" />
+<!-- 電算システム公式サイトのブランド配色（最後に読み込んでトークンを上書き） -->
+<link rel="stylesheet" href="./export-dialog.css" />
+<link rel="stylesheet" href="./type-assignee.css" />
+<!-- 権限設定／ユーザー管理のユーザーグループ関連（styles.css の後に読み込む） -->
+<link rel="stylesheet" href="./permissions-groups.css" />
+<link rel="stylesheet" href="./brand-densan.css" />
+</head>
+<body>
+<div id="app"></div>
+<!-- デモの権限モード（全権限／?perm=1 で制限）。app.js より先に読む -->
+<script src="./admin-mode.js"></script>
+<script src="./app.js"></script>
+<!-- 確認画面の連動ハイライト調整（app.js の再生成に影響されないよう別ファイル） -->
+<script src="./review-focus-fix.js"></script>
+</body>
+</html>

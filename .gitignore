@@ -1,0 +1,26 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# dependencies / build output
+node_modules/
+dist/
+dist-ssr/
+build/
+*.local
+
+# logs / caches
+*.log
+__pycache__/
+*.pyc
+.cache/
+
+# 一時ファイル（検証用スクリプト等）
+_*.mjs
+tmp/
+
+# 別リポジトリ（React プロトタイプ）は独自リモートを持つため除外
+#   origin: https://github.com/lialuong/llm-ocr-nl.git
+demo/llm ocr NL/
