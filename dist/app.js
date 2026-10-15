@@ -896,14 +896,14 @@ var MOCK_EXTRA_APPLIED = true;
       reading: ''
     }[st] || '';
     var u = users[k % users.length];
-    FILES.push([id, nm, lay.id, size, st, hist, stamp, stamp2, readAt, confAt, apprAt, u, u, u]);
+    var au = users[(k + 3) % users.length]; FILES.push([id, nm, lay.id, size, st, hist, stamp, stamp2, readAt, confAt, apprAt, u, u, au]);
   }
 })();
 function buildFiles() {
   return FILES.map((r) => ({
     id: r[0], name: r[1], layout: r[2], size: r[3], status: r[4], history: r[5],
     createdAt: r[6], updatedAt: r[7], readAt: r[8], confirmedAt: r[9], approvedAt: r[10],
-    createdBy: r[11], updatedBy: r[12], approvedBy: r[13],
+    createdBy: r[11], updatedBy: r[12], approvedBy: r[10] ? r[13] : null,
     /* 確認者：確認日がある場合。デモでは更新者を確認担当として扱う（実データは確認実行ユーザ） */
     confirmedBy: r[9] ? r[12] : null,
     /* 読取完了以降は読取日が入る。確認・承認以降は確認日も入る */
@@ -2892,7 +2892,7 @@ function renderTable() {
         <td class="name col-name"><button class="fn link" data-result-preview="${f.id}" title="${esc(dispFileName(f.id))}">${esc(dispFileName(f.id))}</button></td>
         <td class="result-type" title="${esc(dispLayout(f.layout))}">${esc(dispLayout(f.layout))}</td>
         <td class="result-size">${fmtSize(f.size)}</td>
-        <td><span class="st ${stCls(f.status)}" title="${esc(STATUS[f.status].label)}">${esc(STATUS[f.status].label)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td>
+        <td><span class="st ${stCls(f.status)}" title="${esc(STATUS[f.status].label)}">${esc(STATUS[f.status].label)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td><td class="sub" title="${esc(userName(f.confirmedBy) || '')}">${esc(userName(f.confirmedBy) || '—')}</td><td class="sub" title="${esc(userName(f.approvedBy) || '')}">${esc(userName(f.approvedBy) || '—')}</td>
         
         <td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>
         <td style="white-space:nowrap;color:var(--text-2)">${esc(f.updatedAt)}</td>
@@ -2948,7 +2948,7 @@ function renderTable() {
       </colgroup>
       <thead><tr>
         <th><input type="checkbox" class="cb" data-pickall="1" aria-label="このページを全選択" ${rows.length && rows.every((f) => state.picked[f.id]) ? 'checked' : ''} /></th>
-        <th data-sort="name" class="col-name" style="cursor:pointer">ファイル名${arrow('name')}</th>${th('layout', '帳票タイプ')}${th('size', 'ファイルサイズ')}${th('status', 'ステータス')}${th('createdAt', '作成日時', 'class="col-created"')}${th('updatedAt', '更新日時')}<th class="result-actions-cell centered">操作・処理</th>
+        <th data-sort="name" class="col-name" style="cursor:pointer">ファイル名${arrow('name')}</th>${th('layout', '帳票タイプ')}${th('size', 'ファイルサイズ')}${th('status', 'ステータス')}<th style="width:132px">確認者</th><th style="width:132px">承認者</th>${th('createdAt', '作成日時', 'class="col-created"')}${th('updatedAt', '更新日時')}<th class="result-actions-cell centered">操作・処理</th>
       </tr></thead>
       <tbody>${body}</tbody>
     </table>

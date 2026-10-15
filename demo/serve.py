@@ -553,7 +553,7 @@ var MOCK_EXTRA_APPLIED = true;
       reading: ''
     }[st] || '';
     var u = users[k % users.length];
-    FILES.push([id, nm, lay.id, size, st, hist, stamp, stamp2, readAt, confAt, apprAt, u, u, u]);
+    var au = users[(k + 3) % users.length]; FILES.push([id, nm, lay.id, size, st, hist, stamp, stamp2, readAt, confAt, apprAt, u, u, au]);
   }
 })();
 """
@@ -694,7 +694,11 @@ RESULT_FREEZE_CSS = """
 .result-table th:nth-child(6),  .result-table td:nth-child(6)  { width: 168px; }
 .result-table th:nth-child(7),  .result-table td:nth-child(7)  { width: 138px; }
 .result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 138px; }
-.result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 108px; }
+.result-table th:nth-child(6),  .result-table td:nth-child(6)  { width: 120px; }
+.result-table th:nth-child(7),  .result-table td:nth-child(7)  { width: 120px; }
+.result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 128px; }
+.result-table th:nth-child(9),  .result-table td:nth-child(9)  { width: 128px; }
+.result-table th:nth-child(10), .result-table td:nth-child(10) { width: 128px; }
 .result-table th, .result-table td { overflow: hidden; text-overflow: ellipsis; }
 .result-table td:nth-child(2), .result-table td:nth-child(3),
 .result-table td:nth-child(6) { white-space: nowrap; }
@@ -1078,6 +1082,42 @@ HISTORY_NORMALIZE = """
   window.__recordText = recordText;
 })();
 """
+
+
+def apply_actor_columns_fix(src):
+    """確認者／承認者は「その操作が完了している場合だけ」入れる（未処理の行に担当者を出さない）。"""
+    old = "approvedBy: r[13],"
+    if old in src:
+        return src.replace(old, "approvedBy: r[10] ? r[13] : null,", 1)
+    return src
+
+
+def apply_result_person_columns(src):
+    """ファイル一覧に「確認者」「承認者」列を足す（誰が処理したか。作成者/確認者/承認者で絞り込み可能）。"""
+    if '確認者</th>' in src:
+        return src
+    # ① colgroup：ステータス(120px)の後ろに 2 列
+    col_old = '<col style="width:120px">\n        <col style="width:160px">'
+    col_new = ('<col style="width:120px">\n        <col style="width:132px">\n        '
+               '<col style="width:132px">\n        <col style="width:160px">')
+    if col_old in src:
+        src = src.replace(col_old, col_new, 1)
+    # ② 見出し
+    th_old = "${th('status', 'ステータス')}"
+    th_new = (th_old
+              + '<th style="width:132px">確認者</th>'
+              + '<th style="width:132px">承認者</th>')
+    if th_old in src:
+        src = src.replace(th_old, th_new, 1)
+    # ③ セル（ステータスセルの直後）
+    m = re.search(r'(<td><span class="st \$\{stCls\(f\.status\)\}"[\s\S]*?</td>)', src)
+    if m:
+        cell = m.group(1)
+        add = (cell
+               + '<td class="sub" title="${esc(userName(f.confirmedBy) || \'\')}">${esc(userName(f.confirmedBy) || \'—\')}</td>'
+               + '<td class="sub" title="${esc(userName(f.approvedBy) || \'\')}">${esc(userName(f.approvedBy) || \'—\')}</td>')
+        src = src.replace(cell, add, 1)
+    return src
 
 
 def apply_drop_history_column(src):
@@ -1831,6 +1871,8 @@ def patched_app_js(path):
     patched = apply_group_category_scope(patched)
     patched = apply_notes_to_comments(patched)
     patched = apply_mytask_filters(patched)
+    patched = apply_actor_columns_fix(patched)
+    patched = apply_result_person_columns(patched)
     patched = apply_drop_history_column(patched)
     patched = apply_history_normalize(patched)
     patched = apply_two_stage_mock(patched)
