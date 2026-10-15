@@ -3,10 +3,10 @@
  * -------------------------------------------------------------------------
  * 前提（客户回答より）:
  *   - ツリー表示次元は切替可能：
- *       業務シーン → 帳票カテゴリ → ファイル ／ 帳票カテゴリ → ファイル
- *   - 業務シーン名・帳票カテゴリ名はマスタ固定（ツリーでは改名不可）。ファイル名のみ改名可。
+ *       業務シーン → 帳票タイプ → ファイル ／ 帳票タイプ → ファイル
+ *   - 業務シーン名・帳票タイプ名はマスタ固定（ツリーでは改名不可）。ファイル名のみ改名可。
  *   - 同階層はドラッグで並び替え可能。
- *   - 業務／帳票カテゴリ／版式のマスタは各自治体（組織）が作成・命名する。
+ *   - 業務／帳票タイプ／版式のマスタは各自治体（組織）が作成・命名する。
  *   - 絞り込み条件は AND（同時滿足）。1条件内の複数選択は OR。
  *   - 「日付」＝ 読取日 / 確認日 / 承認日。
  *   - ファイルの手動リネームは表示名のみ（ID・格納パス・エクスポート名は不変）。
@@ -25,7 +25,7 @@ let BUSINESS = [
   { id: 'b6', name: '高齢者実態調査', order: 6 },
 ];
 
-/** 帳票カテゴリ（＝ツリー第2階層。権限・承認フローの単位） */
+/** 帳票タイプ（＝ツリー第2階層。権限・承認フローの単位） */
 let CATEGORY = [
   { id: 'c1', business: 'b1', name: '住民異動届', order: 1 },
   { id: 'c2', business: 'b2', name: '個人住民税申告', order: 1 },
@@ -827,7 +827,7 @@ const TENANTS = [
   { id: 'tenant03', name: '△△町', note: '検証' },
 ];
 
-/* ── 承認フロー設定（帳票カテゴリ単位。ここは「承認を使うか」だけを持つ） ──
+/* ── 承認フロー設定（帳票タイプ単位。ここは「承認を使うか」だけを持つ） ──
  * 承認段数とフロー担当は 帳票タイプ側の権限表（TICKET_PERMS）から導出する。
  * フロー担当は権限者（ロール）またはユーザー。権限者は所属ユーザーへランダム割当。 */
 const APPROVAL_CONFIG = {
@@ -1264,7 +1264,7 @@ const state = {
   treeOpen: true,                 // ファイルツリーパネル自体の開閉
   treeView: 'biz-cat',            // 表示次元：biz-cat | cat
   treeFolders: [],                // 互換用（構造は BUSINESS/CATEGORY を正とする）
-  fileFolder: {},                 // ファイルID → 所属帳票カテゴリID（未分類は null）
+  fileFolder: {},                 // ファイルID → 所属帳票タイプID（未分類は null）
   fileOrder: {},                  // ファイルID → 同カテゴリ内の並び順
   treeSeeded: false,              // ファイル所属の初期シード済みか
   rename: {},                     // 表示名のみの手動リネーム（ファイル名のみ変更可）
@@ -1516,9 +1516,9 @@ const inTenant = (f) => tenantOfFile(f);
 /* ====================== 4. ツリー（自動生成）とノード判定 ====================== */
 
 /** 表示次元に応じてツリーを組み立てる
- *  - biz-cat: 業務シーン → 帳票カテゴリ → ファイル
- *  - cat:     帳票カテゴリ → ファイル
- * 業務シーン名・帳票カテゴリ名はマスタ固定（ツリーでは改名不可）。ファイル名のみ改名可。
+ *  - biz-cat: 業務シーン → 帳票タイプ → ファイル
+ *  - cat:     帳票タイプ → ファイル
+ * 業務シーン名・帳票タイプ名はマスタ固定（ツリーでは改名不可）。ファイル名のみ改名可。
  * 同階層はドラッグで並び替え可能。
  */
 const TREE_MAX_DEPTH = 3;
@@ -1545,7 +1545,7 @@ const folderName = (id) => {
   return state.rename['folder:' + id] || (folderById(id) || {}).name || id;
 };
 
-/** ファイルが属する帳票カテゴリ ID */
+/** ファイルが属する帳票タイプ ID */
 function fileCatId(file) {
   ensureTreeSeeded();
   const fid = state.fileFolder[file.id];
@@ -1609,12 +1609,12 @@ function inNode(file, node) {
 
 /** 互換：自由フォルダ追加はデモでは無効（マスタ階層のみ） */
 function addTreeFolder() {
-  toast('業務シーン・帳票カテゴリはマスタで管理します');
+  toast('業務シーン・帳票タイプはマスタで管理します');
   return null;
 }
 
 function deleteTreeFolder() {
-  toast('業務シーン・帳票カテゴリはツリーから削除できません');
+  toast('業務シーン・帳票タイプはツリーから削除できません');
 }
 
 function moveTreeFolder() {
@@ -1622,7 +1622,7 @@ function moveTreeFolder() {
   return false;
 }
 
-/** ファイルを帳票カテゴリへ移動（null=未分類） */
+/** ファイルを帳票タイプへ移動（null=未分類） */
 function moveFileToFolder(fileId, folderId) {
   ensureTreeSeeded();
   if (folderId && !byId(CATEGORY, folderId)) {
@@ -1821,7 +1821,7 @@ function renderTree() {
         || ((state.activeNode.type === 'biz' || state.activeNode.type === 'cat') && n.type === 'folder' && state.activeNode.id === n.id);
       const ni = treeIcon(n.type === 'file' ? 'document' : 'folder', opened);
       const fullName = nodeLabel(n);
-      /* 名称変更はファイルのみ（業務シーン・帳票カテゴリはマスタ固定） */
+      /* 名称変更はファイルのみ（業務シーン・帳票タイプはマスタ固定） */
       const ops = n.type === 'file'
         ? [`<button class="redo" title="ファイル名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
         : [];
@@ -1915,7 +1915,7 @@ function fselect(id, placeholder, opts, current) {
  * 承認フローの状態遷移
  * 確認: 読取完了 → 確認済み（承認待ち）
  * 承認: 確認済み → 承認1 → 承認2 → 承認済み（stages=1 なら承認1で承認済み）
- *      承認機能を使わない帳票カテゴリは 確認済み → そのまま出力可
+ *      承認機能を使わない帳票タイプは 確認済み → そのまま出力可
  * 差戻: 常に「確認」へ戻す（2段承認中でも承認1へは戻さない）。理由コメント必須。
  *       差戻後は再確認→再承認（OA の「再順次承認」）。
  * 出力: 承認済み（または承認不要なら確認済み）→ 出力済み
@@ -2454,7 +2454,7 @@ function runFlowAction(fileId, action, comment) {
     f.history = `確認担当者: ${who}`;
     toast(need ? '確認しました（承認待ち）' : '確認しました（承認不要のため出力できます）');
   } else if (action === 'approve') {
-    if (!need) { toast('この帳票カテゴリは承認機能を使用しません'); return; }
+    if (!need) { toast('この帳票タイプは承認機能を使用しません'); return; }
     const next = done + 1;
     f.flow.push({ stage: next, action: stages === 1 ? '承認' : `承認${next}`, user: who, at: stamp, comment: comment || '' });
     if (next >= stages) {
@@ -2556,7 +2556,7 @@ function renderTable() {
   const node = state.activeNode;
   const ctxName = node.type === 'all' ? 'すべての帳票'
     : node.type === 'file' ? nodeLabel(node)
-      : nodeLabel(node) + (node.type === 'cat' ? '（帳票カテゴリ）' : '（業務）');
+      : nodeLabel(node) + (node.type === 'cat' ? '（帳票タイプ）' : '（業務）');
   const all = visibleFiles();
   const total = all.length;
   const pages = Math.max(1, Math.ceil(total / state.perPage));
@@ -5362,7 +5362,7 @@ function renderMyTasks() {
       <div class="mytask-filters">
         <label class="field"><span class="lbl">ファイル名</span><input class="fld" id="mtName" placeholder="ファイル名" value="${esc(F.name || '')}" /></label>
         <label class="field"><span class="lbl">業務カテゴリ</span><select class="fld" id="mtBiz"><option value="">すべて</option>${bizOpts}</select></label>
-        <label class="field"><span class="lbl">帳票カテゴリ</span><select class="fld" id="mtCat"><option value="">すべて</option>${catOpts}</select></label>
+        <label class="field"><span class="lbl">帳票タイプ</span><select class="fld" id="mtCat"><option value="">すべて</option>${catOpts}</select></label>
         <label class="field"><span class="lbl">更新日時</span><span class="range"><input class="fld" type="date" id="mtUpdatedFrom" value="${esc(F.updatedFrom || '')}" /><span>〜</span><input class="fld" type="date" id="mtUpdatedTo" value="${esc(F.updatedTo || '')}" /></span></label>
         <label class="field"><span class="lbl">作成日時</span><span class="range"><input class="fld" type="date" id="mtCreatedFrom" value="${esc(F.createdFrom || '')}" /><span>〜</span><input class="fld" type="date" id="mtCreatedTo" value="${esc(F.createdTo || '')}" /></span></label>
         <label class="field"><span class="lbl">担当者</span><input class="fld" id="mtAssignee" placeholder="ユーザ名で検索" value="${esc(F.assignee || '')}" /></label>
@@ -5411,7 +5411,7 @@ function renderCfgNav() {
  * 新規アップロードは頂栏独立メニューのためサイドバーなし。
  */
 function renderSidebarPane() {
-  const treeTip = '表示次元を切替えできます。業務シーン・帳票カテゴリ名は変更不可（ファイル名のみ変更可）。同階層はドラッグで並び替えできます';
+  const treeTip = '表示次元を切替えできます。業務シーン・帳票タイプ名は変更不可（ファイル名のみ変更可）。同階層はドラッグで並び替えできます';
   return `
   <aside class="panel side with-tree">
   <div class="sidenav-panel">
@@ -5768,7 +5768,7 @@ function bindTree(treeEl) {
     const type = node.dataset.type, id = node.dataset.id, key = type + ':' + id;
     if (e.target.closest('[data-rename]')) {
       e.stopPropagation();
-      if (type !== 'file') { toast('業務シーン・帳票カテゴリ名は変更できません'); return; }
+      if (type !== 'file') { toast('業務シーン・帳票タイプ名は変更できません'); return; }
       startRename(node, type, id);
       return;
     }
@@ -7241,9 +7241,9 @@ function bindUploadPanel() {
 }
 
 function startRename(nodeEl, type, id) {
-  /* ツリーではファイル名のみ変更可（業務シーン・帳票カテゴリはマスタ固定） */
+  /* ツリーではファイル名のみ変更可（業務シーン・帳票タイプはマスタ固定） */
   if (type !== 'file') {
-    toast('業務シーン・帳票カテゴリ名は変更できません');
+    toast('業務シーン・帳票タイプ名は変更できません');
     return;
   }
   const key = 'file:' + id;

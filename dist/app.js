@@ -44,10 +44,10 @@ function renderGroupTree() { return ''; }
  * -------------------------------------------------------------------------
  * 前提（客户回答より）:
  *   - ツリー表示次元は切替可能：
- *       業務シーン → 帳票カテゴリ → ファイル ／ 帳票カテゴリ → ファイル
- *   - 業務シーン名・帳票カテゴリ名はマスタ固定（ツリーでは改名不可）。ファイル名のみ改名可。
+ *       業務シーン → 帳票タイプ → ファイル ／ 帳票タイプ → ファイル
+ *   - 業務シーン名・帳票タイプ名はマスタ固定（ツリーでは改名不可）。ファイル名のみ改名可。
  *   - 同階層はドラッグで並び替え可能。
- *   - 業務／帳票カテゴリ／版式のマスタは各自治体（組織）が作成・命名する。
+ *   - 業務／帳票タイプ／版式のマスタは各自治体（組織）が作成・命名する。
  *   - 絞り込み条件は AND（同時滿足）。1条件内の複数選択は OR。
  *   - 「日付」＝ 読取日 / 確認日 / 承認日。
  *   - ファイルの手動リネームは表示名のみ（ID・格納パス・エクスポート名は不変）。
@@ -66,7 +66,7 @@ let BUSINESS = [
   { id: 'b6', name: '高齢者実態調査', order: 6 },
 ];
 
-/** 帳票カテゴリ（＝ツリー第2階層。権限・承認フローの単位） */
+/** 帳票タイプ（＝ツリー第2階層。権限・承認フローの単位） */
 let CATEGORY = [
   { id: 'c1', business: 'b1', name: '住民異動届', order: 1 },
   { id: 'c2', business: 'b2', name: '個人住民税申告', order: 1 },
@@ -932,7 +932,7 @@ const TENANTS = [
   { id: 'tenant03', name: '△△町', note: '検証' },
 ];
 
-/* ── 承認フロー設定（帳票カテゴリ単位。ここは「承認を使うか」だけを持つ） ──
+/* ── 承認フロー設定（帳票タイプ単位。ここは「承認を使うか」だけを持つ） ──
  * 承認段数とフロー担当は 帳票タイプ側の権限表（TICKET_PERMS）から導出する。
  * フロー担当は権限者（ロール）またはユーザー。権限者は所属ユーザーへランダム割当。 */
 const APPROVAL_CONFIG = {
@@ -1001,7 +1001,7 @@ function approvalOf(layoutId) {
   /* カテゴリで承認不要、または承認担当が空 → 承認フローなし */
   const stageLists = stagesOf(layoutId);
   const assigned = stageLists.filter((x) => (x || []).length).length;
-  /* 帳票カテゴリの工作流で決めた承認段数（未設定なら担当から推定） */
+  /* 帳票タイプの工作流で決めた承認段数（未設定なら担当から推定） */
   const declared = (typeof catStagesOf === 'function') ? catStagesOf(layoutId) : null;
   /* 配った段数を正とする（担当が空の段は「承認者未設定」として後で警告する） */
   const stages = (declared === null) ? assigned : declared;
@@ -1101,10 +1101,10 @@ const historyRowsOf = (f) => {
   return rows;
 };
 
-/* ══ 帳票カテゴリの承認段数 N に合わせて、帳票権限表の「承認」列を 承認1..N に展開する ══ */
+/* ══ 帳票タイプの承認段数 N に合わせて、帳票権限表の「承認」列を 承認1..N に展開する ══ */
 const APPROVAL_COL_RE = /^approve(\d+)$/;
 const stageIdxOfKey = (key) => { const m = APPROVAL_COL_RE.exec(String(key || '')); return m ? Number(m[1]) - 1 : -1; };
-/** その帳票タイプの承認段数（帳票カテゴリの工作流で決まる） */
+/** その帳票タイプの承認段数（帳票タイプの工作流で決まる） */
 const approvalStageCountOf = (layoutId) => {
   const declared = (typeof catStagesOf === 'function') ? catStagesOf(layoutId) : null;
   const assigned = (typeof stageCountOf === 'function') ? stageCountOf(layoutId) : 0;
@@ -1190,7 +1190,7 @@ const permActLabelOf = (key) => {
 /* 既定の工程：アップロード → 読取 → 確認 → 承認（0〜N 段・任意） → 出力 */
 const WF_STEPS = ['アップロード', '読取', '確認', '承認', '出力'];
 const WF_FIXED = ['アップロード', '読取', '確認', '出力'];       /* 常に存在する工程 */
-/* グループが担当する権限（7 項目）。工作流の定義（工程の並び・承認段数）は帳票カテゴリ側。 */
+/* グループが担当する権限（7 項目）。工作流の定義（工程の並び・承認段数）は帳票タイプ側。 */
 const GROUP_NODES = ['閲覧', 'アップロード', '確認', '承認', '出力'].map((l) => ({ key: l, label: l }));
 const GROUP_NODE_LABELS = GROUP_NODES.map((n) => n.label);
 /* 旧ラベル（閲覧／再承認／アップロード／CSV出力 等）を新しい工程名へ寄せる */
@@ -1538,7 +1538,7 @@ const state = {
   saveHistoryOpen: false,         // 保存履历ダイアログ
   flowDialog: null,               // { fileId, action } 承認・確認・差戻のダイアログ
   myTaskTab: 'pending',           // マイタスク：pending(未対応) | done(対応済)
-  myTaskFilters: { name: '', biz: '', cat: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' },
+  myTaskFilters: { name: '', biz: '', cat: '', kind: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' },
   /* デモ用：現在ユーザ（帳票タイプの確認／承認ユーザーと照合） */
   currentUser: 'u1',              // デモ既定：確認窓口（閲覧範囲が広い）
   userMenuOpen: false,            // 右上ユーザーメニューの開閉
@@ -1556,7 +1556,7 @@ const state = {
   treeOpen: true,                 // ファイルツリーパネル自体の開閉
   treeView: 'biz-cat',            // 表示次元：biz-cat | cat
   treeFolders: [],                // 互換用（構造は BUSINESS/CATEGORY を正とする）
-  fileFolder: {},                 // ファイルID → 所属帳票カテゴリID（未分類は null）
+  fileFolder: {},                 // ファイルID → 所属帳票タイプID（未分類は null）
   fileOrder: {},                  // ファイルID → 同カテゴリ内の並び順
   treeSeeded: false,              // ファイル所属の初期シード済みか
   rename: {},                     // 表示名のみの手動リネーム（ファイル名のみ変更可）
@@ -1808,9 +1808,9 @@ const inTenant = (f) => tenantOfFile(f);
 /* ====================== 4. ツリー（自動生成）とノード判定 ====================== */
 
 /** 表示次元に応じてツリーを組み立てる
- *  - biz-cat: 業務シーン → 帳票カテゴリ → ファイル
- *  - cat:     帳票カテゴリ → ファイル
- * 業務シーン名・帳票カテゴリ名はマスタ固定（ツリーでは改名不可）。ファイル名のみ改名可。
+ *  - biz-cat: 業務シーン → 帳票タイプ → ファイル
+ *  - cat:     帳票タイプ → ファイル
+ * 業務シーン名・帳票タイプ名はマスタ固定（ツリーでは改名不可）。ファイル名のみ改名可。
  * 同階層はドラッグで並び替え可能。
  */
 const TREE_MAX_DEPTH = 3;
@@ -1837,7 +1837,7 @@ const folderName = (id) => {
   return state.rename['folder:' + id] || (folderById(id) || {}).name || id;
 };
 
-/** ファイルが属する帳票カテゴリ ID */
+/** ファイルが属する帳票タイプ ID */
 function fileCatId(file) {
   ensureTreeSeeded();
   const fid = state.fileFolder[file.id];
@@ -1901,12 +1901,12 @@ function inNode(file, node) {
 
 /** 互換：自由フォルダ追加はデモでは無効（マスタ階層のみ） */
 function addTreeFolder() {
-  toast('業務シーン・帳票カテゴリはマスタで管理します');
+  toast('業務シーン・帳票タイプはマスタで管理します');
   return null;
 }
 
 function deleteTreeFolder() {
-  toast('業務シーン・帳票カテゴリはツリーから削除できません');
+  toast('業務シーン・帳票タイプはツリーから削除できません');
 }
 
 function moveTreeFolder() {
@@ -1914,7 +1914,7 @@ function moveTreeFolder() {
   return false;
 }
 
-/** ファイルを帳票カテゴリへ移動（null=未分類） */
+/** ファイルを帳票タイプへ移動（null=未分類） */
 function moveFileToFolder(fileId, folderId) {
   ensureTreeSeeded();
   if (folderId && !byId(CATEGORY, folderId)) {
@@ -2118,7 +2118,7 @@ function renderTree() {
         || ((state.activeNode.type === 'biz' || state.activeNode.type === 'cat') && n.type === 'folder' && state.activeNode.id === n.id);
       const ni = treeIcon(n.type === 'file' ? 'document' : 'folder', opened);
       const fullName = nodeLabel(n);
-      /* 名称変更はファイルのみ（業務シーン・帳票カテゴリはマスタ固定） */
+      /* 名称変更はファイルのみ（業務シーン・帳票タイプはマスタ固定） */
       const ops = n.type === 'file'
         ? [`<button class="redo" title="ファイル名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
         : [];
@@ -2212,7 +2212,7 @@ function fselect(id, placeholder, opts, current) {
  * 承認フローの状態遷移
  * 確認: 読取完了 → 確認済み（承認待ち）
  * 承認: 確認済み → 承認1 → 承認2 → 承認済み（stages=1 なら承認1で承認済み）
- *      承認機能を使わない帳票カテゴリは 確認済み → そのまま出力可
+ *      承認機能を使わない帳票タイプは 確認済み → そのまま出力可
  * 差戻: 常に「確認」へ戻す（2段承認中でも承認1へは戻さない）。理由コメント必須。
  *       差戻後は再確認→再承認（OA の「再順次承認」）。
  * 出力: 承認済み（または承認不要なら確認済み）→ 出力済み
@@ -2368,6 +2368,14 @@ function myTaskRows(bucket) {
     }
   });
   return rows;
+}
+
+
+/* マイタスク：タスク種別での絞り込み（serve.py 注入） */
+function passesMyTaskKind(r) {
+  const F = state.myTaskFilters || {};
+  if (F.kind && r.kind !== F.kind) return false;
+  return true;
 }
 
 function passesMyTaskFilters(f) {
@@ -2755,7 +2763,7 @@ function runFlowAction(fileId, action, comment) {
     f.history = `確認担当者: ${who}`;
     toast(need ? '確認しました（承認待ち）' : '確認しました（承認不要のため出力できます）');
   } else if (action === 'approve') {
-    if (!need) { toast('この帳票カテゴリは承認機能を使用しません'); return; }
+    if (!need) { toast('この帳票タイプは承認機能を使用しません'); return; }
     const next = done + 1;
     f.flow.push({ stage: next, action: stages === 1 ? '承認' : `承認${next}`, user: who, at: stamp, comment: comment || '' });
     if (next >= stages) {
@@ -2857,7 +2865,7 @@ function renderTable() {
   const node = state.activeNode;
   const ctxName = node.type === 'all' ? 'すべての帳票'
     : node.type === 'file' ? nodeLabel(node)
-      : nodeLabel(node) + (node.type === 'cat' ? '（帳票カテゴリ）' : '（業務）');
+      : nodeLabel(node) + (node.type === 'cat' ? '（帳票タイプ）' : '（業務）');
   const all = visibleFiles();
   const total = all.length;
   const pages = Math.max(1, Math.ceil(total / state.perPage));
@@ -3926,7 +3934,7 @@ function renderAccessUrlTab() {
 /** ユーザー追加／編集ダイアログ（製品の「ユーザー追加」に合わせる） */
 
 /* ══ 2 段承認のモックデータ（serve.py 注入） ══
-   帳票カテゴリを 2 段承認にし、1 段目だけ承認済みのファイルを数件用意する。 */
+   帳票タイプを 2 段承認にし、1 段目だけ承認済みのファイルを数件用意する。 */
 (function seedTwoStageApproval() {
   var two = { c1: 2, c4: 2, c5: 2 };   /* 住民異動届 / 利用申込 / 保育必要事由 */
   Object.keys(two).forEach(function (catId) {
@@ -4024,7 +4032,7 @@ var GROUP_OPS = {
     });
   }
   /* グループから操作権限を導出（複数所属は和集合） */
-  /* ── 帳票カテゴリ単位の工作流（工程の並びと承認段数） ── */
+  /* ── 帳票タイプ単位の工作流（工程の並びと承認段数） ── */
   var WF_SEQ = ['アップロード', '読取', '確認', '承認', '出力'];
   var resolveLayoutId = function (idOrType) {
     if (!idOrType) return null;
@@ -4055,7 +4063,7 @@ var GROUP_OPS = {
     APPROVAL_CONFIG[cat.id].stages = Math.max(0, Math.min(6, Number(n) || 0));
     APPROVAL_CONFIG[cat.id].need = Number(n) > 0;
   };
-  /* 帳票タイプ設定に出す「帳票カテゴリの工作流」ブロック */
+  /* 帳票タイプ設定に出す「帳票タイプの工作流」ブロック */
   window.catFlowBlockFor = function (t) {
     var lid = resolveLayoutId(t && t.id) || (t && t.id);
     var lay = (LAYOUT || []).filter(function (l) { return l.id === lid; })[0];
@@ -4071,9 +4079,9 @@ var GROUP_OPS = {
     }).join('<span class="wf-arrow">→</span>');
     var input = '<input type="number" class="fld wf-stage-input" data-cat-stage-input="1" min="0" max="9" step="1"'
       + ' value="' + stages + '" aria-label="承認段数" />';
-    return '<div class="wiz-field is-col"><span class="wl">帳票カテゴリの工作流</span>'
+    return '<div class="wiz-field is-col"><span class="wl">帳票タイプの工作流</span>'
       + '<div class="catflow-box">'
-      + '<div class="catflow-cat">帳票カテゴリ：<b>' + (typeof dispCat === 'function' ? dispCat(cat.id) : cat.name) + '</b></div>'
+      + '<div class="catflow-cat">帳票タイプ：<b>' + (typeof dispCat === 'function' ? dispCat(cat.id) : cat.name) + '</b></div>'
       + '<div class="wf-flow">' + nodes + '</div>'
       + '<div class="wf-stages"><span class="wf-stages-l">承認段数</span>' + input
       + '<span class="wf-stages-unit">段（0＝承認なし）</span></div>'
@@ -4515,7 +4523,7 @@ function groupFormDialog() {
           ${GROUP_NODES.map((n) => { const on = groupRolesOf(f).indexOf(n.label) >= 0; return `<button type="button" class="asg-mode-pill groupNodePills${on ? ' on' : ''}" data-grp-kind="${esc(n.label)}" role="checkbox" aria-checked="${on}">${esc(n.label)}</button>`; }).join('')}
         </div>
       </div>
-      <!-- <p class="grp-note">このグループが担当する権限を選びます。工作流の定義（工程の並び・承認段数）は 帳票カテゴリ で設定します。選んだノードは所属ユーザー全員に適用されます（OCR結果修正は確認に含まれます）。</p> -->
+      <!-- <p class="grp-note">このグループが担当する権限を選びます。工作流の定義（工程の並び・承認段数）は 帳票タイプ で設定します。選んだノードは所属ユーザー全員に適用されます（OCR結果修正は確認に含まれます）。</p> -->
       <label class="perm-row"><span class="lbl">概要</span><textarea class="fld" id="grpFormDesc" placeholder="概要を入力してください">${esc(f.desc || '')}</textarea></label>
       <div class="perm-row is-col"><span class="lbl">所属ユーザー（${members} 名）</span>
         <div class="grp-users">
@@ -4525,7 +4533,7 @@ function groupFormDialog() {
       </div>
     </div>`;
 
-  /* 帳票権限タブ：帳票カテゴリ単位で「担当する」を選ぶ（権限は基本情報のワークフロー設定で決まる） */
+  /* 帳票権限タブ：帳票タイプ単位で「担当する」を選ぶ（権限は基本情報のワークフロー設定で決まる） */
   const myOps = groupOpKeysOf(f);
   const ticketRows = CATEGORY.map((c, i) => {
     const on = groupHasCategory(f, c.id);
@@ -4554,7 +4562,7 @@ function groupFormDialog() {
     <div class="perm-body is-flush">
       <div class="tablewrap grp-tk-wrap">
         <table class="grp-tk-table grp-cat-table">
-          <thead><tr><th style="width:56px">番号</th><th>帳票カテゴリ</th><th style="width:130px">担当</th><th style="width:240px">承認の段</th><th>付与される権限</th></tr></thead>
+          <thead><tr><th style="width:56px">番号</th><th>帳票タイプ</th><th style="width:130px">担当</th><th style="width:240px">承認の段</th><th>付与される権限</th></tr></thead>
           <tbody>${ticketRows}</tbody>
         </table>
       </div>
@@ -5808,12 +5816,12 @@ function renderMyTasks() {
   const F = state.myTaskFilters || {};
   const pendingN = myTaskRows('pending').length;
   const doneN = myTaskRows('done').length;
-  const rows = myTaskRows(tab).filter((r) => passesMyTaskFilters(r.file));
+  const rows = myTaskRows(tab).filter((r) => passesMyTaskFilters(r.file) && passesMyTaskKind(r));
   const stCls = (s) => (s === 'done' || s === 'confirmed' || s === 'approved' || s === 'exported' ? 'ok' : s === 'failed' || s === 'returned' ? 'ng' : 'wait');
   const bizOpts = BUSINESS.map((b) => `<option value="${b.id}" ${F.biz === b.id ? 'selected' : ''}>${esc(b.name)}</option>`).join('');
   const catOpts = CATEGORY.map((c) => `<option value="${c.id}" ${F.cat === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
   const body = rows.length === 0
-    ? `<tr><td colspan="9" class="empty-cell">${tab === 'pending' ? '未対応のタスクはありません' : '対応済のタスクはありません'}</td></tr>`
+    ? `<tr><td colspan="8" class="empty-cell">${tab === 'pending' ? '未対応のタスクはありません' : '対応済のタスクはありません'}</td></tr>`
     : rows.map((r) => {
       const f = r.file;
       const cfg = approvalOf(f.layout);
@@ -5828,7 +5836,7 @@ function renderMyTasks() {
       const assignee = userName(assigneeUid) || assigneeUserNames(kindMeta.targets);
       return `<tr data-task="${f.id}" data-task-kind="${r.kind}">
         <td class="name"><button class="fn link" data-task-open="${f.id}">${esc(dispFileName(f.id))}</button></td>
-        <td><span class="task-kind ${kindMeta.cls}">${esc(kindMeta.label)}</span></td><td class="nowrap">${r.kind === 'confirm' ? '—' : esc('承認' + (flowOf(f).done + 1))}</td>
+        <td><span class="task-kind ${kindMeta.cls}">${esc(kindMeta.label)}</span></td>
         <td>${esc(dispLayout(f.layout))}</td>
         <td><span class="st ${stCls(f.status)}">${esc(STATUS[f.status].label)}</span></td>
         <td class="nowrap muted">${esc(f.createdAt || '—')}</td>
@@ -5845,9 +5853,9 @@ function renderMyTasks() {
     </div>
     <div class="result-content">
       <div class="mytask-filters">
-        <label class="field"><span class="lbl">ファイル名</span><input class="fld" id="mtName" placeholder="ファイル名" value="${esc(F.name || '')}" /></label>
+        <label class="field"><span class="lbl">ファイル名</span><input class="fld" id="mtName" placeholder="ファイル名" value="${esc(F.name || '')}" /></label><label class="field"><span class="lbl">タスク種別</span><select class="fld" id="mtKind"><option value="">すべて</option><option value="confirm" ${F.kind === 'confirm' ? 'selected' : ''}>要確認</option><option value="approve" ${F.kind === 'approve' ? 'selected' : ''}>要承認</option><option value="reapprove" ${F.kind === 'reapprove' ? 'selected' : ''}>要再承認</option></select></label>
         <label class="field"><span class="lbl">業務カテゴリ</span><select class="fld" id="mtBiz"><option value="">すべて</option>${bizOpts}</select></label>
-        <label class="field"><span class="lbl">帳票カテゴリ</span><select class="fld" id="mtCat"><option value="">すべて</option>${catOpts}</select></label>
+        <label class="field"><span class="lbl">帳票タイプ</span><select class="fld" id="mtCat"><option value="">すべて</option>${catOpts}</select></label>
         <label class="field"><span class="lbl">更新日時</span><span class="range"><input class="fld" type="date" id="mtUpdatedFrom" value="${esc(F.updatedFrom || '')}" /><span>〜</span><input class="fld" type="date" id="mtUpdatedTo" value="${esc(F.updatedTo || '')}" /></span></label>
         <label class="field"><span class="lbl">作成日時</span><span class="range"><input class="fld" type="date" id="mtCreatedFrom" value="${esc(F.createdFrom || '')}" /><span>〜</span><input class="fld" type="date" id="mtCreatedTo" value="${esc(F.createdTo || '')}" /></span></label>
         <label class="field"><span class="lbl">担当者</span><input class="fld" id="mtAssignee" placeholder="ユーザ名で検索" value="${esc(F.assignee || '')}" /></label>
@@ -5860,7 +5868,7 @@ function renderMyTasks() {
       <div class="tablewrap">
         <table class="mytask-table">
           <thead><tr>
-            <th>ファイル名</th><th>タスク種別</th><th style="width:96px">承認段</th><th>帳票タイプ</th><th>ステータス</th><th>作成日時</th><th>更新日時</th><th>担当</th><th style="text-align:right">操作</th>
+            <th>ファイル名</th><th>タスク種別</th><th>帳票タイプ</th><th>ステータス</th><th>作成日時</th><th>更新日時</th><th>担当</th><th style="text-align:right">操作</th>
           </tr></thead>
           <tbody>${body}</tbody>
         </table>
@@ -5896,7 +5904,7 @@ function renderCfgNav() {
  * 新規アップロードは頂栏独立メニューのためサイドバーなし。
  */
 function renderSidebarPane() {
-  const treeTip = '表示次元を切替えできます。業務シーン・帳票カテゴリ名は変更不可（ファイル名のみ変更可）。同階層はドラッグで並び替えできます';
+  const treeTip = '表示次元を切替えできます。業務シーン・帳票タイプ名は変更不可（ファイル名のみ変更可）。同階層はドラッグで並び替えできます';
   return `
   <aside class="panel side with-tree">
   <div class="sidenav-panel">
@@ -6236,7 +6244,7 @@ function bindTree(treeEl) {
     const type = node.dataset.type, id = node.dataset.id, key = type + ':' + id;
     if (e.target.closest('[data-rename]')) {
       e.stopPropagation();
-      if (type !== 'file') { toast('業務シーン・帳票カテゴリ名は変更できません'); return; }
+      if (type !== 'file') { toast('業務シーン・帳票タイプ名は変更できません'); return; }
       startRename(node, type, id);
       return;
     }
@@ -7511,14 +7519,14 @@ function bindMyTasks() {
       updatedTo: ($('#mtUpdatedTo') || {}).value || '',
       createdFrom: ($('#mtCreatedFrom') || {}).value || '',
       createdTo: ($('#mtCreatedTo') || {}).value || '',
-      assignee: ($('#mtAssignee') || {}).value || '',
+      assignee: ($('#mtAssignee') || {}).value || '', kind: ($('#mtKind') || {}).value || '',
     };
   };
   const mtSearch = $('#mtSearch');
   if (mtSearch) mtSearch.onclick = () => { readMtFilters(); render(); };
   const mtReset = $('#mtReset');
   if (mtReset) mtReset.onclick = () => {
-    state.myTaskFilters = { name: '', biz: '', cat: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' };
+    state.myTaskFilters = { name: '', biz: '', cat: '', kind: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' };
     render();
   };
   ['mtName', 'mtAssignee'].forEach((id) => {
@@ -7739,9 +7747,9 @@ function bindUploadPanel() {
 }
 
 function startRename(nodeEl, type, id) {
-  /* ツリーではファイル名のみ変更可（業務シーン・帳票カテゴリはマスタ固定） */
+  /* ツリーではファイル名のみ変更可（業務シーン・帳票タイプはマスタ固定） */
   if (type !== 'file') {
-    toast('業務シーン・帳票カテゴリ名は変更できません');
+    toast('業務シーン・帳票タイプ名は変更できません');
     return;
   }
   const key = 'file:' + id;

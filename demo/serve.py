@@ -213,7 +213,7 @@ var GROUP_OPS = {
     });
   }
   /* グループから操作権限を導出（複数所属は和集合） */
-  /* ── 帳票カテゴリ単位の工作流（工程の並びと承認段数） ── */
+  /* ── 帳票タイプ単位の工作流（工程の並びと承認段数） ── */
   var WF_SEQ = ['アップロード', '読取', '確認', '承認', '出力'];
   var resolveLayoutId = function (idOrType) {
     if (!idOrType) return null;
@@ -244,7 +244,7 @@ var GROUP_OPS = {
     APPROVAL_CONFIG[cat.id].stages = Math.max(0, Math.min(6, Number(n) || 0));
     APPROVAL_CONFIG[cat.id].need = Number(n) > 0;
   };
-  /* 帳票タイプ設定に出す「帳票カテゴリの工作流」ブロック */
+  /* 帳票タイプ設定に出す「帳票タイプの工作流」ブロック */
   window.catFlowBlockFor = function (t) {
     var lid = resolveLayoutId(t && t.id) || (t && t.id);
     var lay = (LAYOUT || []).filter(function (l) { return l.id === lid; })[0];
@@ -260,9 +260,9 @@ var GROUP_OPS = {
     }).join('<span class="wf-arrow">→</span>');
     var input = '<input type="number" class="fld wf-stage-input" data-cat-stage-input="1" min="0" max="9" step="1"'
       + ' value="' + stages + '" aria-label="承認段数" />';
-    return '<div class="wiz-field is-col"><span class="wl">帳票カテゴリの工作流</span>'
+    return '<div class="wiz-field is-col"><span class="wl">帳票タイプの工作流</span>'
       + '<div class="catflow-box">'
-      + '<div class="catflow-cat">帳票カテゴリ：<b>' + (typeof dispCat === 'function' ? dispCat(cat.id) : cat.name) + '</b></div>'
+      + '<div class="catflow-cat">帳票タイプ：<b>' + (typeof dispCat === 'function' ? dispCat(cat.id) : cat.name) + '</b></div>'
       + '<div class="wf-flow">' + nodes + '</div>'
       + '<div class="wf-stages"><span class="wf-stages-l">承認段数</span>' + input
       + '<span class="wf-stages-unit">段（0＝承認なし）</span></div>'
@@ -587,7 +587,7 @@ GRP_TK_CSS = """
 }
 .roles-table td { vertical-align: middle; }
 
-/* 帳票カテゴリの工作流（帳票タイプ設定） */
+/* 帳票タイプの工作流（帳票タイプ設定） */
 .catflow-box { border: 1px solid var(--line-d); border-radius: 4px; background: #fbfdff; padding: 12px 14px; }
 .catflow-cat { font-size: 12.5px; color: var(--text-2); margin-bottom: 10px; }
 .catflow-cat b { color: var(--text); }
@@ -759,7 +759,7 @@ function applyGroupCategory(g, catId, on) {
 
 """
 
-GROUP_CAT_TAB = r"""/* 帳票権限タブ：帳票カテゴリ単位で「担当する」を選ぶ（権限は基本情報のワークフロー設定で決まる） */
+GROUP_CAT_TAB = r"""/* 帳票権限タブ：帳票タイプ単位で「担当する」を選ぶ（権限は基本情報のワークフロー設定で決まる） */
   const myOps = groupOpKeysOf(f);
   const ticketRows = CATEGORY.map((c, i) => {
     const on = groupHasCategory(f, c.id);
@@ -778,7 +778,7 @@ GROUP_CAT_TAB = r"""/* 帳票権限タブ：帳票カテゴリ単位で「担当
     <div class="perm-body is-flush">
       <div class="tablewrap grp-tk-wrap">
         <table class="grp-tk-table grp-cat-table">
-          <thead><tr><th style="width:56px">番号</th><th>帳票カテゴリ</th><th style="width:130px">担当</th><th>付与される権限</th></tr></thead>
+          <thead><tr><th style="width:56px">番号</th><th>帳票タイプ</th><th style="width:130px">担当</th><th>付与される権限</th></tr></thead>
           <tbody>${ticketRows}</tbody>
         </table>
       </div>
@@ -802,7 +802,7 @@ def apply_group_role_cell(src):
 
 
 def apply_group_category_scope(src):
-    """グループ編集の「帳票権限」タブを 帳票カテゴリ 単位の選択に置き換える。"""
+    """グループ編集の「帳票権限」タブを 帳票タイプ 単位の選択に置き換える。"""
     if 'data-grp-cat=' in src:
         return src
     anchor = "const GROUP_KINDS = ["
@@ -851,7 +851,7 @@ STAGE_CHIPS_ROWS = r"""const ticketRows = CATEGORY.map((c, i) => {
     </tr>`;
   }).join('');"""
 
-STAGE_HEADER = r"""<thead><tr><th style="width:56px">番号</th><th>帳票カテゴリ</th><th style="width:130px">担当</th><th style="width:240px">承認の段</th><th>付与される権限</th></tr></thead>"""
+STAGE_HEADER = r"""<thead><tr><th style="width:56px">番号</th><th>帳票タイプ</th><th style="width:130px">担当</th><th style="width:240px">承認の段</th><th>付与される権限</th></tr></thead>"""
 
 STAGE_HANDLER = r"""    /* 承認の段：カテゴリ内の全帳票タイプのその段だけに、グループを入れ／外しする */
     document.querySelectorAll('[data-grp-stage]').forEach((b) => {
@@ -935,7 +935,7 @@ def _patch_stage_selection(src):
     if m2:
         out = out[:m2.start()] + STAGE_CHIPS_ROWS + out[m2.end():]; report.append('D ticketRows')
     # D2) ヘッダに「承認の段」列
-    h_old = '<thead><tr><th style="width:56px">番号</th><th>帳票カテゴリ</th><th style="width:130px">担当</th><th>付与される権限</th></tr></thead>'
+    h_old = '<thead><tr><th style="width:56px">番号</th><th>帳票タイプ</th><th style="width:130px">担当</th><th>付与される権限</th></tr></thead>'
     if h_old in out:
         out = out.replace(h_old, STAGE_HEADER, 1); report.append('D2 ヘッダ')
     # E) 段チップのハンドラ
@@ -951,7 +951,7 @@ def _patch_stage_selection(src):
 
 TWO_STAGE_MOCK = """
 /* ══ 2 段承認のモックデータ（serve.py 注入） ══
-   帳票カテゴリを 2 段承認にし、1 段目だけ承認済みのファイルを数件用意する。 */
+   帳票タイプを 2 段承認にし、1 段目だけ承認済みのファイルを数件用意する。 */
 (function seedTwoStageApproval() {
   var two = { c1: 2, c4: 2, c5: 2 };   /* 住民異動届 / 利用申込 / 保育必要事由 */
   Object.keys(two).forEach(function (catId) {
@@ -993,21 +993,50 @@ TWO_STAGE_MOCK = """
 """
 
 
-def apply_mytask_stage_column(src):
-    """マイタスクに「承認段」列を足す（要確認＝—、要承認＝承認1/承認2…）。"""
-    if '承認段</th>' in src:
+MYTASK_KIND_STAGE_FILTERS = '''
+/* マイタスク：タスク種別での絞り込み（serve.py 注入） */
+function passesMyTaskKind(r) {
+  const F = state.myTaskFilters || {};
+  if (F.kind && r.kind !== F.kind) return false;
+  return true;
+}
+
+'''
+
+
+def apply_mytask_filters(src):
+    """マイタスクの絞り込みに「タスク種別」「承認段」を追加する。"""
+    if 'mtKind' in src:
         return src
-    head_old = "<th>ファイル名</th><th>タスク種別</th><th>帳票タイプ</th>"
-    head_new = "<th>ファイル名</th><th>タスク種別</th><th style=\"width:96px\">承認段</th><th>帳票タイプ</th>"
-    if head_old in src:
-        src = src.replace(head_old, head_new, 1)
-    cell_old = ('<td><span class="task-kind ${kindMeta.cls}">${esc(kindMeta.label)}</span></td>')
-    cell_new = (cell_old
-                + '<td class="nowrap">${r.kind === \'confirm\' ? \'—\' : esc(\'承認\' + (flowOf(f).done + 1))}</td>')
-    if cell_old in src:
-        src = src.replace(cell_old, cell_new, 1)
-    src = src.replace('<td colspan="8" class="empty-cell">${tab === \'pending\' ? \'未対応のタスクはありません\'',
-                      '<td colspan="9" class="empty-cell">${tab === \'pending\' ? \'未対応のタスクはありません\'', 1)
+    # ① 絞り込み UI（ファイル名の直後）
+    name_field = ('<label class="field"><span class="lbl">ファイル名</span>'
+                  '<input class="fld" id="mtName" placeholder="ファイル名" value="${esc(F.name || \'\')}" /></label>')
+    if name_field in src:
+        add = (name_field
+               + '<label class="field"><span class="lbl">タスク種別</span><select class="fld" id="mtKind">'
+                 '<option value="">すべて</option>'
+                 '<option value="confirm" ${F.kind === \'confirm\' ? \'selected\' : \'\'}>要確認</option>'
+                 '<option value="approve" ${F.kind === \'approve\' ? \'selected\' : \'\'}>要承認</option>'
+                 '<option value="reapprove" ${F.kind === \'reapprove\' ? \'selected\' : \'\'}>要再承認</option>'
+                 '</select></label>'
+               )
+        src = src.replace(name_field, add, 1)
+    # ② 読み取り
+    src = src.replace("assignee: ($('#mtAssignee') || {}).value || '',",
+                      "assignee: ($('#mtAssignee') || {}).value || '', kind: ($('#mtKind') || {}).value || '',", 1)
+    # ③ リセット
+    src = src.replace("state.myTaskFilters = { name: '', biz: '', cat: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' };",
+                      "state.myTaskFilters = { name: '', biz: '', cat: '', kind: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' };", 1)
+    # ④ state 初期値
+    src = src.replace("myTaskFilters: { name: '', biz: '', cat: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' },",
+                      "myTaskFilters: { name: '', biz: '', cat: '', kind: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' },", 1)
+    # ⑤ 適用
+    src = src.replace("const rows = myTaskRows(tab).filter((r) => passesMyTaskFilters(r.file));",
+                      "const rows = myTaskRows(tab).filter((r) => passesMyTaskFilters(r.file) && passesMyTaskKind(r));", 1)
+    # ⑥ 判定関数
+    anchor = "function passesMyTaskFilters(f) {"
+    if anchor in src:
+        src = src.replace(anchor, MYTASK_KIND_STAGE_FILTERS + anchor, 1)
     return src
 
 
@@ -1046,7 +1075,7 @@ def apply_notes_to_comments(src):
 
 
 def apply_category_flow(src):
-    """帳票タイプ設定に「帳票カテゴリの工作流」（工程＋承認段数）を出す。"""
+    """帳票タイプ設定に「帳票タイプの工作流」（工程＋承認段数）を出す。"""
     if 'catFlowBlockFor(t)' in src:
         return src
     # ① ブロックを step1 の配列に足す
@@ -1066,7 +1095,7 @@ def apply_category_flow(src):
         "  const stages = need ? stageLists.filter((x) => (x || []).length).length : 0;",
         "  const stageLists = stagesOf(layoutId);\n"
         "  const assigned = stageLists.filter((x) => (x || []).length).length;\n"
-        "  /* 帳票カテゴリの工作流で決めた承認段数（未設定なら担当から推定） */\n"
+        "  /* 帳票タイプの工作流で決めた承認段数（未設定なら担当から推定） */\n"
         "  const declared = (typeof catStagesOf === 'function') ? catStagesOf(layoutId) : null;\n"
         "  const stages = (declared === null) ? assigned : Math.min(declared, assigned || declared);\n"
         "  const need = base.need !== false && stages > 0;",
@@ -1074,10 +1103,10 @@ def apply_category_flow(src):
     return src
 
 
-STAGE_MATRIX_HELPERS = r"""/* ══ 帳票カテゴリの承認段数 N に合わせて、帳票権限表の「承認」列を 承認1..N に展開する ══ */
+STAGE_MATRIX_HELPERS = r"""/* ══ 帳票タイプの承認段数 N に合わせて、帳票権限表の「承認」列を 承認1..N に展開する ══ */
 const APPROVAL_COL_RE = /^approve(\d+)$/;
 const stageIdxOfKey = (key) => { const m = APPROVAL_COL_RE.exec(String(key || '')); return m ? Number(m[1]) - 1 : -1; };
-/** その帳票タイプの承認段数（帳票カテゴリの工作流で決まる） */
+/** その帳票タイプの承認段数（帳票タイプの工作流で決まる） */
 const approvalStageCountOf = (layoutId) => {
   const declared = (typeof catStagesOf === 'function') ? catStagesOf(layoutId) : null;
   const assigned = (typeof stageCountOf === 'function') ? stageCountOf(layoutId) : 0;
@@ -1193,7 +1222,7 @@ const historyRowsOf = (f) => {
 
 
 def apply_stage_count_authoritative(src):
-    """承認段数は「帳票カテゴリで配った N」を正とする（担当未設定の段があっても N 段で回す）。"""
+    """承認段数は「帳票タイプで配った N」を正とする（担当未設定の段があっても N 段で回す）。"""
     old = ("  const declared = (typeof catStagesOf === 'function') ? catStagesOf(layoutId) : null;\n"
            "  const stages = (declared === null) ? assigned : Math.min(declared, assigned || declared);\n"
            "  const need = base.need !== false && stages > 0;")
@@ -1422,7 +1451,7 @@ def apply_group_nodes(src):
 /* 既定の工程：アップロード → 読取 → 確認 → 承認（0〜N 段・任意） → 出力 */
 const WF_STEPS = ['アップロード', '読取', '確認', '承認', '出力'];
 const WF_FIXED = ['アップロード', '読取', '確認', '出力'];       /* 常に存在する工程 */
-/* グループが担当する権限（7 項目）。工作流の定義（工程の並び・承認段数）は帳票カテゴリ側。 */
+/* グループが担当する権限（7 項目）。工作流の定義（工程の並び・承認段数）は帳票タイプ側。 */
 const GROUP_NODES = ['閲覧', 'アップロード', '確認', '承認', '出力'].map((l) => ({ key: l, label: l }));
 const GROUP_NODE_LABELS = GROUP_NODES.map((n) => n.label);
 /* 旧ラベル（閲覧／再承認／アップロード／CSV出力 等）を新しい工程名へ寄せる */
@@ -1480,7 +1509,7 @@ const toggleGroupRole = (g, label) => {
     # 説明文を「ワークフロー設定」の言い回しに揃える
     src = src.replace(
         '役割は所属ユーザー全員の操作権限になります。OCR結果修正は確認に含まれます。ユーザー個別では設定しません。',
-        'このグループが担当する権限を選びます。工作流の定義（工程の並び・承認段数）は 帳票カテゴリ で設定します。'
+        'このグループが担当する権限を選びます。工作流の定義（工程の並び・承認段数）は 帳票タイプ で設定します。'
         '選んだノードは所属ユーザー全員に適用されます（OCR結果修正は確認に含まれます）。',
     )
     src = src.replace('<p class="grp-note">ここで選んだユーザーがこのグループの担当者プールに入ります。',
@@ -1738,7 +1767,7 @@ def patched_app_js(path):
     patched = apply_group_role_cell(patched)
     patched = apply_group_category_scope(patched)
     patched = apply_notes_to_comments(patched)
-    patched = apply_mytask_stage_column(patched)
+    patched = apply_mytask_filters(patched)
     patched = apply_two_stage_mock(patched)
     patched = apply_file_click_preview(patched)
     patched, _stage_report = _patch_stage_selection(patched)
