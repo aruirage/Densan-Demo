@@ -3925,6 +3925,48 @@ function renderAccessUrlTab() {
 
 /** ユーザー追加／編集ダイアログ（製品の「ユーザー追加」に合わせる） */
 
+/* ══ 2 段承認のモックデータ（serve.py 注入） ══
+   帳票カテゴリを 2 段承認にし、1 段目だけ承認済みのファイルを数件用意する。 */
+(function seedTwoStageApproval() {
+  var two = { c1: 2, c4: 2, c5: 2 };   /* 住民異動届 / 利用申込 / 保育必要事由 */
+  Object.keys(two).forEach(function (catId) {
+    if (!APPROVAL_CONFIG[catId]) APPROVAL_CONFIG[catId] = { need: true };
+    APPROVAL_CONFIG[catId].stages = 2;
+    APPROVAL_CONFIG[catId].need = true;
+    LAYOUT.forEach(function (l) {
+      var c = catOf(l.id) || {};
+      if (c.id !== catId) return;
+      var p = TICKET_PERMS[l.id];
+      if (!p) { p = TICKET_PERMS[l.id] = { view: [], confirm: [], approve: [], reapprove: [], stages: [] }; }
+      var first = (p.approve && p.approve.length) ? p.approve.slice() : ['gc'];
+      var second = (p.reapprove && p.reapprove.length) ? p.reapprove.slice() : ['ga'];
+      p.approve = first;
+      p.reapprove = second;
+      p.stages = [first, second];
+    });
+  });
+  /* 2 段目の承認待ち（1 段目は承認済み）を 4 件作る */
+  var picked = 0;
+  FILES_DATA.forEach(function (f) {
+    if (picked >= 4) return;
+    var c = catOf(f.layout) || {};
+    if (!two[c.id]) return;
+    if (f.status === 'approved' || f.status === 'exported') return;
+    f.status = 'confirmed';
+    f.history = '承認1済み（承認2待ち）';
+    f.flow = [
+      { action: '確認', user: '佐藤 一郎', at: '2026-10-14 10:12:00',
+        comment: '必須項目を目視確認し、誤読箇所を修正しました' },
+      { stage: 1, action: '承認1', user: '田中 実', at: '2026-10-14 15:20:00', comment: '' },
+    ];
+    f.confirmedAt = '2026-10-14 10:12:00';
+    f.confirmedBy = 'u1';
+    f.updatedAt = '2026-10-14 15:20:00';
+    picked += 1;
+  });
+})();
+
+
 /* グループ＝権限のバケツ（serve.py 注入）：読取／確認／承認／管理者 */
 var GROUP_OPS = {
   gu: ['view', 'upload'],
