@@ -329,3 +329,6 @@
 /* 固定列の見出し背景を実測値（#eef5fd）に合わせる */
 .result-table thead th:first-child,
 .result-table thead th.col-name{ background:#eef5fd; }
+
+/* ══ 全テーブルの見出し色をファイル一覧（#eef5fd）に統一（客户：home と揃える） ══ */
+thead th{ background:#eef5fd !important; }
