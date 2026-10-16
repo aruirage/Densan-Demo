@@ -1519,6 +1519,19 @@ def apply_user_ops_derive_fix(src):
     return src
 
 
+def apply_encoding_fix(src):
+    """CSV/JSON の文字エンコード設定を実際の出力に反映（BOM あり/なし）＋ 選択肢を要件の 3 択に。"""
+    src = src.replace("select('encoding', ['UTF-8', 'Shift_JIS'])",
+                      "select('encoding', ['UTF-8（BOMあり）', 'UTF-8（BOMなし）', 'Shift_JIS（S-JIS）'])")
+    old = "const blob = new Blob(['\\ufeff' + text], { type: 'text/plain;charset=utf-8' });"
+    new = ("const _enc = (state.exportCfg && state.exportCfg.encoding) || 'UTF-8（BOMあり）';\n"
+           "  const _bom = _enc.indexOf('BOMなし') >= 0 ? '' : '\\ufeff';\n"
+           "  const blob = new Blob([_bom + text], { type: (fmt === 'json' ? 'application/json' : 'text/csv') + ';charset=utf-8' });")
+    if old in src:
+        src = src.replace(old, new, 1)
+    return src
+
+
 def apply_read_op_finalize(src):
     """最終調整：読取は独立した操作権限なので、旧ラベル寄せ（読取→閲覧）を外す。
 
@@ -2236,6 +2249,7 @@ def patched_app_js(path):
     patched = apply_export_format_block(patched)
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
+    patched = apply_encoding_fix(patched)
     patched = apply_read_op_finalize(patched)
     # グループ＝権限バケツ：GROUPS / TICKET_PERMS の定義後（レンダリング前）に当てる
     m_anchor = re.search(r"(function renderUserAddDialog)", patched)

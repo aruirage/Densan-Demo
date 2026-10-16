@@ -3498,7 +3498,9 @@ function downloadResultFile(id, fmt) {
   const text = fmt === 'json'
     ? JSON.stringify({ document_id: id, file_name: dispFileName(id), fields: rows.slice(1).map(([k, v]) => ({ label: k, value: v })) }, null, 2)
     : rows.map((r) => r.join(',')).join('\r\n');
-  const blob = new Blob(['\ufeff' + text], { type: 'text/plain;charset=utf-8' });
+  const _enc = (state.exportCfg && state.exportCfg.encoding) || 'UTF-8（BOMあり）';
+  const _bom = _enc.indexOf('BOMなし') >= 0 ? '' : '\ufeff';
+  const blob = new Blob([_bom + text], { type: (fmt === 'json' ? 'application/json' : 'text/csv') + ';charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   const ext = fmt === 'excel' ? 'csv' : (fmt === 'pdf' ? 'txt' : fmt);
@@ -3769,7 +3771,7 @@ function renderExportDialog() {
             <label class="exp-check"><input type="checkbox" data-expcfg="merge" ${C.merge ? 'checked' : ''} /><span>同一帳票タイプを1ファイルに結合</span></label>
           </div>
           <div class="exp-fields">
-            ${field('文字コード', select('encoding', ['UTF-8', 'Shift_JIS']))}
+            ${field('文字コード', select('encoding', ['UTF-8（BOMあり）', 'UTF-8（BOMなし）', 'Shift_JIS（S-JIS）']))}
             ${field('改行コード', select('newline', ['CRLF', 'LF']))}
             ${field('区切り文字', select('delimiter', ['カンマ', 'タブ']))}
             ${field('空値の表示', select('emptyValue', ['空欄', 'NULL', '-']))}
