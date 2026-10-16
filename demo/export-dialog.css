@@ -332,3 +332,10 @@
 
 /* ══ 全テーブルの見出し色をファイル一覧（#eef5fd）に統一（客户：home と揃える） ══ */
 thead th{ background:#eef5fd !important; }
+
+/* ══ 絞り込み欄の背景をホーム（ページ背景）と統一（客户：白にしない） ══ */
+.filters.result-filters{
+  background:var(--bg, #f3f6fa) !important;
+  border:1px solid var(--line, #e5e9f0);
+  border-radius:8px;
+}
