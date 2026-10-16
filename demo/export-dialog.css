@@ -163,13 +163,86 @@
   color: var(--text-3);
 }
 
-/* ══ エクスポート設定：オプションを縦一列に揃える（客户指摘のレイアウト崩れ） ══ */
-.exp-modal .exp-checks{
-  display:flex !important;
-  flex-direction:column !important;
-  align-items:flex-start !important;
-  gap:8px !important;
+/* ══ エクスポート設定：縦積み・狭い幅・スイッチ ══ */
+.exp-modal .modal-canvas.exp-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 18px 14px;
 }
-.exp-modal .exp-checks .exp-check{ width:auto !important; }
-.exp-modal .exp-field{ align-items:center; }
-.exp-modal .exp-field-label{ white-space:nowrap; }
+.exp-stack-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+.exp-stack-field .exp-field-label {
+  flex: none;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+}
+.exp-stack-field .req {
+  color: var(--red, #e23);
+  font-style: normal;
+  margin-right: 2px;
+}
+.exp-stack-field .exp-control,
+.exp-stack-field .exp-filename {
+  width: 100%;
+}
+.exp-switches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.exp-name-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exp-name-group .exp-stack-field {
+  margin-left: 0;
+}
+.exp-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+.exp-switch .switch-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.exp-filename {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0;
+  background: #fff;
+}
+.exp-filename .exp-name-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 48px 0 10px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.exp-filename .exp-name-input:disabled {
+  color: var(--text-2);
+}
+.exp-filename .exp-file-ext {
+  position: absolute;
+  right: 10px;
+  color: var(--text-3);
+  pointer-events: none;
+}

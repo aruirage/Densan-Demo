@@ -3496,7 +3496,7 @@ function downloadResultFile(id, fmt) {
   const text = fmt === 'json'
     ? JSON.stringify({ document_id: id, file_name: dispFileName(id), fields: rows.slice(1).map(([k, v]) => ({ label: k, value: v })) }, null, 2)
     : rows.map((r) => r.join(',')).join('\r\n');
-  const _enc = (state.exportCfg && state.exportCfg.encoding) || 'UTF-8（BOMあり）';
+  const _enc = (state.exportCfg && state.exportCfg.encoding) || 'UTF-8';
   const _bom = _enc.indexOf('BOMなし') >= 0 ? '' : '\ufeff';
   const blob = new Blob([_bom + text], { type: (fmt === 'json' ? 'application/json' : 'text/csv') + ';charset=utf-8' });
   const a = document.createElement('a');
@@ -3723,41 +3723,41 @@ function exportFileName() {
 function renderExportDialog() {
   if (!state.exportOpen) return '';
   const C = state.exportCfg;
-  const radio = (name, value, label, desc) => `
-    <label class="exp-radio${C[name] === value ? ' on' : ''}">
-      <input type="radio" name="${name}" value="${value}" ${C[name] === value ? 'checked' : ''} data-expcfg="${name}" />
-      <span class="exp-radio-body"><b>${esc(label)}</b><span class="exp-radio-desc">${esc(desc)}</span></span>
+  const fromInput = C.fileNameFromInput !== false;
+  const enc = C.encoding || 'UTF-8';
+  const encodings = ['UTF-8', 'UTF-8（BOMなし）', 'Shift_JIS'];
+  const sw = (key, on, label) => `
+    <label class="switch exp-switch">
+      <span class="switch-text">${esc(label)}</span>
+      <input type="checkbox" data-expcfg="${key}" ${on ? 'checked' : ''} />
+      <span class="switch-track" aria-hidden="true"></span>
     </label>`;
-  const field = (label, control, wide) => `
-    <label class="exp-field${wide ? ' is-wide' : ''}"><span class="exp-field-label">${esc(label)}</span>${control}</label>`;
-  const select = (key, options) => `<select class="fld exp-control" data-expcfg="${key}">${options.map((o) => `<option ${C[key] === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  const nameField = fromInput ? '' : `
+        <label class="exp-stack-field">
+          <span class="exp-field-label"><i class="req">*</i>ファイル名</span>
+          <span class="exp-filename">
+            <input class="fld exp-name-input" id="expFileName" type="text" value="${esc(C.fileName || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" />
+            <span class="exp-file-ext">.csv</span>
+          </span>
+        </label>`;
 
   return `
   <div class="modal-back" id="expBack">
-    <div class="modal exp-modal" style="width:min(820px,100%)">
+    <div class="modal exp-modal" style="width:min(400px,100%)">
       <div class="modal-head"><b>エクスポート設定</b><span class="spacer"></span><button class="icon-btn" id="expClose"><span class="ico i-close"></span></button></div>
       <div class="modal-canvas exp-canvas">
-        
-
-        <section class="exp-block">
-        
-        
-        <div class="exp-fields">
-          <label class="exp-field"><span class="exp-field-label"><i class="req">*</i>変換方式</span>
-            <select class="fld exp-control" data-expcfg="encoding">
-              <option ${C.encoding === 'UTF-8（BOMあり）' ? 'selected' : ''}>UTF-8（BOMあり）</option>
-              <option ${C.encoding === 'UTF-8（BOMなし）' ? 'selected' : ''}>UTF-8（BOMなし）</option>
-              <option ${C.encoding === 'Shift_JIS（S-JIS）' ? 'selected' : ''}>Shift_JIS（S-JIS）</option>
-            </select>
-          </label>
+        <label class="exp-stack-field">
+          <span class="exp-field-label"><i class="req">*</i>変換方式</span>
+          <select class="fld exp-control" data-expcfg="encoding">${encodings.map((o) => `<option ${enc === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
+        </label>
+        <div class="exp-switches">
+          ${sw('combineFiles', !!C.combineFiles, 'まとめて出力')}
+          <div class="exp-name-group">
+            ${sw('fileNameFromInput', fromInput, '入力名と同じ')}
+            ${nameField}
+          </div>
+          ${sw('requiredOnly', !!C.requiredOnly, '必須項目のみ')}
         </div>
-        <div class="exp-checks">
-          <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>結合出力</span></label>
-          <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみ出力</span></label>
-          <label class="exp-check"><input type="checkbox" data-expcfg="fileNameFromInput" ${C.fileNameFromInput !== false ? 'checked' : ''} /><span>出力名＝入力名</span></label>
-          ${C.fileNameFromInput === false ? `<label class="exp-field is-wide exp-filefield"><span class="exp-field-label"><i class="req">*</i>ファイル名</span><span class="exp-filename"><input class="fld exp-name-input" id="expFileName" type="text" value="${esc((C && C.fileName) || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span></label>` : ''}
-        </div>
-      </section>
       </div>
       <div class="modal-foot exp-foot">
         <span class="spacer"></span>
@@ -3802,7 +3802,7 @@ function cfgHeader(title, actions) {
 }
 
 function cfgSearch(id, placeholder, value) {
-  return `<div class="cfg-search"><input class="fld" id="${id}" placeholder="${esc(placeholder)}" value="${esc(value)}" /><span class="mag ico i-view"></span></div>`;
+  return `<div class="cfg-search"><input class="fld" id="${id}" placeholder="${esc(placeholder)}" value="${esc(value)}" /><span class="mag"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg></span></div>`;
 }
 
 /** 互換：旧テーブル一覧は左リスト＋右 Step1 に統合済み */
@@ -4838,7 +4838,7 @@ function renderBizScenes() {
     + '<aside class="type-list">'
     + '<h2 class="type-list-title">業務シーン設定</h2>'
     + '<div class="type-list-tools">'
-    + '<div class="type-search search-wrap"><input id="sceneQ" placeholder="業務シーンを検索" value="' + esc(cfgState.sceneQ || '') + '" /><span class="mag ico i-view"></span></div>'
+    + '<div class="type-search search-wrap"><input id="sceneQ" placeholder="業務シーンを検索" value="' + esc(cfgState.sceneQ || '') + '" /><span class="mag"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg></span></div>'
     + '<button class="btn primary block" id="sceneAdd">+ 業務シーン追加</button>'
     + '</div>'
     + '<div class="type-items">' + (items || '<p class="muted" style="padding:10px">該当なし</p>') + '</div>'
@@ -5162,7 +5162,10 @@ function canEditWorkflow_() {
         <td><input class="fld tp2-in" data-tpf="${f.id}" data-k="prompt" value="${esc(f.prompt)}" /></td>
         <td><input class="fld tp2-in" data-tpf="${f.id}" data-k="sample" placeholder="正解サンプルを入力してください" value="${esc(f.sample || '')}" /></td>
         <td class="tp2-req"><label class="switch sm"><input type="checkbox" data-tpf="${f.id}" data-k="required" ${f.required ? 'checked' : ''} /><span></span></label></td>
-        <td class="tp2-ops"><button type="button" class="icon-btn" data-tpdel="${f.id}" title="削除"><span class="ico i-delete"></span></button><span class="tp2-drag" title="並び替え">☰</span></td>
+        <td class="tp2-ops">
+          <button type="button" class="tp2-op" data-tpdel="${f.id}" title="削除" aria-label="削除"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 4.4h9.6M6.1 4.4V3.1h3.8v1.3M4.3 4.4l.55 8.3h6.3l.55-8.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+          <button type="button" class="tp2-op tp2-grip" draggable="true" data-tpdrag="${f.id}" title="ドラッグして順番を変更" aria-label="順番を変更"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 6.2h10M3 9.8h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+        </td>
       </tr>`).join('');
     const tableBody = fields.length
       ? `<div class="tp2-tablewrap"><table class="tp2-table">
@@ -5242,7 +5245,7 @@ function renderTicketDetail() {
   const leftList = '<aside class="type-list">'
     + '<h2 class="type-list-title">帳票設定-タイプ</h2>'
     + '<div class="type-list-tools">'
-    + '<div class="type-search search-wrap"><input id="typeQ" placeholder="タイプを検索" value="' + esc(cfgState.ticketQ || '') + '" /><span class="mag ico i-view"></span></div>'
+    + '<div class="type-search search-wrap"><input id="typeQ" placeholder="タイプを検索" value="' + esc(cfgState.ticketQ || '') + '" /><span class="mag"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg></span></div>'
     + '<button class="btn primary block" id="typeAdd" data-cfg="addType">+ タイプ追加</button>'
     + '</div>'
     + '<div class="type-items">' + (items || '<p class="muted" style="padding:10px">該当なし</p>') + '</div>'
@@ -5540,8 +5543,48 @@ function bindTicketDetail() {
     if (el.tagName === 'INPUT' && el.type !== 'checkbox') el.oninput = apply;
   });
   document.querySelectorAll('[data-tpdel]').forEach((b) => {
-    b.onclick = () => {
+    b.onclick = (e) => {
+      e.stopPropagation();
       state.typeFields = ensureTypeFields().filter((x) => x.id !== b.dataset.tpdel);
+      render();
+    };
+  });
+  /* 4 点ハンドルをドラッグして項目の順番を入れ替える */
+  let tpDragId = null;
+  document.querySelectorAll('[data-tpdrag]').forEach((b) => {
+    b.ondragstart = (e) => {
+      tpDragId = b.dataset.tpdrag;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', tpDragId);
+      const tr = b.closest('tr');
+      if (tr) tr.classList.add('is-drag');
+    };
+    b.ondragend = () => {
+      tpDragId = null;
+      document.querySelectorAll('.tp2-table tr').forEach((tr) => tr.classList.remove('is-drag', 'is-drop'));
+    };
+  });
+  document.querySelectorAll('.tp2-table tbody tr').forEach((tr) => {
+    tr.ondragover = (e) => {
+      if (!tpDragId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.tp2-table tr.is-drop').forEach((x) => x.classList.remove('is-drop'));
+      tr.classList.add('is-drop');
+    };
+    tr.ondrop = (e) => {
+      e.preventDefault();
+      const fromId = tpDragId || e.dataTransfer.getData('text/plain');
+      const grip = tr.querySelector('[data-tpdrag]');
+      const toId = grip && grip.dataset.tpdrag;
+      tpDragId = null;
+      if (!fromId || !toId || fromId === toId) return;
+      const list = ensureTypeFields();
+      const from = list.findIndex((x) => x.id === fromId);
+      const to = list.findIndex((x) => x.id === toId);
+      if (from < 0 || to < 0) return;
+      const [item] = list.splice(from, 1);
+      list.splice(to, 0, item);
       render();
     };
   });

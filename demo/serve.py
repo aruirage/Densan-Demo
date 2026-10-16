@@ -1520,7 +1520,21 @@ def apply_user_ops_derive_fix(src):
 
 
 def apply_encoding_fix(src):
-    """CSV/JSON の文字エンコード設定を実際の出力に反映（BOM あり/なし）＋ 選択肢を要件の 3 択に。"""
+    """CSV/JSON の文字エンコード設定を実際の出力に反映（BOM あり/なし）。
+
+    ダイアログ本体は app.js の縦積み＋スイッチ。ここでは出力時の BOM だけ当てる。
+    """
+    if 'class="switch exp-switch"' in src:
+        old = "const blob = new Blob(['\\ufeff' + text], { type: 'text/plain;charset=utf-8' });"
+        new = ("const _enc = (state.exportCfg && state.exportCfg.encoding) || 'UTF-8';\n"
+               "  const _bom = _enc.indexOf('BOMなし') >= 0 ? '' : '\\ufeff';\n"
+               "  const blob = new Blob([_bom + text], { type: (fmt === 'json' ? 'application/json' : 'text/csv') + ';charset=utf-8' });")
+        if old in src:
+            src = src.replace(old, new, 1)
+        src = re.sub(r'\s*<button[^>]*data-batchdl="excel"[^>]*>[^<]*</button>', '', src)
+        src = re.sub(r'\s*<button[^>]*data-dl="excel"[^>]*>[^<]*</button>', '', src)
+        src = re.sub(r"\['excel', 'Excelをダウンロード'\],\s*", '', src)
+        return src
     src = src.replace("select('encoding', ['UTF-8', 'Shift_JIS'])",
                       "select('encoding', ['UTF-8（BOMあり）', 'UTF-8（BOMなし）', 'Shift_JIS（S-JIS）'])")
     old = "const blob = new Blob(['\\ufeff' + text], { type: 'text/plain;charset=utf-8' });"
@@ -1570,6 +1584,9 @@ def apply_encoding_fix(src):
     src = src.replace('複数ファイルを1ファイルにまとめる', '結合出力')
     src = src.replace('入力ファイル名を出力ファイル名にする', '出力名＝入力名')
     # チェック項目を縦に揃える（2 カラム grid をやめる）
+    # 検索栏の右アイコンを拡大アイコン → 虫眼鏡に（客户指摘）
+    _svg = '<svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>'
+    src = src.replace('<span class="mag ico i-view"></span>', '<span class="mag">' + _svg + '</span>')
     return src
 
 
@@ -1578,11 +1595,16 @@ def apply_read_op_finalize(src):
 
     GROUP_NODE_ALIAS は apply_group_nodes が注入するため、パイプラインの最後で当てる。
     """
+    # 検索栏の右アイコンを虫眼鏡に（客户指摘）
+    _svg = '<svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>'
+    src = src.replace('<span class="mag ico i-view"></span>', '<span class="mag">' + _svg + '</span>')
     return src.replace("'読取': '閲覧', 'アップロード': 'アップロード',", "'アップロード': 'アップロード',", 1)
 
 
 def apply_export_format_block(src):
-    """エクスポート設定に「文字コード・出力オプション・まとめ出力・ファイル名項目」を追加（客户要件）。"""
+    """旧ダイアログへ出力オプションを足す。縦積みスイッチ版では何もしない。"""
+    if 'class="switch exp-switch"' in src:
+        return src
     old = '<section class="exp-block">\n          <h4 class="exp-sec">CSV オプション</h4>'
     new = '<section class="exp-block">\n        <h4 class="exp-sec">文字コード・出力オプション</h4>\n        <div class="exp-checks">\n          <label class="exp-check"><input type="checkbox" data-expcfg="formatCsv" ${C.formatCsv !== false ? \'checked\' : \'\'} /><span>CSV</span></label>\n          <label class="exp-check"><input type="checkbox" data-expcfg="formatJson" ${C.formatJson ? \'checked\' : \'\'} /><span>JSON</span></label>\n          <label class="exp-check"><input type="checkbox" data-expcfg="formatPdf" ${C.formatPdf ? \'checked\' : \'\'} /><span>PDF</span></label>\n        </div>\n        <div class="exp-fields">\n          <label class="exp-field"><span class="exp-field-label">文字エンコード（CSV・JSON）</span>\n            <select class="fld exp-control" data-expcfg="encoding">\n              <option ${C.encoding === \'UTF-8（BOMあり）\' ? \'selected\' : \'\'}>UTF-8（BOMあり）</option>\n              <option ${C.encoding === \'UTF-8（BOMなし）\' ? \'selected\' : \'\'}>UTF-8（BOMなし）</option>\n              <option ${C.encoding === \'Shift_JIS（S-JIS）\' ? \'selected\' : \'\'}>Shift_JIS（S-JIS）</option>\n            </select>\n          </label>\n        </div>\n        <div class="exp-checks">\n          <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? \'checked\' : \'\'} /><span>同一帳票タイプの複数ファイルを 1 ファイルにまとめる（1 ファイル複数レコード）</span></label>\n          <label class="exp-check"><input type="checkbox" data-expcfg="includeFileName" ${C.includeFileName ? \'checked\' : \'\'} /><span>入力ファイル名を出力項目に含める</span></label>\n        </div>\n        <p class="exp-note">列名は横一列のヘッダー行、1 レコード＝1 行で出力します。列名・列順は帳票タイプごとに管理者が設定します。</p>\n      </section>\n      <section class="exp-block">\n        <h4 class="exp-sec">CSV オプション</h4>'
     # 旧「出力方式」（横向/縦向/結合）は廃止（列定義で表現するため）
