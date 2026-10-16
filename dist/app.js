@@ -2867,11 +2867,11 @@ function renderTable() {
         <td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>
         <td style="white-space:nowrap;color:var(--text-2)">${esc(f.updatedAt)}</td>
         <td class="result-actions-cell"><div class="acts act-icons">${(() => {
-          /* 原型どおり：详情／再読取／ダウンロード／削除（確認・承認はマイタスク） */
+          /* 行アクション：詳細／確認／ダウンロード／削除 */
           const canRedo = ['done', 'failed', 'returned'].includes(f.status);
           return [
             `<button class="act" data-act="detail" data-file="${f.id}" data-tip="详情" aria-label="详情"><span class="ico i-view" aria-hidden="true"></span></button>`,
-            `<button class="act ${canRedo ? '' : 'off'}" data-act="redo" data-file="${f.id}" ${canRedo ? '' : 'disabled'} data-tip="再読取" aria-label="再読取">${canRedo ? '<span class="ico i-scan" aria-hidden="true"></span>' : '<span aria-hidden="true">−</span>'}</button>`,
+            `<button class="act" data-act="confirm" data-file="${f.id}" data-tip="確認" aria-label="確認"><span class="ico i-edit" aria-hidden="true"></span></button>`,
             /* ダウンロードは hover で形式メニューを出す（data-dlmenu）。表のスクロール領域で切れないよう fixed 配置 */
             `<button class="act" data-dlmenu="${f.id}" aria-haspopup="menu" aria-label="ダウンロード"><span class="ico i-download" aria-hidden="true"></span></button>`,
             `<button class="act danger" data-act="delete" data-file="${f.id}" data-tip="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>`,
@@ -7566,12 +7566,7 @@ function bindPaneNav() {
       const act = b.dataset.act, id = b.dataset.file;
       if (act === 'delete') { FILES_DATA = FILES_DATA.filter((x) => x.id !== id); render(); toast('削除しました'); return; }
       if (act === 'detail') { openPreview(id); return; }   // 详情＝帳票のページプレビュー（確認画面ではない）
-      if (act === 'redo') { startReRead(id); return; }
-      if (act === 'confirm' || act === 'approve' || act === 'return') {
-        toast('確認・承認はマイタスクから行ってください');
-        openTab('myTasks');
-        return;
-      }
+      if (act === 'confirm') { openReview(id, { returnPage: 'result' }); return; }
       if (act === 'export') { toast('CSV 出力は確認・承認完了後に実行できます'); return; }
       runFlowAction(id, act);
     };
