@@ -288,3 +288,16 @@
   width:100% !important;
   gap:10px;
 }
+
+/* ══ エクスポート設定：条件付きファイル名はラベルを消して全幅の入力欄だけにする ══ */
+#expBack label:has(#expFileName){
+  grid-column:1 / -1 !important;
+  width:100% !important;
+}
+#expBack label:has(#expFileName) .exp-field-label,
+#expBack label:has(#expFileName) > .exp-field-label,
+#expBack label:has(#expFileName) > span:first-child{ display:none !important; }
+#expBack label:has(#expFileName) input{ width:100% !important; }
+#expBack label:has(#expFileName){ display:block !important; }
+#expBack label:has(#expFileName) .exp-filename{ display:flex !important; width:100% !important; }
+#expBack label:has(#expFileName) input{ flex:1 1 auto !important; width:auto !important; min-width:0; }

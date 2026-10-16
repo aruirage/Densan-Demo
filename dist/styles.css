@@ -1662,7 +1662,8 @@ th .ico{font-size:11px;color:var(--accent)}
 .tp2-table tbody tr:focus-within .tp2-ops .tp2-op{opacity:1;pointer-events:auto}
 .tp2-grip{cursor:grab}
 .tp2-grip:active{cursor:grabbing}
-.tp2-ops .tp2-op svg{display:block}
+.tp2-ops .tp2-op .i-delete,
+.tb-icon .i-delete{font-size:15px;color:var(--red)}
 .tp2-table tbody tr.is-drop td{background:#f3f7ff}
 .tp2-table tbody tr.is-drag{opacity:.55}
 .rule-pane{min-height:0}

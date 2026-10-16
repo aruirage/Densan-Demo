@@ -5133,7 +5133,7 @@ function renderTypeTablePane() {
       <td><input class="fld tp2-in" data-tbcol="${esc(tb.id)}:${esc(f.id)}" data-k="sample" placeholder="正解サンプルを入力してください" value="${esc(f.sample || '')}" /></td>
       <td class="tp2-req"><label class="switch sm"><input type="checkbox" data-tbcol="${esc(tb.id)}:${esc(f.id)}" data-k="required" ${f.required ? 'checked' : ''} /><span></span></label></td>
       <td class="tp2-ops">
-        <button type="button" class="tp2-op" data-tbcol-del="${esc(tb.id)}:${esc(f.id)}" title="削除" aria-label="削除"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 4.4h9.6M6.1 4.4V3.1h3.8v1.3M4.3 4.4l.55 8.3h6.3l.55-8.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+        <button type="button" class="tp2-op" data-tbcol-del="${esc(tb.id)}:${esc(f.id)}" title="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>
         <button type="button" class="tp2-op tp2-grip" draggable="true" data-dragscope="${esc(tb.id)}" data-tpdrag="${esc(f.id)}" title="ドラッグして順番を変更" aria-label="順番を変更"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="currentColor"><circle cx="5" cy="5" r="1.35"/><circle cx="11" cy="5" r="1.35"/><circle cx="5" cy="11" r="1.35"/><circle cx="11" cy="11" r="1.35"/></svg></button>
       </td>
     </tr>`).join('');
@@ -5158,7 +5158,7 @@ function renderTypeTablePane() {
       <div class="tb-card-head">
         <input class="tb-title" data-tb-name="${esc(tb.id)}" value="${esc(tb.name)}" aria-label="テーブル名" />
         <span class="spacer"></span>
-        <button type="button" class="tb-icon" data-tb-del="${esc(tb.id)}" title="削除" aria-label="テーブルを削除"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 4.4h9.6M6.1 4.4V3.1h3.8v1.3M4.3 4.4l.55 8.3h6.3l.55-8.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+        <button type="button" class="tb-icon" data-tb-del="${esc(tb.id)}" title="削除" aria-label="テーブルを削除"><span class="ico i-delete" aria-hidden="true"></span></button>
         <button type="button" class="tb-icon" data-tb-toggle="${esc(tb.id)}" title="${tb.open ? '折りたたむ' : '展開'}" aria-label="${tb.open ? '折りたたむ' : '展開'}"><span class="ico ${tb.open ? 'i-caret-up' : 'i-caret-down'}"></span></button>
       </div>
       ${body}
@@ -5244,7 +5244,7 @@ function canEditWorkflow_() {
         <td><input class="fld tp2-in" data-tpf="${f.id}" data-k="sample" placeholder="正解サンプルを入力してください" value="${esc(f.sample || '')}" /></td>
         <td class="tp2-req"><label class="switch sm"><input type="checkbox" data-tpf="${f.id}" data-k="required" ${f.required ? 'checked' : ''} /><span></span></label></td>
         <td class="tp2-ops">
-          <button type="button" class="tp2-op" data-tpdel="${f.id}" title="削除" aria-label="削除"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 4.4h9.6M6.1 4.4V3.1h3.8v1.3M4.3 4.4l.55 8.3h6.3l.55-8.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+          <button type="button" class="tp2-op" data-tpdel="${f.id}" title="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>
           <button type="button" class="tp2-op tp2-grip" draggable="true" data-dragscope="fields" data-tpdrag="${f.id}" title="ドラッグして順番を変更" aria-label="順番を変更"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="currentColor"><circle cx="5" cy="5" r="1.35"/><circle cx="11" cy="5" r="1.35"/><circle cx="5" cy="11" r="1.35"/><circle cx="11" cy="11" r="1.35"/></svg></button>
         </td>
       </tr>`).join('');
