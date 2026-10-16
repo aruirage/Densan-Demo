@@ -3743,7 +3743,7 @@ function renderExportDialog() {
         
         
         <div class="exp-fields">
-          <label class="exp-field"><span class="exp-field-label"><i class="req">*</i>文字エンコード（CSV・JSON）</span>
+          <label class="exp-field"><span class="exp-field-label"><i class="req">*</i>変換方式</span>
             <select class="fld exp-control" data-expcfg="encoding">
               <option ${C.encoding === 'UTF-8（BOMあり）' ? 'selected' : ''}>UTF-8（BOMあり）</option>
               <option ${C.encoding === 'UTF-8（BOMなし）' ? 'selected' : ''}>UTF-8（BOMなし）</option>
@@ -3752,9 +3752,9 @@ function renderExportDialog() {
           </label>
         </div>
         <div class="exp-checks">
-          <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>複数ファイルを1ファイルにまとめる</span></label>
+          <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>結合出力</span></label>
           <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみ出力</span></label>
-          <label class="exp-check"><input type="checkbox" data-expcfg="fileNameFromInput" ${C.fileNameFromInput !== false ? 'checked' : ''} /><span>入力ファイル名を出力ファイル名にする</span></label>
+          <label class="exp-check"><input type="checkbox" data-expcfg="fileNameFromInput" ${C.fileNameFromInput !== false ? 'checked' : ''} /><span>出力名＝入力名</span></label>
           ${C.fileNameFromInput === false ? `<label class="exp-field is-wide exp-filefield"><span class="exp-field-label"><i class="req">*</i>ファイル名</span><span class="exp-filename"><input class="fld exp-name-input" id="expFileName" type="text" value="${esc((C && C.fileName) || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span></label>` : ''}
         </div>
       </section>

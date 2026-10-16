@@ -1565,6 +1565,13 @@ def apply_encoding_fix(src):
     _sw2 = _sw + '''
           ${C.fileNameFromInput === false ? `<label class="exp-field is-wide exp-filefield"><span class="exp-field-label"><i class="req">*</i>ファイル名</span><span class="exp-filename"><input class="fld exp-name-input" id="expFileName" type="text" value="${esc((C && C.fileName) || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span></label>` : ''}'''
     src = src.replace(_sw, _sw2, 1)
+    # 文言を参考画面に合わせて短縮（変換方式／結合出力／出力名＝入力名）
+    src = src.replace('<i class="req">*</i>文字エンコード（CSV・JSON）', '<i class="req">*</i>変換方式')
+    src = src.replace('複数ファイルを1ファイルにまとめる', '結合出力')
+    src = src.replace('入力ファイル名を出力ファイル名にする', '出力名＝入力名')
+    # チェック項目を縦に揃える（2 カラム grid をやめる）
+    if '.exp-modal .exp-checks{flex-direction:column' not in src:
+        src = src.replace('</style>', '.exp-modal .exp-checks{display:flex !important;flex-direction:column !important;align-items:flex-start !important;gap:6px !important;grid-template-columns:none !important;}\n</style>', 1)
     return src
 
 
