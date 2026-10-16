@@ -1529,6 +1529,10 @@ def apply_encoding_fix(src):
            "  const blob = new Blob([_bom + text], { type: (fmt === 'json' ? 'application/json' : 'text/csv') + ';charset=utf-8' });")
     if old in src:
         src = src.replace(old, new, 1)
+    # Excel を全廃（要件は CSV/JSON/PDF の 3 形式）
+    src = re.sub(r'\s*<button[^>]*data-batchdl="excel"[^>]*>[^<]*</button>', '', src)
+    src = re.sub(r'\s*<button[^>]*data-dl="excel"[^>]*>[^<]*</button>', '', src)
+    src = re.sub(r"\['excel', 'Excelをダウンロード'\],\s*", '', src)
     return src
 
 

@@ -2908,7 +2908,6 @@ function renderTable() {
       <button type="button" class="btn sm result-download" id="batchExport" ${pickedCount ? '' : 'disabled'} aria-haspopup="true" title="選択行を一括ダウンロード"><span class="ico i-download" aria-hidden="true"></span>一括ダウンロード</button>
       <div class="batch-dl-menu" role="menu">
         <button type="button" role="menuitem" data-batchdl="csv">CSVをダウンロード</button>
-        <button type="button" role="menuitem" data-batchdl="excel">Excelをダウンロード</button>
         <button type="button" role="menuitem" data-batchdl="json">JSONをダウンロード</button>
         <button type="button" role="menuitem" data-batchdl="pdf">PDFをダウンロード</button>
   </div>
@@ -3486,7 +3485,6 @@ function renderSaveHistoryDialog() {
 
 /** 行ダウンロードの形式（製品のポップアップに合わせる）。表示順もこの配列の順 */
 const DL_FORMATS = [
-  ['excel', 'Excelをダウンロード'],
   ['csv', 'CSVをダウンロード'],
   ['json', 'JSONをダウンロード'],
 ];
@@ -3570,7 +3568,6 @@ function renderDlMenu() {
     <div class="dl-pop">
       <div class="dl-pop-head">${esc(dispFileName(f.id))}</div>
       <button data-dl="csv" data-file="${f.id}">CSVをダウンロード</button>
-      <button data-dl="excel" data-file="${f.id}">Excelをダウンロード</button>
       <button data-dl="json" data-file="${f.id}">JSONをダウンロード</button>
       <button data-dl="pdf" data-file="${f.id}">PDFをダウンロード</button>
       <button class="dl-pop-cancel" id="dlPopCancel">キャンセル</button>
