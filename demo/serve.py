@@ -688,7 +688,7 @@ GRP_TK_CSS = """
 RESULT_FREEZE_CSS = """
 /* ══ ファイル一覧：末尾の「操作・処理」列だけ横スクロールでも固定する ══ */
 .result-table { table-layout: fixed !important; min-width: 1720px !important; width: 100% !important; }
-.result-table col { width: auto !important; }
+.result-table col { width: auto; }
 /* 列幅（チェック / ファイル名 / 帳票タイプ / サイズ / ステータス / 作成者 / 確認者 / 承認者 / 作成日時 / 更新日時 / 操作・処理） */
 .result-table th:nth-child(1),  .result-table td:nth-child(1)  { width: 40px; }
 .result-table th:nth-child(2),  .result-table td:nth-child(2)  { width: 240px; }
@@ -1605,7 +1605,7 @@ def apply_result_columns_11(src):
         <col style="width:160px">
         <col style="width:170px">"""
     new_cg = """        <col style="width:44px">
-        <col class="col-name" style="width:300px">
+        <col class="col-name" style="width:260px">
         <col style="width:150px">
         <col style="width:260px">
         <col style="width:110px">
