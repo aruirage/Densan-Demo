@@ -3741,7 +3741,7 @@ function renderExportDialog() {
         
 
         <section class="exp-block">
-        <h4 class="exp-sec">出力形式・文字コード</h4>
+        <h4 class="exp-sec">文字コード・出力オプション</h4>
         <div class="exp-checks">
           <label class="exp-check"><input type="checkbox" data-expcfg="formatCsv" ${C.formatCsv !== false ? 'checked' : ''} /><span>CSV</span></label>
           <label class="exp-check"><input type="checkbox" data-expcfg="formatJson" ${C.formatJson ? 'checked' : ''} /><span>JSON</span></label>
