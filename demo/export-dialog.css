@@ -325,3 +325,7 @@
 /* 固定した列の見出し背景を他の見出しと揃える（#f7f7f7） */
 .result-table thead th:first-child,
 .result-table thead th.col-name{ background:#f7f7f7; }
+
+/* 固定列の見出し背景を実測値（#eef5fd）に合わせる */
+.result-table thead th:first-child,
+.result-table thead th.col-name{ background:#eef5fd; }
