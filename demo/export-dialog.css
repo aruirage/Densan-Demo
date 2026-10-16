@@ -297,3 +297,12 @@
   text-overflow:clip;
 }
 .result-table col{ min-width:0; }
+
+/* ══ 状態バッジの色（客户 d） ══ */
+.st.info{ color:#1668dc; }
+.st.info .dot, .st.info .spin{ background:#1668dc; }
+.st.info .spin{ border-color:rgba(22,104,220,.28); border-top-color:#1668dc; background:transparent; }
+.st.wait{ color:#8a94a6; }
+.st.ok{ color:#12a150; }
+.st.ok .dot{ background:#12a150; }
+.st.ng{ color:#e5484d; }

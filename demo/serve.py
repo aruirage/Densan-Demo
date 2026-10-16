@@ -1687,6 +1687,12 @@ function downloadResultFile(id, fmt) {""", 1)
         src = src.replace(_biz_field2, _biz_field3, 1)
     src = src.replace("""${range('読取日', 'readFrom', 'readTo')}""", "")
 
+    # ⑧ 状態バッジの色（客户 d）：読取中／確認済み＝青、読取完了＝緑、読取失敗＝赤、出力済＝グレー
+    _old_cls = "const stCls = (s) => (s === 'done' || s === 'confirmed' || s === 'approved' || s === 'exported' ? 'ok' : s === 'failed' || s === 'returned' ? 'ng' : s === 'reading' ? 'mid' : 'wait');"
+    _new_cls = "const stCls = (s) => (s === 'done' ? 'ok' : s === 'confirmed' || s === 'reading' ? 'info' : s === 'failed' || s === 'returned' ? 'ng' : s === 'exported' ? 'wait' : 'wait');"
+    if _old_cls in src:
+        src = src.replace(_old_cls, _new_cls)
+
     # ⑥ 並べ替え：業務シーン・作成者・更新者を「名前」で比較できるようにする
     old_sort = "    if (k === 'layout') { va = dispLayout(a.layout); vb = dispLayout(b.layout); return va.localeCompare(vb, 'ja') * dir; }"
     new_sort = old_sort + """
