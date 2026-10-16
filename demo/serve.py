@@ -1599,7 +1599,7 @@ def apply_tree_folder_rename(src):
 
 def apply_remove_mytasks_menu(src):
     """メニューから「マイタスク」を外す（route 定義は残す＝画面自体は残す）。"""
-    src = re.sub(r"\s*\{\s*id:\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
+    src = re.sub(r"\s*\{\s*(?:id|page):\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
     return src
 
 
@@ -1626,7 +1626,7 @@ def apply_minimal_flow2(src):
     ③ ファイル一覧のタブに「読取待ち」を追加
     """
     # ① メニュー項目（スペース・引用符の揺れに対応して全部消す）
-    src = re.sub(r"\s*\{\s*id:\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
+    src = re.sub(r"\s*\{\s*(?:id|page):\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
     # ③ タブに「読取待ち」を先頭追加（STATUS.waiting.label = 読取待ち）
     src = re.sub(r"const TAB_STATUS = \[[^\]]*\];", "const TAB_STATUS = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];", src, count=1)
     # ② アップロード済ファイルの一覧カードを非表示（投入専用）
