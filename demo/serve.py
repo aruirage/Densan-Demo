@@ -1591,7 +1591,7 @@ def apply_tree_folder_rename(src):
     # 一覧のツールチップ：表示次元の切替は廃止、フォルダ名も変更可能になった
     src = src.replace(
         "'表示次元を切替えできます。業務シーン・帳票タイプ名は変更不可（ファイル名のみ変更可）。同階層はドラッグで並び替えできます'",
-        "'業務シーン・帳票タイプ・ファイルの表示名を変更できます（拡張子は変更不可）。同階層はドラッグで並び替えます'", 1)
+        "'帳票タイプ・ファイルの表示名を変更できます（拡張子は変更不可）。同階層はドラッグで並び替えます'", 1)
     return src
 
 
@@ -1656,9 +1656,13 @@ def apply_result_columns_11(src):
         src = src.replace("function downloadResultFile(id, fmt) {", """function histTextOf(f) {
   if (!f) return '—';
   if (f.status === 'failed') return '読取に失敗しました' + (f.history ? '（' + f.history + '）' : '');
-  if (f.status === 'exported') return '出力担当者: ' + (f.exportedBy || f.confirmedBy || '—');
-  if (f.status === 'confirmed') return '確認担当者: ' + (f.confirmedBy || '—');
+  if (f.status === 'exported') return '出力担当者: ' + _histName(f.exportedBy || f.updatedBy || f.confirmedBy);
+  if (f.status === 'confirmed') return '確認担当者: ' + _histName(f.confirmedBy || f.updatedBy);
   return '—';
+}
+function _histName(id) {
+  if (!id) return '—';
+  try { return (byId(USERS, id) || {}).name || id; } catch (_e) { return id; }
 }
 function downloadResultFile(id, fmt) {""", 1)
 
@@ -1692,6 +1696,25 @@ function downloadResultFile(id, fmt) {""", 1)
     _new_cls = "const stCls = (s) => (s === 'done' ? 'ok' : s === 'confirmed' || s === 'reading' ? 'info' : s === 'failed' || s === 'returned' ? 'ng' : s === 'exported' ? 'wait' : 'wait');"
     if _old_cls in src:
         src = src.replace(_old_cls, _new_cls)
+
+    # ⑨ モック補完（客户 c）：失敗理由・確認担当者・出力担当者を埋めて、操作・処理履歴に出す
+    _seed = """
+/* ── デモ用モック補完：失敗理由・確認担当者・出力担当者 ───────────────── */
+try {
+  const _reasons = ['文字が薄く読み取れませんでした', '帳票の傾きが大きく読み取れませんでした', '一部項目の認識に失敗しました', 'ページの一部が欠けています'];
+  let _ri = 0;
+  FILES_DATA.forEach((f) => {
+    if (f.status === 'failed') { if (!f.history) f.history = _reasons[_ri++ % _reasons.length]; }
+    if (f.status === 'confirmed' && !f.confirmedBy) f.confirmedBy = f.updatedBy || f.createdBy;
+    if (f.status === 'exported') {
+      if (!f.exportedBy) f.exportedBy = f.updatedBy || f.confirmedBy || f.createdBy;
+      if (!f.confirmedBy) f.confirmedBy = f.createdBy;
+    }
+  });
+} catch (_e) { /* ignore */ }
+"""
+    if 'デモ用モック補完' not in src:
+        src = src + _seed
 
     # ⑥ 並べ替え：業務シーン・作成者・更新者を「名前」で比較できるようにする
     old_sort = "    if (k === 'layout') { va = dispLayout(a.layout); vb = dispLayout(b.layout); return va.localeCompare(vb, 'ja') * dir; }"
