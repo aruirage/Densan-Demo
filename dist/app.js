@@ -343,7 +343,7 @@ const TENANT_ADMIN_ROLE = 'R1';
  * 操作権限のラベル定義（付与はユーザーグループの「役割」で行う）。
  * システム権限（メニュー到達）とは別物。OCR結果修正は確認に付随。
  */
-const USER_OPS = [ { key: 'view', label: '閲覧' }, { key: 'upload', label: 'アップロード' }, { key: 'confirm', label: '確認' }, { key: 'approve', label: '承認' }, { key: 'reapprove', label: '再承認' }, { key: 'export', label: '出力' }, ];
+const USER_OPS = [ { key: 'view', label: '閲覧' }, { key: 'upload', label: 'アップロード' }, { key: 'read', label: '読取' }, { key: 'confirm', label: '確認' }, { key: 'approve', label: '承認' }, { key: 'export', label: '出力' }, ];
 
 const DATA_PERMISSIONS = ['自身のみ', '全件参照'];
 
@@ -454,7 +454,7 @@ const PERM_ACTS = [
   { key: 'settings', label: '帳票設定変更', hint: '帳票タイプの設定を変更する' }
 ];
 /** 操作キー → 表示ラベル */
-const permActLabel = (key) => (PERM_ACTS.find((a) => a.key === key) || {}).label || key;
+const permActLabel = (key) => ((PERM_ACTS.find((a) => a.key === key) || USER_OPS.find((o) => o.key === key) || {}).label) || key;
 /** 操作キー → 補足説明 */
 const permActHint = (key) => (PERM_ACTS.find((a) => a.key === key) || {}).hint || '';
 
@@ -1053,7 +1053,7 @@ const roleMemberIds = (roleId) => ROLE_MEMBERS[roleId] || [];
 /** グループの役割（＝所属ユーザー全員に付く操作権限。1 グループ 1 役割） */
 /* 権限ラベル → 帳票権限表のキー（serve.py 注入） */
 const GROUP_ROLE_OP_KEY = {
-  '閲覧': 'view', 'アップロード': 'upload', 'OCR結果修正': 'fix', '確認': 'confirm',
+  '閲覧': 'view', 'アップロード': 'upload', '読取': 'read', 'OCR結果修正': 'fix', '確認': 'confirm',
   '承認': 'approve', '再承認': 'reapprove', '出力': 'export', '帳票設定変更': 'settings',
 };
 /** グループが持つ帳票権限のキー一覧 */
@@ -1197,11 +1197,11 @@ const permActLabelOf = (key) => {
 const WF_STEPS = ['アップロード', '読取', '確認', '承認', '出力'];
 const WF_FIXED = ['アップロード', '読取', '確認', '出力'];       /* 常に存在する工程 */
 /* グループが担当する権限（7 項目）。工作流の定義（工程の並び・承認段数）は帳票タイプ側。 */
-const GROUP_NODES = ['閲覧', 'アップロード', '確認', '承認', '出力'].map((l) => ({ key: l, label: l }));
+const GROUP_NODES = ['閲覧', 'アップロード', '読取', '確認', '承認', '出力'].map((l) => ({ key: l, label: l }));
 const GROUP_NODE_LABELS = GROUP_NODES.map((n) => n.label);
 /* 旧ラベル（閲覧／再承認／アップロード／CSV出力 等）を新しい工程名へ寄せる */
 const GROUP_NODE_ALIAS = {
-  '読取': '閲覧', 'アップロード': 'アップロード', 'OCR結果修正': '確認', 'CSV出力': '出力',
+  'アップロード': 'アップロード', 'OCR結果修正': '確認', 'CSV出力': '出力',
 };
 /* グループの工程を「固定工程 ＋ 承認（任意・N 段）」として解決する */
 const groupFlowOf = (g) => {
@@ -7249,6 +7249,7 @@ function bindCfgPages() {
       if (exist) {
         exist.name = f.name.trim();
         exist.kind = f.kind;
+        exist.roles = groupRolesOf(f);
         exist.desc = f.desc || '';
         exist.userIds = (f.userIds || []).slice();
       } else {

@@ -746,7 +746,7 @@ def apply_remove_group_hint(src):
 
 GROUP_CAT_HELPERS = r"""/* 権限ラベル → 帳票権限表のキー（serve.py 注入） */
 const GROUP_ROLE_OP_KEY = {
-  '閲覧': 'view', 'アップロード': 'upload', 'OCR結果修正': 'fix', '確認': 'confirm',
+  '閲覧': 'view', 'アップロード': 'upload', '読取': 'read', 'OCR結果修正': 'fix', '確認': 'confirm',
   '承認': 'approve', '再承認': 'reapprove', '出力': 'export', '帳票設定変更': 'settings',
 };
 /** グループが持つ帳票権限のキー一覧 */
@@ -1522,6 +1522,23 @@ def apply_user_ops_derive_fix(src):
     return src
 
 
+def apply_read_op_finalize(src):
+    """最終調整：読取は独立した操作権限なので、旧ラベル寄せ（読取→閲覧）を外す。
+
+    GROUP_NODE_ALIAS は apply_group_nodes が注入するため、パイプラインの最後で当てる。
+    """
+    return src.replace("'読取': '閲覧', 'アップロード': 'アップロード',", "'アップロード': 'アップロード',", 1)
+
+
+def apply_group_roles_sync_fix(src):
+    """グループ保存時、既存グループでも roles を kind から同期する（一覧のチップが古いままになるバグ）。"""
+    old = "        exist.kind = f.kind;\n        exist.desc = f.desc || '';"
+    new = "        exist.kind = f.kind;\n        exist.roles = groupRolesOf(f);\n        exist.desc = f.desc || '';"
+    if old in src:
+        src = src.replace(old, new, 1)
+    return src
+
+
 def apply_user_ops_align(src):
     """ユーザー側の操作権限をグループと同じ 6 項（閲覧/アップロード/確認/承認/再承認/出力）に揃える。
 
@@ -1531,9 +1548,12 @@ def apply_user_ops_align(src):
         return src
     src = src.replace("label: 'CSV出力'", "label: '出力'")
     new_ops = ("const USER_OPS = [ { key: 'view', label: '閲覧' }, { key: 'upload', label: 'アップロード' }, "
-               "{ key: 'confirm', label: '確認' }, { key: 'approve', label: '承認' }, "
-               "{ key: 'reapprove', label: '再承認' }, { key: 'export', label: '出力' }, ];")
+               "{ key: 'read', label: '読取' }, { key: 'confirm', label: '確認' }, { key: 'approve', label: '承認' }, "
+               "{ key: 'export', label: '出力' }, ];")
     src = re.sub(r"const USER_OPS = \[[\s\S]*?\];", new_ops, src, count=1)
+    # PERM_ACTS に無いキー（read など）もラベル表示できるようにする
+    src = src.replace("const permActLabel = (key) => (PERM_ACTS.find((a) => a.key === key) || {}).label || key;",
+                      "const permActLabel = (key) => ((PERM_ACTS.find((a) => a.key === key) || USER_OPS.find((o) => o.key === key) || {}).label) || key;")
     return src
 
 
@@ -1597,7 +1617,7 @@ def apply_group_nodes(src):
 const WF_STEPS = ['アップロード', '読取', '確認', '承認', '出力'];
 const WF_FIXED = ['アップロード', '読取', '確認', '出力'];       /* 常に存在する工程 */
 /* グループが担当する権限（7 項目）。工作流の定義（工程の並び・承認段数）は帳票タイプ側。 */
-const GROUP_NODES = ['閲覧', 'アップロード', '確認', '承認', '出力'].map((l) => ({ key: l, label: l }));
+const GROUP_NODES = ['閲覧', 'アップロード', '読取', '確認', '承認', '出力'].map((l) => ({ key: l, label: l }));
 const GROUP_NODE_LABELS = GROUP_NODES.map((n) => n.label);
 /* 旧ラベル（閲覧／再承認／アップロード／CSV出力 等）を新しい工程名へ寄せる */
 const GROUP_NODE_ALIAS = {
@@ -1931,6 +1951,7 @@ def patched_app_js(path):
     patched = apply_stepper_stage_label(patched)
     patched = apply_stage_matrix(patched)
     patched = apply_user_ops_derive_fix(patched)
+    patched = apply_group_roles_sync_fix(patched)
     patched = apply_user_ops_align(patched)
     patched = apply_group_role_label(patched)
     patched = apply_default_admin_user(patched)
@@ -1949,6 +1970,7 @@ def patched_app_js(path):
     patched = apply_admin_nav(patched)
     patched = apply_user_group_checks(patched)
     patched = hide_actor_switch(patched)
+    patched = apply_read_op_finalize(patched)
     # グループ＝権限バケツ：GROUPS / TICKET_PERMS の定義後（レンダリング前）に当てる
     m_anchor = re.search(r"(function renderUserAddDialog)", patched)
     if m_anchor and 'GROUP_OPS' not in patched:

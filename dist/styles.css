@@ -361,7 +361,7 @@ input:focus,select:focus,button:focus-visible{
 .treepanel-head{display:flex;align-items:center;gap:10px;padding:10px 12px;flex-wrap:wrap}
 .tree-view-select{height:30px;max-width:100%;min-width:0;flex:1 1 180px;border:1px solid var(--line-d);border-radius:2px;padding:0 8px;font-size:12px;color:var(--text);background:#fff;cursor:pointer}
 .tree-view-select:hover,.tree-view-select:focus{border-color:var(--accent);outline:none}
-/* 表示次元のピル型スイッチ（左：業務シーン／右：帳票カテゴリ） */
+/* 表示次元のピル型スイッチ（左：業務シーン／右：帳票タイプ） */
 .tree-view-pills{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--line-d);border-radius:999px;background:#fff;flex:0 0 auto}
 .tree-view-pill{height:26px;padding:0 14px;border:none;border-radius:999px;background:transparent;color:var(--text-2);font-size:12px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
 .tree-view-pill:hover{color:var(--accent)}
