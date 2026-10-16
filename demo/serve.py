@@ -1717,6 +1717,12 @@ function downloadResultFile(id, fmt) {""", 1)
     if _old_cls in src:
         src = src.replace(_old_cls, _new_cls)
 
+    # ⑭ ツールチップを製品と同じダークな形式（data-tip）に統一（客户）
+    src = re.sub(r'(<td class="(?:result-biz|result-type|result-person|col-created)"[^>]*?) title="', r'\1 data-tip="', src)
+    src = re.sub(r'(<td class="hist [^"]*"[^>]*?) title="', r'\1 data-tip="', src)
+    src = re.sub(r'(<span class="st [^"]*"[^>]*?) title="', r'\1 data-tip="', src)
+    src = re.sub(r'(<td style="white-space:nowrap;color:var\(--text-2\)") title="', r'\1 data-tip="', src)
+
     # ⑬ 一覧の「一括ダウンロード」の左に「選択帳票読取」を追加（客户）
     #    ※ ダウンロードのメニュー（.batch-dl 内）を乱さないよう、コンテナの外側・左に置く
     _bd = """<div class="batch-dl${pickedCount ? '' : ' is-disabled'}">"""
