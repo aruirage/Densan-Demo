@@ -1672,6 +1672,9 @@ def apply_no_approval(src):
     sub('/* 原型どおり：详情／再読取／ダウンロード／削除（確認・承認はマイタスク） */', '/* 行アクション：詳細／確認／ダウンロード／削除 */')
     sub("      if (act === 'redo') { startReRead(id); return; }\n      if (act === 'confirm' || act === 'approve' || act === 'return') {\n        toast('確認・承認はマイタスクから行ってください');\n        openTab('myTasks');\n        return;\n      }",
         "      if (act === 'confirm') { openReview(id, { returnPage: 'result' }); return; }")
+    # 業務シーン・帳票タイプの絞り込み（左ツリーと重複）を外す
+    sub('<div class="field"><span class="lbl">業務シーン</span>${fselect(\'biz\', \'選択してください\', bizOpts, F.biz)}</div>', "")
+    sub('<div class="field"><span class="lbl">帳票タイプ</span>${fselect(\'layout\', \'選択してください\', layouts, F.layout)}</div>', "")
     # ⑨ 権限一覧から承認者ロールを外す
     sub("{ id: 'R4', name: '承認者', code: 'approver', desc: '確認済み帳票の承認・再承認。マイタスクの承認作業', created: '2025-10-01 00:00:00', status: '有効' },\n", "")
     return src, rep

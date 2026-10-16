@@ -2823,8 +2823,8 @@ function renderFilters() {
       <div class="result-filters-fields">
         <div class="result-filter-row result-search-row">
           <div class="field"><span class="lbl">ステータス</span>${fselect('status', '選択してください', statusOpts, F.status)}</div>
-          <div class="field"><span class="lbl">業務シーン</span>${fselect('biz', '選択してください', bizOpts, F.biz)}</div>
-          <div class="field"><span class="lbl">帳票タイプ</span>${fselect('layout', '選択してください', layouts, F.layout)}</div>
+          
+          
         </div>
         ${open ? `<div class="result-filter-row" id="resultAdvanced">
           <div class="field"><span class="lbl">作成者</span>${fselect('createdBy', '選択してください', users, F.createdBy)}</div>
