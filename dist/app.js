@@ -8018,12 +8018,17 @@ function startRename(nodeEl, type, id) {
   const key = type + ':' + id;
   const current = type === 'file' ? dispFileName(id) : (type === 'biz' ? dispBiz(id) : dispCat(id));
   const label = $('.label', nodeEl);
+  const _ext = (type === 'file') ? (String(current).match(/\.[A-Za-z0-9]+$/) || [''])[0] : '';
   const input = document.createElement('input');
-  input.className = 'rename'; input.value = current;
-  label.replaceWith(input); input.focus(); input.select();
+  input.className = 'rename';
+  input.value = _ext ? String(current).slice(0, -_ext.length) : current;
+  label.replaceWith(input);
+  if (_ext) { const _es = document.createElement('span'); _es.className = 'rename-ext'; _es.textContent = _ext; input.insertAdjacentElement('afterend', _es); }
+  input.focus(); input.select();
   const commit = (save) => {
     if (save && input.value.trim()) {
-      state.rename[key] = input.value.trim();
+      const _v = input.value.trim().replace(/\.[A-Za-z0-9]+$/, '');
+      state.rename[key] = _ext ? (_v + _ext) : _v;
       toast((type === 'file' ? 'ファイル表示名' : 'フォルダ表示名') + 'を変更しました（表示のみ）');
     }
     render();

@@ -1519,6 +1519,30 @@ def apply_user_ops_derive_fix(src):
     return src
 
 
+def apply_rename_keep_extension(src):
+    """ファイル名の変更では拡張子を変えられないようにする（名前だけ編集）。"""
+    # ① 入力欄には拡張子を除いた名前を入れ、拡張子は固定表示にする
+    old_in = """  const input = document.createElement('input');
+  input.className = 'rename'; input.value = current;"""
+    new_in = """  const _ext = (type === 'file') ? (String(current).match(/\\.[A-Za-z0-9]+$/) || [''])[0] : '';
+  const input = document.createElement('input');
+  input.className = 'rename';
+  input.value = _ext ? String(current).slice(0, -_ext.length) : current;"""
+    src = src.replace(old_in, new_in, 1)
+    old_rep = "  label.replaceWith(input); input.focus(); input.select();"
+    new_rep = ("  label.replaceWith(input);\n"
+               "  if (_ext) { const _es = document.createElement('span'); _es.className = 'rename-ext'; "
+               "_es.textContent = _ext; input.insertAdjacentElement('afterend', _es); }\n"
+               "  input.focus(); input.select();")
+    src = src.replace(old_rep, new_rep, 1)
+    # ② 保存時：ユーザーが拡張子を打っても無視し、元の拡張子を付け直す
+    old_set = "      state.rename[key] = input.value.trim();"
+    new_set = ("      const _v = input.value.trim().replace(/\\.[A-Za-z0-9]+$/, '');\n"
+               "      state.rename[key] = _ext ? (_v + _ext) : _v;")
+    src = src.replace(old_set, new_set, 1)
+    return src
+
+
 def apply_tree_folder_rename(src):
     """ファイルツリーのフォルダ（業務シーン／帳票タイプ）も名称変更できるようにする。"""
     # ① ✎ ボタンをフォルダにも出す
@@ -2346,6 +2370,7 @@ def patched_app_js(path):
     patched = apply_export_format_block(patched)
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
+    patched = apply_rename_keep_extension(patched)
     patched = apply_tree_folder_rename(patched)
     patched = apply_encoding_fix(patched)
     patched = apply_read_op_finalize(patched)
