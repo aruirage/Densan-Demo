@@ -292,3 +292,4 @@
 /* ══ スイッチは 1 行 1 項目（跳行しない）＋「入力名と同じ」を最下段に ══ */
 #expBack .exp-switches{ grid-template-columns:1fr !important; }
 #expBack .exp-switches > .exp-switch:nth-child(2){ order:9 !important; }
+#expBack label:has(#expFileName) .exp-field-label{ display:none !important; }
