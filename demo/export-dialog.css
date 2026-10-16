@@ -369,3 +369,25 @@ thead th{ background:#eef5fd !important; }
 .result-filter-row .field select,
 .result-filter-row .field input.fld,
 .result-filter-row .field .result-date-range{ flex:1 1 auto; min-width:0; width:100%; }
+
+/* ══ 左の 2 列（チェック・ファイル名）の体裁を揃える（客户） ══ */
+.result-table thead th:first-child,
+.result-table thead th.col-name{
+  background:#eef5fd !important;
+  border-right:0 !important;
+}
+.result-table thead th.col-name{
+  border-right:1px solid var(--line,#e5e9f0) !important;
+}
+.result-table tbody td:first-child,
+.result-table tbody td.col-name{
+  background:#fff !important;
+  border-right:0 !important;
+}
+.result-table tbody td.col-name{
+  border-right:1px solid var(--line,#e5e9f0) !important;
+}
+.result-table tbody tr:hover td:first-child,
+.result-table tbody tr:hover td.col-name{ background:#f5f8ff !important; }
+.result-table tbody tr.pick td:first-child,
+.result-table tbody tr.pick td.col-name{ background:#eef5fd !important; }
