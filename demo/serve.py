@@ -1597,6 +1597,16 @@ def apply_tree_folder_rename(src):
     return src
 
 
+def apply_row_actions_fix(src):
+    """行アクションを「再読取・確認・ダウンロード・削除」の順に整える（详情は削除済み）。"""
+    anchor = '<button class="act" data-act="confirm" data-file="${f.id}"'
+    redo = ('<button class="act" data-act="redo" data-file="${f.id}" data-tip="再読取" aria-label="再読取">'
+            '<span class="ico i-scan" aria-hidden="true"></span></button>')
+    if anchor in src and 'data-act="redo"' not in src:
+        src = src.replace(anchor, redo + anchor, 1)
+    return src
+
+
 def apply_remove_detail_action(src):
     """行アクションの「详情」を削除（左から：再読取・確認・ダウンロード・削除）。"""
     src = re.sub(r"<button class=\"act\" data-act=\"detail\"[^>]*>.*?</button>", "", src)
@@ -2638,6 +2648,7 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_row_actions_fix(patched)
     patched = apply_remove_detail_action(patched)
     patched = apply_minimal_flow2(patched)
     patched = apply_minimal_flow(patched)
