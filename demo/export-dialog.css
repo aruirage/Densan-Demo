@@ -289,3 +289,11 @@
 
 /* ══ 表示次元の切替を廃止（3 層ツリー固定：業務シーン ＞ 帳票タイプ ＞ ファイル） ══ */
 #treeView, .tree-view-pills{ display:none !important; }
+
+/* ══ 一覧の列名を省略せず全部表示（客户：列名显示完整） ══ */
+.result-table thead th{
+  white-space:nowrap;
+  overflow:visible;
+  text-overflow:clip;
+}
+.result-table col{ min-width:0; }
