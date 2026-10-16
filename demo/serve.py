@@ -1704,10 +1704,11 @@ function downloadResultFile(id, fmt) {""", 1)
         src = src.replace(_old_cls, _new_cls)
 
     # ⑬ 一覧の「一括ダウンロード」の左に「選択帳票読取」を追加（客户）
-    _be = """<button type="button" class="btn sm result-download" id="batchExport\""""
-    if _be in src and 'id="resRead"' not in src:
-        src = src.replace(_be, """<button type="button" class="btn sm" id="resRead" ${pickedCount ? '' : 'disabled'} title="選択した帳票を読取（再読取）します"><span class="ico i-scan" aria-hidden="true"></span>選択帳票読取</button>
-      """ + _be, 1)
+    #    ※ ダウンロードのメニュー（.batch-dl 内）を乱さないよう、コンテナの外側・左に置く
+    _bd = """<div class="batch-dl${pickedCount ? '' : ' is-disabled'}">"""
+    if _bd in src and 'id="resRead"' not in src:
+        src = src.replace(_bd, """<button type="button" class="btn sm" id="resRead" ${pickedCount ? '' : 'disabled'}>選択帳票読取</button>
+    """ + _bd, 1)
 
     # ⑫ 確認画面：Enter を押したら（値が変わっていなくても）「修正済み」にする
     _ocr_head = """  document.querySelectorAll('[data-ocr]').forEach((inp) => {
