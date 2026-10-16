@@ -1608,16 +1608,17 @@ def apply_result_columns_11(src):
         <col style="width:160px">
         <col style="width:200px">"""
     new_cg = """        <col style="width:44px">
-        <col class="col-name" style="width:260px">
-        <col style="width:120px">
+        <col class="col-name" style="width:300px">
         <col style="width:150px">
-        <col style="width:180px">
-        <col style="width:130px">
-        <col style="width:130px">
-        <col style="width:150px">
-        <col style="width:150px">
+        <col style="width:260px">
+        <col style="width:110px">
+        <col style="width:110px">
         <col style="width:220px">
-        <col style="width:200px">"""
+        <col style="width:110px">
+        <col style="width:150px">
+        <col style="width:110px">
+        <col style="width:150px">
+        <col style="width:190px">"""
     if old_cg in src:
         src = src.replace(old_cg, new_cg, 1)
 

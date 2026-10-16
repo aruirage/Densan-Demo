@@ -399,3 +399,6 @@ thead th{ background:#eef5fd !important; }
 /* 左右の固定列の体裁を統一：右（操作・処理）に合わせて、ファイル名の縦線を外す */
 .result-table thead th.col-name,
 .result-table tbody td.col-name{ border-right:0 !important; }
+
+/* 列幅を意図どおりにする（合計幅を確保して横スクロールで見せる） */
+.result-table{ min-width:1900px; table-layout:fixed; }
