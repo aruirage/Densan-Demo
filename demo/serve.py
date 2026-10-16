@@ -1538,6 +1538,9 @@ def apply_encoding_fix(src):
     _new = _chk + '''
           <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみを出力する（オフのときは全項目を出力）</span></label>'''
     src = src.replace(_chk, _new, 1)
+    # 出力形式（CSV/JSON/PDF）のチェックは設定から削除（形式はダウンロード時に選ぶ）
+    src = re.sub(r'\n\s*<label class="exp-check"><input type="checkbox" data-expcfg="format(?:Csv|Json|Pdf)"[^\n]*', '', src)
+    src = re.sub(r'<div class="exp-checks">\s*</div>', '', src)
     return src
 
 
