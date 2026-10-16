@@ -269,3 +269,22 @@
 .exp-modal .exp-field select{ width:100% !important; }
 .exp-modal .exp-field-label{ display:block; margin-bottom:6px; }
 .exp-modal .exp-checks{ display:grid !important; grid-template-columns:1fr 1fr !important; column-gap:28px !important; row-gap:12px !important; margin-top:14px; }
+
+/* ══ エクスポート設定（現行マークアップ）：スイッチを 2 カラムに（客户：方案 B） ══ */
+#expBack .exp-canvas{ padding:18px 22px; }
+#expBack .exp-stack-field{ display:block; width:100%; margin-bottom:16px; }
+#expBack .exp-stack-field select{ width:100% !important; }
+#expBack .exp-switches{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  column-gap:26px !important;
+  row-gap:14px !important;
+  width:100% !important;
+}
+#expBack .exp-switch{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  width:100% !important;
+  gap:10px;
+}

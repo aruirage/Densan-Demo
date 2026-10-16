@@ -1508,6 +1508,7 @@ const state = {
   typePage: 1,
   typeZoom: 1,
   typeReadTab: 'text',            // AI読取設定：text | table
+  typeRuleTab: 'table',           // 処理ルール設定：text | table
   typePrompt: '空白文字列抽出ルール：該当項目が見つからない、または判読不能な場合は空文字（""）を出力してください。',
   typeMenu: null,                 // step2 ツールバー：tpl | gear | null
   typeItemMenu: null,             // 左リスト行の … メニュー（タイプ id）
@@ -5282,15 +5283,7 @@ function canEditWorkflow_() {
       ` : renderTypeTablePane()}
     </div>`;
   }
-  if (step === 3) {
-    return '<div class="wiz-empty"><p class="wiz-empty-title">処理ルール設定</p>'
-      + '<p class="muted">読取後の値の変換・突合・出力ルールを設定します。</p>'
-      + '<table class="wiz-table"><thead><tr><th>ルール</th><th>対象項目</th><th>内容</th></tr></thead><tbody>'
-      + '<tr><td>辞書突合</td><td><code>address</code></td><td>市町村名辞書で正規化</td></tr>'
-      + '<tr><td>日付正規化</td><td><code>birthday</code></td><td>和暦 → 西暦（YYYY-MM-DD）</td></tr>'
-      + '<tr><td>必須チェック</td><td><code>name</code></td><td>空の場合は「要確認」にする</td></tr>'
-      + '</tbody></table></div>';
-  }
+  if (step === 3) return renderRulePane();
   return '<div class="wiz-empty"><p class="wiz-empty-title">効果テスト</p>'
     + '<p class="muted">テスト帳票で分類・読取の精度を確認します。</p>'
     + '<table class="wiz-table"><thead><tr><th>項目</th><th>正解</th><th>読取結果</th><th>判定</th></tr></thead><tbody>'
@@ -5298,6 +5291,69 @@ function canEditWorkflow_() {
     + '<tr><td>住所</td><td>千代田区…</td><td>千代田区…</td><td><span class="st ok"><span class="dot"></span>一致</span></td></tr>'
     + '<tr><td>生年月日</td><td>1985-04-02</td><td>1985-04-02</td><td><span class="st ok"><span class="dot"></span>一致</span></td></tr>'
     + '</tbody></table><p class="wiz-score">精度：<b>98.2%</b>（サンプル 120 件）</p></div>';
+}
+
+const RULE_KINDS = ['数字のみ', '小数点付きの数字', 'カタカナ', 'ひらがな', '日付', '西暦年', '西暦月', '西暦日'];
+const RULE_TEXT_ROWS = [
+  ['発注日', '日付'],
+  ['発注番号', '数字のみ'],
+  ['仕入先会社名', 'カタカナ'],
+  ['仕入先担当者', ''],
+  ['納品先', ''],
+  ['納品希望日', '日付'],
+  ['支払条件', ''],
+  ['商品名', ''],
+  ['数量', '数字のみ'],
+  ['単位', 'カタカナ'],
+  ['単価', '小数点付きの数字'],
+  ['金額', '小数点付きの数字'],
+  ['備考', ''],
+  ['発注担当者', ''],
+];
+const RULE_TABLE_ROWS = [
+  ['No.', '数字のみ'],
+  ['商品コード', ''],
+  ['品名・仕様', ''],
+  ['数量', '数字のみ'],
+  ['単位', 'カタカナ'],
+  ['単価', '小数点付きの数字'],
+  ['金額', '小数点付きの数字'],
+];
+
+function renderRulePane() {
+  const tab = state.typeRuleTab === 'text' ? 'text' : 'table';
+  const src = tab === 'text' ? RULE_TEXT_ROWS : RULE_TABLE_ROWS;
+  if (!state.typeRulePick) state.typeRulePick = {};
+  const rows = src.map(([name, fallback], i) => {
+    const id = tab + ':' + i;
+    const cur = state.typeRulePick[id] != null ? state.typeRulePick[id] : fallback;
+    const opts = ['<option value="">選択してください</option>']
+      .concat(RULE_KINDS.map((k) => `<option value="${esc(k)}" ${cur === k ? 'selected' : ''}>${esc(k)}</option>`))
+      .join('');
+    return `<tr>
+      <td class="tp2-no">${i + 1}</td>
+      <td class="rule-name">${esc(name)}</td>
+      <td><select class="fld rule-select" data-rule="${esc(id)}">${opts}</select></td>
+      <td class="rule-conf"><span>95.0 %</span></td>
+    </tr>`;
+  }).join('');
+  return `<div class="tp2-pane rule-pane">
+    <div class="tp2-head">
+      <div class="tp2-tabs">
+        <button type="button" class="tp2-tab ${tab === 'text' ? 'on' : ''}" data-ruletab="text">テキスト読取</button>
+        <button type="button" class="tp2-tab ${tab === 'table' ? 'on' : ''}" data-ruletab="table">テーブル情報読取</button>
+      </div>
+      <div class="tp2-tools">
+        <button type="button" class="btn primary sm" data-rule-ai="1">AIマッチング</button>
+      </div>
+    </div>
+    <div class="tp2-tablewrap rule-tablewrap">
+      <table class="tp2-table rule-table">
+        <thead><tr><th>番号</th><th>項目名</th><th>処理ルール</th><th class="rule-conf">自信度</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
 }
 
 /** 帳票タイプ設定（左：タイプ一覧／右：選択中の Step1〜4） */
@@ -5554,6 +5610,34 @@ function bindTicketDetail() {
   document.querySelectorAll('[data-tpread]').forEach((b) => {
     b.onclick = () => { state.typeReadTab = b.dataset.tpread; state.typeMenu = null; render(); };
   });
+  document.querySelectorAll('[data-ruletab]').forEach((b) => {
+    b.onclick = () => { state.typeRuleTab = b.dataset.ruletab; render(); };
+  });
+  document.querySelectorAll('[data-rule]').forEach((el) => {
+    el.onchange = () => {
+      if (!state.typeRulePick) state.typeRulePick = {};
+      state.typeRulePick[el.dataset.rule] = el.value;
+    };
+  });
+  const ruleAi = document.querySelector('[data-rule-ai]');
+  if (ruleAi) ruleAi.onclick = () => {
+    if (!state.typeRulePick) state.typeRulePick = {};
+    const tab = state.typeRuleTab === 'text' ? 'text' : 'table';
+    const src = tab === 'text' ? RULE_TEXT_ROWS : RULE_TABLE_ROWS;
+    const guess = (name) => {
+      if (/日|年|月/.test(name)) return '日付';
+      if (/単価|金額|税/.test(name)) return '小数点付きの数字';
+      if (/番号|数量|No\.|コード/.test(name)) return '数字のみ';
+      if (/会社|単位|カナ/.test(name)) return 'カタカナ';
+      return 'ひらがな';
+    };
+    src.forEach(([name], i) => {
+      const id = tab + ':' + i;
+      if (!state.typeRulePick[id]) state.typeRulePick[id] = guess(name);
+    });
+    toast('AIマッチングしました（Demo）');
+    render();
+  };
   const tpai = document.querySelector('[data-tpai]');
   if (tpai) tpai.onclick = () => {
     const fields = ensureTypeFields();

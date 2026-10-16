@@ -1665,6 +1665,12 @@ th .ico{font-size:11px;color:var(--accent)}
 .tp2-ops .tp2-op svg{display:block}
 .tp2-table tbody tr.is-drop td{background:#f3f7ff}
 .tp2-table tbody tr.is-drag{opacity:.55}
+.rule-pane{min-height:0}
+.rule-tablewrap{max-height:none;flex:1}
+.rule-table .rule-name{font-size:13px;color:var(--text)}
+.rule-select{height:32px;min-width:180px;width:100%;max-width:280px;background:#fff}
+.rule-conf{text-align:right;width:110px}
+.rule-conf span{display:inline-flex;align-items:center;justify-content:center;min-width:72px;height:28px;padding:0 8px;border:1px solid var(--line);border-radius:3px;background:#f7f8fa;color:var(--text-2);font-size:12.5px}
 .tb-list{display:flex;flex-direction:column;gap:12px}
 .tb-card{border:1px solid var(--line);border-radius:6px;background:#fff;overflow:hidden}
 .tb-card-head{display:flex;align-items:center;gap:6px;padding:8px 12px;background:#f4f6f8}
