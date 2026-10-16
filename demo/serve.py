@@ -1595,6 +1595,25 @@ def apply_tree_folder_rename(src):
     return src
 
 
+def apply_kill_approve_tasks(src):
+    """承認は全廃：マイタスクに承認タスクを一切出さない（pendingApproveKind を常に null に）。"""
+    key = "function pendingApproveKind(f, cfg) {"
+    i = src.find(key)
+    if i < 0 or '承認は全廃' in src:
+        return src
+    j = src.find("{", i)
+    depth, k = 0, j
+    while k < len(src):
+        if src[k] == "{":
+            depth += 1
+        elif src[k] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+        k += 1
+    return src[:i] + "function pendingApproveKind(f, cfg) { return null; /* 承認は全廃（客户指示） */ }" + src[k + 1:]
+
+
 def apply_tree_perm_filter(src):
     """ツリーの権限連動：閲覧権限のない帳票タイプ（配下に閲覧可ファイルが 1 件も無い）を隠す。"""
     old = """function buildTree() {
@@ -2581,6 +2600,7 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_kill_approve_tasks(patched)
     patched = apply_tree_perm_filter(patched)
     patched = apply_result_columns_11(patched)
     patched = apply_rename_keep_extension(patched)
