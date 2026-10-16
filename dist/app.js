@@ -1512,6 +1512,7 @@ const state = {
   typeMenu: null,                 // step2 ツールバー：tpl | gear | null
   typeItemMenu: null,             // 左リスト行の … メニュー（タイプ id）
   typeFields: null,               // step2 抽出項目（遅延初期化）
+  typeTables: null,               // step2 テーブル情報読取（遅延初期化）
   reviewId: null,                 // 読取結果確認ページで開いているファイル
   reviewReturn: 'myTasks',        // 详情から戻る先（myTasks | result）
   reviewViewOnly: false,          // 一覧からの閲覧のみ（確認・承認 CTA なし）
@@ -5087,6 +5088,92 @@ function ensureTypeFields() {
   return state.typeFields;
 }
 
+const TYPE_TABLE_MAX = 10;
+function ensureTypeTables() {
+  if (state.typeTables) return state.typeTables;
+  const col = (id, name, prompt, sample) => ({ id, name, prompt: prompt || '', sample: sample || '', required: false });
+  state.typeTables = [
+    {
+      id: 'tb1', name: '商品明細テーブル', cond: '', open: true,
+      cols: [
+        col('c1', 'No.', '', '1'),
+        col('c2', '商品コード', '', 'A-001'),
+        col('c3', '品名・仕様', '', 'ブレンドコーヒー豆'),
+        col('c4', '数量', '', '2'),
+        col('c5', '単位', '', '袋'),
+        col('c6', '単価', '数値のみを抽出し、通貨記号は除く', '1,280'),
+        col('c7', '金額', '数値のみを抽出し、補助的に通貨記号は除く', '2,560'),
+      ],
+    },
+    {
+      id: 'tb2', name: '税率内訳テーブル', cond: '', open: false,
+      cols: [
+        col('c8', '税率', '', '10%'),
+        col('c9', '税抜金額', '', '2,560'),
+        col('c10', '消費税', '数値のみを抽出する', '256'),
+      ],
+    },
+    {
+      id: 'tb3', name: '備考テーブル', cond: '', open: false,
+      cols: [col('c11', '備考', '', '')],
+    },
+  ];
+  return state.typeTables;
+}
+
+function typeColOps(id) {
+  return `<td class="tp2-ops">
+    <button type="button" class="tp2-op" data-tpdel="${id}" title="削除" aria-label="削除"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 4.4h9.6M6.1 4.4V3.1h3.8v1.3M4.3 4.4l.55 8.3h6.3l.55-8.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+    <button type="button" class="tp2-op tp2-grip" draggable="true" data-tpdrag="${id}" title="ドラッグして順番を変更" aria-label="順番を変更"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="currentColor"><circle cx="5" cy="5" r="1.35"/><circle cx="11" cy="5" r="1.35"/><circle cx="5" cy="11" r="1.35"/><circle cx="11" cy="11" r="1.35"/></svg></button>
+  </td>`;
+}
+
+function renderTypeTablePane() {
+  const tables = ensureTypeTables();
+  const info = '<span class="ico i-help tb-info"></span>';
+  const cards = tables.map((tb) => {
+    const rows = (tb.cols || []).map((f, i) => `<tr data-drag-scope="${esc(tb.id)}">
+      <td class="tp2-no">${i + 1}</td>
+      <td><input class="fld tp2-in" data-tbcol="${esc(tb.id)}:${esc(f.id)}" data-k="name" value="${esc(f.name)}" /></td>
+      <td><input class="fld tp2-in" data-tbcol="${esc(tb.id)}:${esc(f.id)}" data-k="prompt" value="${esc(f.prompt)}" /></td>
+      <td><input class="fld tp2-in" data-tbcol="${esc(tb.id)}:${esc(f.id)}" data-k="sample" placeholder="正解サンプルを入力してください" value="${esc(f.sample || '')}" /></td>
+      <td class="tp2-req"><label class="switch sm"><input type="checkbox" data-tbcol="${esc(tb.id)}:${esc(f.id)}" data-k="required" ${f.required ? 'checked' : ''} /><span></span></label></td>
+      <td class="tp2-ops">
+        <button type="button" class="tp2-op" data-tbcol-del="${esc(tb.id)}:${esc(f.id)}" title="削除" aria-label="削除"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 4.4h9.6M6.1 4.4V3.1h3.8v1.3M4.3 4.4l.55 8.3h6.3l.55-8.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+        <button type="button" class="tp2-op tp2-grip" draggable="true" data-dragscope="${esc(tb.id)}" data-tpdrag="${esc(f.id)}" title="ドラッグして順番を変更" aria-label="順番を変更"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="currentColor"><circle cx="5" cy="5" r="1.35"/><circle cx="11" cy="5" r="1.35"/><circle cx="5" cy="11" r="1.35"/><circle cx="11" cy="11" r="1.35"/></svg></button>
+      </td>
+    </tr>`).join('');
+    const body = tb.open ? `
+      <label class="tb-cond"><span>テーブル抽出条件</span>
+        <input class="fld" data-tb-cond="${esc(tb.id)}" placeholder="テーブルの説明を入力してください" value="${esc(tb.cond || '')}" />
+      </label>
+      <div class="tp2-tablewrap">
+        <table class="tp2-table">
+          <thead><tr>
+            <th>番号</th>
+            <th><i class="req">*</i>列キー名</th>
+            <th>列プロンプト</th>
+            <th>正解サンプル ${info}</th>
+            <th class="tp2-req">必須 ${info}</th>
+            <th class="tp2-ops">操作</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>` : '';
+    return `<section class="tb-card${tb.open ? '' : ' is-closed'}">
+      <div class="tb-card-head">
+        <input class="tb-title" data-tb-name="${esc(tb.id)}" value="${esc(tb.name)}" aria-label="テーブル名" />
+        <span class="spacer"></span>
+        <button type="button" class="tb-icon" data-tb-del="${esc(tb.id)}" title="削除" aria-label="テーブルを削除"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 4.4h9.6M6.1 4.4V3.1h3.8v1.3M4.3 4.4l.55 8.3h6.3l.55-8.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+        <button type="button" class="tb-icon" data-tb-toggle="${esc(tb.id)}" title="${tb.open ? '折りたたむ' : '展開'}" aria-label="${tb.open ? '折りたたむ' : '展開'}"><span class="ico ${tb.open ? 'i-caret-up' : 'i-caret-down'}"></span></button>
+      </div>
+      ${body}
+    </section>`;
+  }).join('');
+  return `<div class="tb-list">${cards}</div>
+    <button type="button" class="btn sm tp2-add" data-tb-add="1">+ テーブルを追加（${tables.length}/${TYPE_TABLE_MAX}）</button>`;
+}
+
 /** ステップごとの右ペイン内容 */
 function typePane(step, t) {
   if (step === 1) {
@@ -5164,12 +5251,12 @@ function canEditWorkflow_() {
         <td class="tp2-req"><label class="switch sm"><input type="checkbox" data-tpf="${f.id}" data-k="required" ${f.required ? 'checked' : ''} /><span></span></label></td>
         <td class="tp2-ops">
           <button type="button" class="tp2-op" data-tpdel="${f.id}" title="削除" aria-label="削除"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 4.4h9.6M6.1 4.4V3.1h3.8v1.3M4.3 4.4l.55 8.3h6.3l.55-8.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
-          <button type="button" class="tp2-op tp2-grip" draggable="true" data-tpdrag="${f.id}" title="ドラッグして順番を変更" aria-label="順番を変更"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 6.2h10M3 9.8h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+          <button type="button" class="tp2-op tp2-grip" draggable="true" data-dragscope="fields" data-tpdrag="${f.id}" title="ドラッグして順番を変更" aria-label="順番を変更"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="currentColor"><circle cx="5" cy="5" r="1.35"/><circle cx="11" cy="5" r="1.35"/><circle cx="5" cy="11" r="1.35"/><circle cx="11" cy="11" r="1.35"/></svg></button>
         </td>
       </tr>`).join('');
     const tableBody = fields.length
       ? `<div class="tp2-tablewrap"><table class="tp2-table">
-          <thead><tr><th>番号</th><th>項目名</th><th>プロンプト</th><th>正解サンプル</th><th>必須項目</th><th>操作・処理</th></tr></thead>
+          <thead><tr><th>番号</th><th>項目名</th><th>プロンプト</th><th>正解サンプル</th><th>必須項目</th><th class="tp2-ops">操作・処理</th></tr></thead>
           <tbody>${rows}</tbody></table></div>`
       : `<div class="tp2-empty"><span class="ico i-multi"></span><p>データなしです。項目を追加した後また確認してください</p></div>`;
     return `<div class="tp2-pane">
@@ -5190,17 +5277,16 @@ function canEditWorkflow_() {
           </div>
         </div>
       </div>
-      ${tab === 'text' ? `
       <div class="tp2-prompt-wrap">
         <textarea class="fld w100 tp2-prompt" id="tpGlobalPrompt" rows="3" maxlength="2000" placeholder="ここに全体の背景と共通ルールを入力してください（例：一般的な請求書です。原文のまま抽出し、内容を捏造しないでください）。特定の項目に対する抽出ルールは、下記のリストに入力してください">${esc(prompt)}</textarea>
-        <!-- 入力欄の中に左右の丸ボタン（左＝ペン、右＝クリア） -->
         <button type="button" class="fab pen" id="tpPromptAi" title="プロンプトをAI生成"><span class="ico i-edit"></span></button>
         <button type="button" class="fab plain" id="tpPromptClear" title="クリア"><span class="ico i-delete"></span></button>
         <div class="tp2-prompt-meta"><span id="tpPromptCount">${prompt.length}</span> / 2000</div>
       </div>
+      ${tab === 'text' ? `
       ${tableBody}
       <button type="button" class="btn sm tp2-add" data-tpadd="1">+ 項目追加（${fields.length}/100）</button>
-      ` : `<div class="tp2-empty tall"><p>テーブル情報読取の詳細設定は Demo ではプレースホルダーです。<br />タブ切替のみ動作します。</p></div>`}
+      ` : renderTypeTablePane()}
     </div>`;
   }
   if (step === 3) {
@@ -5551,9 +5637,11 @@ function bindTicketDetail() {
   });
   /* 4 点ハンドルをドラッグして項目の順番を入れ替える */
   let tpDragId = null;
+  let tpDragScope = 'fields';
   document.querySelectorAll('[data-tpdrag]').forEach((b) => {
     b.ondragstart = (e) => {
       tpDragId = b.dataset.tpdrag;
+      tpDragScope = b.dataset.dragscope || 'fields';
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', tpDragId);
       const tr = b.closest('tr');
@@ -5577,9 +5665,14 @@ function bindTicketDetail() {
       const fromId = tpDragId || e.dataTransfer.getData('text/plain');
       const grip = tr.querySelector('[data-tpdrag]');
       const toId = grip && grip.dataset.tpdrag;
+      const scope = (document.querySelector(`[data-tpdrag="${fromId}"]`) || {}).dataset;
+      const fromScope = (scope && scope.dragscope) || 'fields';
+      const toScope = (grip && grip.dataset.dragscope) || 'fields';
       tpDragId = null;
-      if (!fromId || !toId || fromId === toId) return;
-      const list = ensureTypeFields();
+      if (!fromId || !toId || fromId === toId || fromScope !== toScope) return;
+      const list = fromScope === 'fields'
+        ? ensureTypeFields()
+        : ((ensureTypeTables().find((t) => t.id === fromScope) || {}).cols || []);
       const from = list.findIndex((x) => x.id === fromId);
       const to = list.findIndex((x) => x.id === toId);
       if (from < 0 || to < 0) return;

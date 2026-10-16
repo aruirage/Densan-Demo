@@ -1654,9 +1654,10 @@ th .ico{font-size:11px;color:var(--accent)}
 .tp2-no{color:var(--text-3);width:40px}
 .tp2-in{height:32px;width:100%;min-width:100px}
 .tp2-req{width:72px;text-align:center}
-.tp2-ops{width:72px;white-space:nowrap;text-align:right}
-.tp2-ops .tp2-op{width:26px;height:26px;margin:0;padding:0;border:0;background:transparent;color:#5c6570;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none}
-.tp2-ops .tp2-op:hover{color:var(--text)}
+.tp2-table th.tp2-ops,
+.tp2-table td.tp2-ops{width:88px;white-space:nowrap;text-align:left;padding-left:10px;padding-right:8px}
+.tp2-ops .tp2-op{appearance:none;-webkit-appearance:none;width:auto;height:auto;min-width:0;margin:0;padding:0 3px;border:none;border-radius:0;background:none;box-shadow:none;color:#5c6570;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;pointer-events:none;line-height:1}
+.tp2-ops .tp2-op:hover{color:var(--text);background:none;border:none}
 .tp2-table tbody tr:hover .tp2-ops .tp2-op,
 .tp2-table tbody tr:focus-within .tp2-ops .tp2-op{opacity:1;pointer-events:auto}
 .tp2-grip{cursor:grab}
