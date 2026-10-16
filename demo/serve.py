@@ -1597,6 +1597,27 @@ def apply_tree_folder_rename(src):
     return src
 
 
+def apply_remove_detail_action(src):
+    """行アクションの「详情」を削除（左から：再読取・確認・ダウンロード・削除）。"""
+    src = re.sub(r"<button class=\"act\" data-act=\"detail\"[^>]*>.*?</button>", "", src)
+    return src
+
+
+def apply_minimal_flow2(src):
+    """最小変動：
+    ① メニューから「マイタスク」を外す（画面は残す）
+    ② アップロード画面の「アップロード済ファイル」一覧を非表示（投入専用化）
+    ③ ファイル一覧のタブに「読取待ち」を追加
+    """
+    # ① メニュー項目（スペース・引用符の揺れに対応して全部消す）
+    src = re.sub(r"\s*\{\s*id:\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
+    # ③ タブに「読取待ち」を先頭追加（STATUS.waiting.label = 読取待ち）
+    src = re.sub(r"const TAB_STATUS = \[[^\]]*\];", "const TAB_STATUS = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];", src, count=1)
+    # ② アップロード済ファイルの一覧カードを非表示（投入専用）
+    src = src.replace("</style>", ".upload-list-card{display:none !important;}\n</style>", 1)
+    return src
+
+
 def apply_minimal_flow(src):
     """最小変動：メニューから「マイタスク」を外す（画面自体は残す／要件に無いため）。"""
     src = src.replace("    { id: 'myTasks', label: 'マイタスク' },\n", "")
@@ -2617,6 +2638,8 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_remove_detail_action(patched)
+    patched = apply_minimal_flow2(patched)
     patched = apply_minimal_flow(patched)
     patched = apply_remove_approve_options(patched)
     patched = apply_kill_approve_tasks(patched)
