@@ -700,7 +700,9 @@ RESULT_FREEZE_CSS = """
 .result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 130px; }
 .result-table th:nth-child(9),  .result-table td:nth-child(9)  { width: 150px; }
 .result-table th:nth-child(10), .result-table td:nth-child(10) { width: 150px; }
-.result-table th:nth-child(11), .result-table td:nth-child(11) { width: 150px; }
+.result-table th:nth-child(11), .result-table td:nth-child(11) { width: 196px; }
+.result-table thead th.result-actions-cell,
+.result-table td.result-actions-cell { width: 196px !important; min-width: 196px !important; overflow: visible !important; }
 /* 横スクロール（全列を潰さずに表示） */
 .result-content > .tablewrap, .result-panel .tablewrap { overflow-x: auto !important; }
 .result-table th, .result-table td { overflow: hidden; text-overflow: ellipsis; }
@@ -1592,6 +1594,14 @@ def apply_tree_folder_rename(src):
     src = src.replace(
         "'表示次元を切替えできます。業務シーン・帳票タイプ名は変更不可（ファイル名のみ変更可）。同階層はドラッグで並び替えできます'",
         "'帳票タイプ・ファイルの表示名を変更できます（拡張子は変更不可）。同階層はドラッグで並び替えます'", 1)
+    return src
+
+
+def apply_remove_approve_options(src):
+    """マイタスクのタスク種別から「要承認」「要再承認」を削除（承認全廃）。"""
+    src = re.sub(r"\n?\s*<option[^>]*>\s*要再?承認\s*</option>", "", src)
+    src = re.sub(r"\n?\s*\[\s*'re?approve'\s*,\s*'要再?承認'\s*\]\s*,?", "", src)
+    src = src.replace("要再承認", "").replace("要承認", "")
     return src
 
 
@@ -2600,6 +2610,7 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_remove_approve_options(patched)
     patched = apply_kill_approve_tasks(patched)
     patched = apply_tree_perm_filter(patched)
     patched = apply_result_columns_11(patched)
