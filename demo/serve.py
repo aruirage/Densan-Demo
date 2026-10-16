@@ -1679,6 +1679,14 @@ function downloadResultFile(id, fmt) {""", 1)
                           """function passesFilters(f) {
   if (state.filters.updatedBy && f.updatedBy !== state.filters.updatedBy) return false;""", 1)
 
+    # ⑦' 帳票タイプの絞り込みを追加（客户）／読取日の絞り込みを削除（客户）
+    _biz_field2 = """<div class="field"><span class="lbl">業務シーン</span>${fselect('biz', '選択してください', bizOpts, F.biz)}</div>"""
+    _biz_field3 = _biz_field2 + """
+          <div class="field"><span class="lbl">帳票タイプ</span>${fselect('layout', '選択してください', layouts, F.layout)}</div>"""
+    if _biz_field2 in src:
+        src = src.replace(_biz_field2, _biz_field3, 1)
+    src = src.replace("""${range('読取日', 'readFrom', 'readTo')}""", "")
+
     # ⑥ 並べ替え：業務シーン・作成者・更新者を「名前」で比較できるようにする
     old_sort = "    if (k === 'layout') { va = dispLayout(a.layout); vb = dispLayout(b.layout); return va.localeCompare(vb, 'ja') * dir; }"
     new_sort = old_sort + """
