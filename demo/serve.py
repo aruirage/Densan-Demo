@@ -1544,6 +1544,10 @@ def apply_encoding_fix(src):
     # 設定は 3 つだけに絞る：文字コード／必須項目のみ／複数ファイルを1ファイルに
     src = re.sub(r'<section class="exp-block">\s*<h4 class="exp-sec">CSV オプション</h4>[\s\S]*?</section>', '', src)
     src = re.sub(r'\n\s*<label class="exp-check"><input type="checkbox" data-expcfg="includeFileName"[^\n]*', '', src)
+    # 出力ファイル名は入力ファイル名と一致させるため、設定欄を外す
+    src = re.sub(r'<label class="exp-field is-wide exp-filefield">[\s\S]*?</label>', '', src)
+    # 説明文（注記）は全て削除
+    src = re.sub(r'\s*<p class="exp-note">[\s\S]*?</p>', '', src)
     return src
 
 

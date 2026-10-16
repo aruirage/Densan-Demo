@@ -3755,14 +3755,7 @@ function renderExportDialog() {
           <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>同一帳票タイプの複数ファイルを 1 ファイルにまとめる（1 ファイル複数レコード）</span></label>
           <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみを出力する（オフのときは全項目を出力）</span></label>
         </div>
-        <p class="exp-note">列名は横一列のヘッダー行、1 レコード＝1 行で出力します。列名・列順は帳票タイプごとに管理者が設定します。</p>
       </section>
-      
-
-        <label class="exp-field is-wide exp-filefield"><span class="exp-field-label">ファイル名</span>
-          <span class="exp-filename"><span class="ico i-file"></span><input class="fld exp-name-input" id="expFileName" type="text" value="${esc((state.exportCfg && state.exportCfg.fileName) || exportFileName())}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span>
-        </label>
-        <p class="exp-note">列名・列順は帳票タイプごとに設定できます（設定変更は管理者のみ）。出力対象：現在の絞り込み結果 <b>${visibleFiles().length}</b> 件。結合出力は最大 ${esc(String(C.maxRows))} 件まで。</p>
       </div>
       <div class="modal-foot exp-foot">
         <span class="spacer"></span>
