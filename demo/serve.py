@@ -1658,6 +1658,15 @@ def apply_result_columns_11(src):
   return '—';
 }
 function downloadResultFile(id, fmt) {""", 1)
+
+    # ⑥ 並べ替え：業務シーン・作成者・更新者を「名前」で比較できるようにする
+    old_sort = "    if (k === 'layout') { va = dispLayout(a.layout); vb = dispLayout(b.layout); return va.localeCompare(vb, 'ja') * dir; }"
+    new_sort = old_sort + """
+    if (k === 'biz') { va = dispBiz((catOf(a.layout) || {}).business || ''); vb = dispBiz((catOf(b.layout) || {}).business || ''); return va.localeCompare(vb, 'ja') * dir; }
+    if (k === 'createdBy') { va = ((byId(USERS, a.createdBy) || {}).name || a.createdBy || ''); vb = ((byId(USERS, b.createdBy) || {}).name || b.createdBy || ''); return va.localeCompare(vb, 'ja') * dir; }
+    if (k === 'updatedBy') { va = ((byId(USERS, a.updatedBy) || {}).name || a.updatedBy || ''); vb = ((byId(USERS, b.updatedBy) || {}).name || b.updatedBy || ''); return va.localeCompare(vb, 'ja') * dir; }"""
+    if old_sort in src:
+        src = src.replace(old_sort, new_sort, 1)
     return src
 
 
