@@ -1555,6 +1555,11 @@ def apply_encoding_fix(src):
     # 文字エンコードは必須なので、ラベルに必須マークを付ける
     src = src.replace('<span class="exp-field-label">文字エンコード（CSV・JSON）</span>',
                       '<span class="exp-field-label"><i class="req">*</i>文字エンコード（CSV・JSON）</span>')
+    # 出力ファイル名＝入力ファイル名 のスイッチ（既定オン）
+    _req = '''<label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみ出力</span></label>'''
+    _add = _req + '''
+          <label class="exp-check"><input type="checkbox" data-expcfg="fileNameFromInput" ${C.fileNameFromInput !== false ? 'checked' : ''} /><span>入力ファイル名を出力ファイル名にする</span></label>'''
+    src = src.replace(_req, _add, 1)
     return src
 
 
