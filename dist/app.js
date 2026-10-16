@@ -5121,13 +5121,6 @@ function ensureTypeTables() {
   return state.typeTables;
 }
 
-function typeColOps(id) {
-  return `<td class="tp2-ops">
-    <button type="button" class="tp2-op" data-tpdel="${id}" title="削除" aria-label="削除"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.2 4.4h9.6M6.1 4.4V3.1h3.8v1.3M4.3 4.4l.55 8.3h6.3l.55-8.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
-    <button type="button" class="tp2-op tp2-grip" draggable="true" data-tpdrag="${id}" title="ドラッグして順番を変更" aria-label="順番を変更"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="currentColor"><circle cx="5" cy="5" r="1.35"/><circle cx="11" cy="5" r="1.35"/><circle cx="5" cy="11" r="1.35"/><circle cx="11" cy="11" r="1.35"/></svg></button>
-  </td>`;
-}
-
 function renderTypeTablePane() {
   const tables = ensureTypeTables();
   const info = '<span class="ico i-help tb-info"></span>';
@@ -5665,8 +5658,7 @@ function bindTicketDetail() {
       const fromId = tpDragId || e.dataTransfer.getData('text/plain');
       const grip = tr.querySelector('[data-tpdrag]');
       const toId = grip && grip.dataset.tpdrag;
-      const scope = (document.querySelector(`[data-tpdrag="${fromId}"]`) || {}).dataset;
-      const fromScope = (scope && scope.dragscope) || 'fields';
+      const fromScope = tpDragScope || 'fields';
       const toScope = (grip && grip.dataset.dragscope) || 'fields';
       tpDragId = null;
       if (!fromId || !toId || fromId === toId || fromScope !== toScope) return;
@@ -5681,6 +5673,66 @@ function bindTicketDetail() {
       render();
     };
   });
+  document.querySelectorAll('[data-tb-name]').forEach((el) => {
+    el.oninput = () => {
+      const tb = ensureTypeTables().find((t) => t.id === el.dataset.tbName);
+      if (tb) tb.name = el.value;
+    };
+  });
+  document.querySelectorAll('[data-tb-cond]').forEach((el) => {
+    el.oninput = () => {
+      const tb = ensureTypeTables().find((t) => t.id === el.dataset.tbCond);
+      if (tb) tb.cond = el.value;
+    };
+  });
+  document.querySelectorAll('[data-tb-toggle]').forEach((b) => {
+    b.onclick = () => {
+      const tb = ensureTypeTables().find((t) => t.id === b.dataset.tbToggle);
+      if (!tb) return;
+      tb.open = !tb.open;
+      render();
+    };
+  });
+  document.querySelectorAll('[data-tb-del]').forEach((b) => {
+    b.onclick = () => {
+      state.typeTables = ensureTypeTables().filter((t) => t.id !== b.dataset.tbDel);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-tbcol]').forEach((el) => {
+    const apply = () => {
+      const parts = String(el.dataset.tbcol || '').split(':');
+      const tb = ensureTypeTables().find((t) => t.id === parts[0]);
+      const col = tb && (tb.cols || []).find((c) => c.id === parts[1]);
+      if (!col) return;
+      col[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value;
+    };
+    el.onchange = apply;
+    if (el.tagName === 'INPUT' && el.type !== 'checkbox') el.oninput = apply;
+  });
+  document.querySelectorAll('[data-tbcol-del]').forEach((b) => {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      const parts = String(b.dataset.tbcolDel || '').split(':');
+      const tb = ensureTypeTables().find((t) => t.id === parts[0]);
+      if (!tb) return;
+      tb.cols = (tb.cols || []).filter((c) => c.id !== parts[1]);
+      render();
+    };
+  });
+  const tbAdd = document.querySelector('[data-tb-add]');
+  if (tbAdd) tbAdd.onclick = () => {
+    const tables = ensureTypeTables();
+    if (tables.length >= TYPE_TABLE_MAX) { toast(`テーブルは最大${TYPE_TABLE_MAX}件です`); return; }
+    tables.push({
+      id: 'tb' + Date.now(),
+      name: '新規テーブル',
+      cond: '',
+      open: true,
+      cols: [{ id: 'c' + Date.now(), name: '', prompt: '', sample: '', required: false }],
+    });
+    render();
+  };
   const tpadd = document.querySelector('[data-tpadd]');
   if (tpadd) tpadd.onclick = () => {
     const fields = ensureTypeFields();

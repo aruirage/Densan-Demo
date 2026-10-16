@@ -258,7 +258,7 @@
 }
 
 /* ══ エクスポート設定：右側の余白をなくす（幅を内容に合わせる） ══ */
-.exp-modal{ width: min(520px, 100%) !important; }
+.exp-modal{ width: min(600px, 100%) !important; }
 .exp-modal .exp-canvas{ padding: 18px 20px; }
 .exp-modal .exp-field{ width: 100%; align-items: center; }
 .exp-modal .exp-field .exp-control,
@@ -268,4 +268,4 @@
 .exp-modal .exp-field .exp-control,
 .exp-modal .exp-field select{ width:100% !important; }
 .exp-modal .exp-field-label{ display:block; margin-bottom:6px; }
-.exp-modal .exp-checks{ display:flex !important; flex-direction:column !important; gap:10px !important; margin-top:14px; }
+.exp-modal .exp-checks{ display:grid !important; grid-template-columns:1fr 1fr !important; column-gap:28px !important; row-gap:12px !important; margin-top:14px; }
