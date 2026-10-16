@@ -1703,6 +1703,34 @@ function downloadResultFile(id, fmt) {""", 1)
     if _old_cls in src:
         src = src.replace(_old_cls, _new_cls)
 
+    # ⑫ 確認画面：Enter を押したら（値が変わっていなくても）「修正済み」にする
+    _ocr_head = """  document.querySelectorAll('[data-ocr]').forEach((inp) => {
+    if (inp.disabled || inp.readOnly) return;
+    inp.oninput = () => {"""
+    _ocr_new = """  /* Enter を押した時点で「修正」として扱う（値が同じでも枠を変色） */
+  document.querySelectorAll('[data-ocr]').forEach((inp) => {
+    if (inp.disabled || inp.readOnly) return;
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      const id = state.reviewId;
+      const key = inp.dataset.ocr;
+      state.reviewDirty[id] = state.reviewDirty[id] || {};
+      state.reviewDirty[id][key] = inp.value;
+      inp.classList.add('edited');
+      const row = inp.closest('.rv-field-row');
+      if (row) {
+        row.classList.remove('is-confirmed');
+        row.classList.add('is-corrected');
+        const holder = row.querySelector('.rv-field-state-row');
+        if (holder) holder.innerHTML = '<span class="rv-field-state mod">修正済み</span>';
+      }
+    });
+  });
+""" + _ocr_head
+    if _ocr_head in src and 'Enter を押した時点で「修正」として扱う' not in src:
+        src = src.replace(_ocr_head, _ocr_new, 1)
+
     # ⑪ ファイル名の hover でフルネームを表示（切り詰められるため）
     _fn_old = """<button class="fn link" data-result-preview="${f.id}" title="${esc(dispFileName(f.id))}">"""
     _fn_new = """<button class="fn link" data-result-preview="${f.id}" data-tip="${esc(dispFileName(f.id))}" title="${esc(dispFileName(f.id))}">"""
