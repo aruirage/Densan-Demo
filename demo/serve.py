@@ -1621,32 +1621,35 @@ def apply_result_columns_11(src):
     if old_cg in src:
         src = src.replace(old_cg, new_cg, 1)
 
-    # ② thead：サイズ削除／業務シーン・作成者・更新者・開始日時・操作・処理履歴
+    # ② thead：客户指定の並び（ファイル名・業務シーン・帳票タイプ・ファイルサイズ・ステータス・
+    #            操作・処理履歴・作成者・作成日時・更新者・更新日時・操作・処理）
     old_th = """${th('layout', '帳票タイプ')}${th('status', 'ステータス')}<th style="width:186px">現在の担当</th>${th('updatedAt', '更新日時')}"""
-    new_th = """${th('status', 'ステータス')}${th('layout', '帳票タイプ')}${th('biz', '業務シーン')}${th('createdBy', '作成者')}${th('updatedBy', '更新者')}${th('createdAt', '開始日時', 'class="col-created"')}${th('updatedAt', '更新日時')}${th('history', '操作・処理履歴')}"""
+    new_th = """${th('biz', '業務シーン')}${th('layout', '帳票タイプ')}${th('size', 'ファイルサイズ')}${th('status', 'ステータス')}${th('history', '操作・処理履歴')}${th('createdBy', '作成者')}${th('createdAt', '作成日時', 'class="col-created"')}${th('updatedBy', '更新者')}${th('updatedAt', '更新日時')}"""
     if old_th in src:
         src = src.replace(old_th, new_th, 1)
 
-    # ②' 状態セルを帳票タイプの前に移動（客户：状態はファイル名の直後）
-    src = re.sub(
-        r'(<td class="result-type" title="\$\{esc\(dispLayout\(f\.layout\)\)\}">\$\{esc\(dispLayout\(f\.layout\)\)\}</td>)\s*(<td><span class="st [\s\S]*?</span></td>)',
-        r'\2\n        \1', src, count=1)
-
-    # ③ 行：旧「現在の担当」セルを 業務シーン／作成者／更新者／開始日時 に置き換える
-    old_sub = """<td class="sub" title="${esc(currentAssigneeOf(f))}">${esc(currentAssigneeOf(f))}</td>"""
-    new_sub = """<td class="result-biz" title="${esc(c && c.business ? dispBiz(c.business) : '—')}">${esc(c && c.business ? dispBiz(c.business) : '—')}</td>
+    # ③ 行：ファイル名の直後〜更新日時までを、客户指定の並びで組み直す
+    _cells = ("""<td class="result-biz" title="${esc(c && c.business ? dispBiz(c.business) : '—')}">${esc(c && c.business ? dispBiz(c.business) : '—')}</td>
+        <td class="result-type" title="${esc(dispLayout(f.layout))}">${esc(dispLayout(f.layout))}</td>
+        <td class="result-size">${fmtSize(f.size)}</td>
+        <td><span class="st ${stCls(f.status)}" title="${esc(STATUS[f.status].label)}">${esc(STATUS[f.status].label)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td>
+        <td class="hist ${histCls(f.status)}" title="${esc(histTextOf(f))}">${esc(histTextOf(f))}</td>
         <td class="result-person">${esc((byId(USERS, f.createdBy) || {}).name || f.createdBy || '—')}</td>
+        <td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>
         <td class="result-person">${esc((byId(USERS, f.updatedBy) || byId(USERS, f.confirmedBy) || {}).name || f.updatedBy || f.confirmedBy || '—')}</td>
-        <td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>"""
-    if old_sub in src:
-        src = src.replace(old_sub, new_sub, 1)
+        <td style="white-space:nowrap;color:var(--text-2)">${esc(f.updatedAt)}</td>""")
+    src = re.sub(
+        r'<td class="result-type" title="\$\{esc\(dispLayout\(f\.layout\)\)\}">\$\{esc\(dispLayout\(f\.layout\)\)\}</td>[\s\S]*?<td style="white-space:nowrap;color:var\(--text-2\)">\$\{esc\(f\.updatedAt\)\}</td>',
+        _cells.replace('\\', '\\\\'), src, count=1)
 
-    # ④ 操作・処理履歴セルを操作列の直前に挿入（失敗理由／確認担当者／出力担当者）
-    old_act = """<td class="result-actions-cell"><div class="acts act-icons">"""
-    new_act = """<td class="hist ${histCls(f.status)}" title="${esc(histTextOf(f))}">${esc(histTextOf(f))}</td>
+    # ③' 旧「現在の担当」セルが残っていれば削除（行内の重複を防ぐ）
+    src = src.replace('<td class="sub" title="${esc(currentAssigneeOf(f))}">${esc(currentAssigneeOf(f))}</td>', '', 1)
+
+    # ③'' 操作・処理履歴セルが二重に入らないよう、操作列の直前の重複を削除
+    _hist_cell = """<td class="hist ${histCls(f.status)}" title="${esc(histTextOf(f))}">${esc(histTextOf(f))}</td>
         <td class="result-actions-cell"><div class="acts act-icons">"""
-    if old_act in src:
-        src = src.replace(old_act, new_act, 1)
+    if src.count(_hist_cell) > 1:
+        src = src.replace(_hist_cell, """<td class="result-actions-cell"><div class="acts act-icons">""", 1)
 
     # ⑤ 履歴テキストのヘルパー
     if 'function histTextOf' not in src:
