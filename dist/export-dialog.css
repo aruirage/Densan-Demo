@@ -247,16 +247,6 @@
   pointer-events: none;
 }
 
-/* ══ 確認画面：プレビュー操作アイコンを上部中央に配置（製品の見た目に合わせる） ══ */
-.review-bar{ position: relative; }
-.review-bar .rv-tools-inline{
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  margin: 0;
-}
-
 /* ══ エクスポート設定：右側の余白をなくす（幅を内容に合わせる） ══ */
 .exp-modal{ width: min(600px, 100%) !important; }
 .exp-modal .exp-canvas{ padding: 18px 20px; }
@@ -292,3 +282,4 @@
 /* ══ スイッチは 1 行 1 項目（跳行しない）＋「入力名と同じ」を最下段に ══ */
 #expBack .exp-switches{ grid-template-columns:1fr !important; }
 #expBack .exp-switches > .exp-switch:nth-child(2){ order:9 !important; }
+#expBack label:has(#expFileName) .exp-field-label{ display:none !important; }

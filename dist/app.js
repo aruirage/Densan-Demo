@@ -1521,7 +1521,7 @@ const state = {
   reviewTab: 'preview',           // preview | json（右ペイン表示モード）
   reviewReadTab: 'text',          // text | table（テキスト読取／テーブル情報読取）
   reviewOnlyErr: false,           // エラー箇所のみ表示
-  reviewPos: true,                // true＝項目位置を非表示（既定ON）。falseで bbox 表示
+  reviewPos: false,               // true＝項目位置を非表示。既定は OFF（bbox を表示）
   reviewFocusKey: null,           // 確認画面で左右連動ハイライト中の項目 key
   resultScrollLeft: 0,            // ファイル一覧テーブルの横スクロール位置
   reviewZoom: 1,
@@ -1602,11 +1602,11 @@ function rvSvg(paths, size = 16) {
   return '<svg class="rv-tool-svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" aria-hidden="true">' + paths + '</svg>';
 }
 const RV_ICON = {
-  reset: rvSvg('<path d="M10 5H6.2C5.5 5 5 5.5 5 6.2V10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5" cy="5" r="1.2" stroke="currentColor" stroke-width="1.2"/><path d="M14 19h3.8c.7 0 1.2-.5 1.2-1.2V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="19" cy="19" r="1.2" stroke="currentColor" stroke-width="1.2"/>'),
-  rotL: rvSvg('<path d="M7.5 8.5H4.5v-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 8.2a7 7 0 1 0 2.2-4.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'),
-  rotR: rvSvg('<path d="M16.5 8.5h3v-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 8.2a7 7 0 1 1-2.2-4.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'),
-  zoomIn: rvSvg('<circle cx="10.5" cy="10.5" r="5.75" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 8v5M8 10.5h5M15.2 15.2L19 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'),
-  zoomOut: rvSvg('<circle cx="10.5" cy="10.5" r="5.75" stroke="currentColor" stroke-width="1.5"/><path d="M8 10.5h5M15.2 15.2L19 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'),
+  select: rvSvg('<rect x="2.8" y="2.8" width="11.2" height="11.2" rx="1.8" stroke="currentColor" stroke-width="1.5"/><path d="M12.4 11.2l7.2 2.4-3.3 1.3 2.3 4.3-1.7.9-2.3-4.2-2.2 2.6z" fill="currentColor"/>'),
+  reset: rvSvg('<rect x="5" y="5" width="14" height="14" rx="1.2" stroke="currentColor" stroke-width="1.5"/><circle cx="17.4" cy="6.6" r="1.7" stroke="currentColor" stroke-width="1.3"/><circle cx="6.6" cy="17.4" r="1.7" stroke="currentColor" stroke-width="1.3"/>'),
+  rot: rvSvg('<path d="M16.2 8.4A6.4 6.4 0 0 0 8.2 6.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8.2 3.6v3.4h3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.8 15.6A6.4 6.4 0 0 0 15.8 17.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15.8 20.4v-3.4h-3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'),
+  zoomIn: rvSvg('<path d="M9 9 4.6 4.6M4.6 4.6H8M4.6 4.6V8M15 9l4.4-4.4M19.4 4.6H16M19.4 4.6V8M9 15l-4.4 4.4M4.6 19.4H8M4.6 19.4V16M15 15l4.4 4.4M19.4 19.4H16M19.4 19.4V16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'),
+  zoomOut: rvSvg('<path d="M4.6 4.6 9 9M9 9H5.6M9 9V5.6M19.4 4.6 15 9M15 9h3.4M15 9V5.6M4.6 19.4 9 15M9 15H5.6M9 15v3.4M19.4 19.4 15 15M15 15h3.4M15 15v3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'),
 };
 
 const dispFileName = (fileId) => state.rename['file:' + fileId] || (byId(FILES_DATA, fileId) || {}).name || '';
@@ -2131,8 +2131,8 @@ function renderTree() {
       const ni = treeIcon(n.type === 'file' ? 'document' : 'folder', opened);
       const fullName = nodeLabel(n);
       /* 名称変更はファイルのみ（業務シーン・帳票タイプはマスタ固定） */
-      const ops = n.type === 'file'
-        ? [`<button class="redo" title="ファイル名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
+      const ops = (n.type === 'file' || n.type === 'biz' || n.type === 'cat')
+        ? [`<button class="redo" title="${n.type === 'file' ? 'ファイル名を変更' : 'フォルダ名を変更'}" data-rename="1"><span class="ico i-edit"></span></button>`]
         : [];
       /* 長い名前は省略表示。hover で全文（ファイルは data-tip、フォルダは title） */
       const labelTip = n.type === 'file'
@@ -3183,7 +3183,7 @@ function openReview(fileId, opts) {
   state.reviewZoom = 1;
   state.reviewRotate = 0;
   state.reviewFocusKey = null;
-  state.reviewPos = true;
+  state.reviewPos = false;
   state.saveHistoryOpen = false;
   /* マイタスク／一覧から開いた确认は独立タブとして前面化 */
   const tid = reviewTabId(fileId);
@@ -3244,7 +3244,7 @@ function bindReview() {
   const zi = $('#rvZoomIn'); if (zi) zi.onclick = () => { state.reviewZoom = Math.min(1.8, Number((state.reviewZoom + 0.1).toFixed(2))); render(); };
   const zo = $('#rvZoomOut'); if (zo) zo.onclick = () => { state.reviewZoom = Math.max(0.6, Number((state.reviewZoom - 0.1).toFixed(2))); render(); };
   const ft = $('#rvFit'); if (ft) ft.onclick = () => { state.reviewZoom = 1; state.reviewRotate = 0; render(); };
-  const rl = $('#rvRotL'); if (rl) rl.onclick = () => { state.reviewRotate = ((state.reviewRotate || 0) - 90 + 360) % 360; render(); };
+  const selTool = $('#rvToolSelect'); if (selTool) selTool.onclick = () => { state.reviewEditTool = 'select'; };
   const rr = $('#rvRotR'); if (rr) rr.onclick = () => { state.reviewRotate = ((state.reviewRotate || 0) + 90) % 360; render(); };
   document.querySelectorAll('[data-rvtab]').forEach((b) => {
     b.onclick = () => { state.reviewTab = b.dataset.rvtab; render(); };
@@ -4976,7 +4976,7 @@ function bindBizScenes() {
       render(); toast('帳票を追加しました');
     };
   });
-  document.querySelectorAll('[data-typedel]').forEach((b) => {
+  document.querySelectorAll('.tc-del[data-typedel]').forEach((b) => {
     b.onclick = () => {
       const sc = cur(); if (!sc) return;
       sc.formIds = (sc.formIds || []).filter((x) => x !== b.dataset.typedel);
@@ -5371,7 +5371,6 @@ function renderTicketDetail() {
       + '<span class="ti-name" title="' + esc(x.name) + '">' + esc(x.name) + '</span>'
       + '<button type="button" class="ti-more" data-typemenu="' + x.id + '" title="メニュー"><span class="ico i-more"></span></button>'
       + (open ? '<div class="ti-menu">'
-        + '<button type="button" data-typerename="' + x.id + '">名称変更</button>'
         + '<button type="button" class="danger" data-typedel="' + x.id + '">削除</button>'
         + '</div>' : '')
       + '</div>';
@@ -5452,23 +5451,10 @@ function bindTicketDetail() {
       render();
     };
   });
-  document.querySelectorAll('[data-typerename]').forEach((b) => {
-    b.onclick = (e) => {
-      e.stopPropagation();
-      const t = byId(TICKET_TYPES, b.dataset.typerename);
-      state.typeItemMenu = null;
-      if (!t) return;
-      const name = (typeof window !== 'undefined' && window.prompt) ? window.prompt('帳票タイプ名', t.name) : t.name;
-      if (name && name.trim()) { t.name = name.trim(); t.updatedAt = nowStamp(); toast('名称を変更しました'); }
-      render();
-    };
-  });
-  document.querySelectorAll('[data-typedel]').forEach((b) => {
+  document.querySelectorAll('.ti-menu [data-typedel]').forEach((b) => {
     b.onclick = (e) => {
       e.stopPropagation();
       const id = b.dataset.typedel;
-      const ask = (typeof window !== 'undefined' && typeof window.confirm === 'function') ? window.confirm('この帳票タイプを削除しますか？') : true;
-      if (!ask) return;
       const i = TICKET_TYPES.findIndex((x) => x.id === id);
       if (i >= 0) TICKET_TYPES.splice(i, 1);
       if (state.typeId === id) state.typeId = (TICKET_TYPES[0] && TICKET_TYPES[0].id) || null;
@@ -5492,6 +5478,14 @@ function bindTicketDetail() {
   const pv = $('#tpPrev'); if (pv) pv.onclick = () => { state.typePage = Math.max(1, state.typePage - 1); render(); };
   const nxt = $('#tpNext'); if (nxt) nxt.onclick = () => { state.typePage = Math.min(3, state.typePage + 1); render(); };
   const ru = $('#tpReupload'); if (ru) ru.onclick = () => toast('サンプル帳票を再アップロードします（モック）');
+  const nmLive = $('#tpName');
+  if (nmLive) nmLive.oninput = () => {
+    const cur = byId(TICKET_TYPES, state.typeId);
+    if (!cur) return;
+    cur.name = nmLive.value;
+    const label = document.querySelector('[data-typeid="' + cur.id + '"] .ti-name');
+    if (label) { label.textContent = cur.name; label.title = cur.name; }
+  };
   const sv = $('#tpSave'); if (sv) sv.onclick = () => {
     const t = byId(TICKET_TYPES, state.typeId);
     const nm = $('#tpName'); const ds = $('#tpDesc'); const gk = $('#tpGroup');
@@ -6521,7 +6515,7 @@ function bindTree(treeEl) {
     const type = node.dataset.type, id = node.dataset.id, key = type + ':' + id;
     if (e.target.closest('[data-rename]')) {
       e.stopPropagation();
-      if (type !== 'file') { toast('業務シーン・帳票タイプ名は変更できません'); return; }
+      if (type !== 'file' && type !== 'biz' && type !== 'cat') { toast('この項目の名称は変更できません'); return; }
       startRename(node, type, id);
       return;
     }
@@ -6955,13 +6949,6 @@ function renderReview() {
           <button type="button" class="btn rv-page-btn" id="rvPrev" ${page <= 1 ? 'disabled' : ''}>前へ</button>
           <button type="button" class="btn rv-page-btn" id="rvNext" ${page >= state.reviewPages ? 'disabled' : ''}>次へ</button>
       </div>
-        <div class="rv-tools-inline" role="toolbar" aria-label="プレビュー操作">
-          <button type="button" class="icon-btn rv-tool" id="rvFit" title="リセット">${RV_ICON.reset}</button>
-          <button type="button" class="icon-btn rv-tool" id="rvRotL" title="左回転">${RV_ICON.rotL}</button>
-          <button type="button" class="icon-btn rv-tool" id="rvRotR" title="右回転">${RV_ICON.rotR}</button>
-          <button type="button" class="icon-btn rv-tool" id="rvZoomIn" title="拡大">${RV_ICON.zoomIn}</button>
-          <button type="button" class="icon-btn rv-tool" id="rvZoomOut" title="縮小">${RV_ICON.zoomOut}</button>
-    </div>
         </div>
       <div class="rv-bar-right">
         <div class="rv-stat-groups">
@@ -6986,6 +6973,13 @@ function renderReview() {
     ${flowStrip}
     <div class="review-body nl-review-body${isApproveUi ? ' is-approve' : ''}">
       <section class="rv-pane nl-preview-pane">
+        <div class="rv-quick-edit" role="toolbar" aria-label="プレビュー操作">
+          <button type="button" class="rv-qbtn" id="rvToolSelect" title="選択">${RV_ICON.select}</button>
+          <button type="button" class="rv-qbtn" id="rvFit" title="表示をリセット">${RV_ICON.reset}</button>
+          <button type="button" class="rv-qbtn" id="rvRotR" title="回転">${RV_ICON.rot}</button>
+          <button type="button" class="rv-qbtn" id="rvZoomIn" title="拡大">${RV_ICON.zoomIn}</button>
+          <button type="button" class="rv-qbtn" id="rvZoomOut" title="縮小">${RV_ICON.zoomOut}</button>
+        </div>
         <div class="rv-preview-stage">
           <button type="button" class="rv-side-nav left" id="rvPagePrev" ${page <= 1 ? 'disabled' : ''} aria-label="前のページ"><span class="ico i-back"></span></button>
           <div class="rv-preview-canvas${state.reviewZoom > 1 ? ' is-zoomed' : ''}">
@@ -8020,13 +8014,9 @@ function bindUploadPanel() {
 }
 
 function startRename(nodeEl, type, id) {
-  /* ツリーではファイル名のみ変更可（業務シーン・帳票タイプはマスタ固定） */
-  if (type !== 'file') {
-    toast('業務シーン・帳票タイプ名は変更できません');
-    return;
-  }
-  const key = 'file:' + id;
-  const current = dispFileName(id);
+  /* ファイル＝ファイル名、フォルダ（業務シーン／帳票タイプ）＝表示名を変更 */
+  const key = type + ':' + id;
+  const current = type === 'file' ? dispFileName(id) : (type === 'biz' ? dispBiz(id) : dispCat(id));
   const label = $('.label', nodeEl);
   const input = document.createElement('input');
   input.className = 'rename'; input.value = current;
@@ -8034,7 +8024,7 @@ function startRename(nodeEl, type, id) {
   const commit = (save) => {
     if (save && input.value.trim()) {
       state.rename[key] = input.value.trim();
-      toast('ファイル表示名を変更しました（表示のみ）');
+      toast((type === 'file' ? 'ファイル表示名' : 'フォルダ表示名') + 'を変更しました（表示のみ）');
     }
     render();
   };
