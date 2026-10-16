@@ -1727,7 +1727,7 @@ function downloadResultFile(id, fmt) {""", 1)
     #    ※ ダウンロードのメニュー（.batch-dl 内）を乱さないよう、コンテナの外側・左に置く
     _bd = """<div class="batch-dl${pickedCount ? '' : ' is-disabled'}">"""
     if _bd in src and 'id="resRead"' not in src:
-        src = src.replace(_bd, """<button type="button" class="btn sm" id="resRead" ${pickedCount ? '' : 'disabled'}>選択帳票読取</button>
+        src = src.replace(_bd, """<button type="button" class="btn primary sm" id="resRead" ${pickedCount ? '' : 'disabled'}>選択帳票読取</button>
     """ + _bd, 1)
 
     # ⑫ 確認画面：Enter を押したら（値が変わっていなくても）「修正済み」にする

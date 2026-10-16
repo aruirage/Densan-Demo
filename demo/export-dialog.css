@@ -403,3 +403,42 @@ thead th{ background:#eef5fd !important; }
 /* 列幅を意図どおりにする（合計幅を確保して横スクロールで見せる） */
 .result-table{ min-width:1900px; table-layout:fixed; }
 .result-tablewrap .result-table.result-table{ min-width:1900px !important; table-layout:fixed !important; width:1900px !important; }
+
+/* ══ 一覧の 3 ボタン：配色を整理＋読み取りボタンでダウンロードメニューが出ないように ══ */
+/* メニューは「一括ダウンロード」を hover / フォーカスした時だけ出す */
+.result-tablebar .batch-dl-menu{ display:none !important; }
+.result-tablebar .batch-dl:hover .batch-dl-menu,
+.result-tablebar .batch-dl:focus-within .batch-dl-menu,
+.result-tablebar .batch-dl.is-open .batch-dl-menu{ display:block !important; }
+
+/* 3 ボタンの見た目 */
+.result-tablebar #resRead{
+  background:#1f7fd0 !important; border:1px solid #1f7fd0 !important; color:#fff !important;
+}
+.result-tablebar #resRead:hover:not(:disabled){ background:#1a6cb3 !important; border-color:#1a6cb3 !important; }
+.result-tablebar #resRead:disabled{ background:#e6eef7 !important; border-color:#dbe6f2 !important; color:#9fb3c8 !important; }
+.result-tablebar .batch-dl .btn.result-download{
+  background:#fff !important; border:1px solid #8fc0e8 !important; color:#1f7fd0 !important;
+}
+.result-tablebar .batch-dl .btn.result-download:hover:not(:disabled){ background:#f2f8fe !important; }
+.result-tablebar .btn.danger-ghost, .result-tablebar #batchDelete{
+  background:#fff !important; border:1px solid #efb9c0 !important; color:#d5495c !important;
+}
+.result-tablebar .btn.danger-ghost:hover:not(:disabled), .result-tablebar #batchDelete:hover:not(:disabled){ background:#fdf3f4 !important; }
+
+/* 参考デザインに合わせる：#1 塗り（primary）／#2 枠線（primary）／#3 枠線（red） */
+.result-tablebar #resRead{
+  background:var(--el-color-primary,#3fb6c6) !important;
+  border:1px solid var(--el-color-primary,#3fb6c6) !important;
+  color:#fff !important;
+}
+.result-tablebar .batch-dl .btn.result-download{
+  background:#fff !important;
+  border:1px solid var(--el-color-primary,#3fb6c6) !important;
+  color:var(--el-color-primary,#2f9fb0) !important;
+}
+.result-tablebar .btn.danger-ghost{
+  background:#fff !important;
+  border:1px solid #e8b7b4 !important;
+  color:var(--red,#d5305a) !important;
+}
