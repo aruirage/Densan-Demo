@@ -716,7 +716,7 @@ RESULT_FREEZE_CSS = """
   position: sticky !important; right: 0; z-index: 3;
   background: #fff; box-shadow: -8px 0 10px -8px rgba(31, 47, 61, .18);
 }
-.result-table thead th:last-child { z-index: 4; background: #eef5fd; }
+.result-table thead th:last-child { z-index: 4; background: #eef5fd; text-align: right !important; padding-right: 16px; }
 .result-table tbody tr:hover td.result-actions-cell { background: #f7faff; }
 .result-table tbody tr.is-picked td.result-actions-cell { background: #f2f7fd; }
 .result-table .result-actions-cell { padding-left: 6px; padding-right: 6px; }
