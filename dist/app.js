@@ -3748,7 +3748,29 @@ function renderExportDialog() {
         </section>
 
         <section class="exp-block">
-          <h4 class="exp-sec">CSV オプション</h4>
+        <h4 class="exp-sec">出力形式・文字コード</h4>
+        <div class="exp-checks">
+          <label class="exp-check"><input type="checkbox" data-expcfg="formatCsv" ${C.formatCsv !== false ? 'checked' : ''} /><span>CSV</span></label>
+          <label class="exp-check"><input type="checkbox" data-expcfg="formatJson" ${C.formatJson ? 'checked' : ''} /><span>JSON</span></label>
+          <label class="exp-check"><input type="checkbox" data-expcfg="formatPdf" ${C.formatPdf ? 'checked' : ''} /><span>PDF</span></label>
+        </div>
+        <div class="exp-fields">
+          <label class="exp-field"><span class="exp-field-label">文字エンコード（CSV・JSON）</span>
+            <select class="fld exp-control" data-expcfg="encoding">
+              <option ${C.encoding === 'UTF-8（BOMあり）' ? 'selected' : ''}>UTF-8（BOMあり）</option>
+              <option ${C.encoding === 'UTF-8（BOMなし）' ? 'selected' : ''}>UTF-8（BOMなし）</option>
+              <option ${C.encoding === 'Shift_JIS（S-JIS）' ? 'selected' : ''}>Shift_JIS（S-JIS）</option>
+            </select>
+          </label>
+        </div>
+        <div class="exp-checks">
+          <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>同一帳票タイプの複数ファイルを 1 ファイルにまとめる（1 ファイル複数レコード）</span></label>
+          <label class="exp-check"><input type="checkbox" data-expcfg="includeFileName" ${C.includeFileName ? 'checked' : ''} /><span>入力ファイル名を出力項目に含める</span></label>
+        </div>
+        <p class="exp-note">列名は横一列のヘッダー行、1 レコード＝1 行で出力します。列名・列順は帳票タイプごとに管理者が設定します。</p>
+      </section>
+      <section class="exp-block">
+        <h4 class="exp-sec">CSV オプション</h4>
           <div class="exp-checks">
             <label class="exp-check"><input type="checkbox" data-expcfg="header" ${C.header ? 'checked' : ''} /><span>ヘッダー行を出力</span></label>
             <label class="exp-check"><input type="checkbox" data-expcfg="merge" ${C.merge ? 'checked' : ''} /><span>同一帳票タイプを1ファイルに結合</span></label>
