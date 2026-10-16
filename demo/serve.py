@@ -1528,9 +1528,12 @@ def apply_export_format_block(src):
     """エクスポート設定に「出力形式・文字コード・まとめ出力・ファイル名項目」を追加（客户要件）。"""
     old = '<section class="exp-block">\n          <h4 class="exp-sec">CSV オプション</h4>'
     new = '<section class="exp-block">\n        <h4 class="exp-sec">出力形式・文字コード</h4>\n        <div class="exp-checks">\n          <label class="exp-check"><input type="checkbox" data-expcfg="formatCsv" ${C.formatCsv !== false ? \'checked\' : \'\'} /><span>CSV</span></label>\n          <label class="exp-check"><input type="checkbox" data-expcfg="formatJson" ${C.formatJson ? \'checked\' : \'\'} /><span>JSON</span></label>\n          <label class="exp-check"><input type="checkbox" data-expcfg="formatPdf" ${C.formatPdf ? \'checked\' : \'\'} /><span>PDF</span></label>\n        </div>\n        <div class="exp-fields">\n          <label class="exp-field"><span class="exp-field-label">文字エンコード（CSV・JSON）</span>\n            <select class="fld exp-control" data-expcfg="encoding">\n              <option ${C.encoding === \'UTF-8（BOMあり）\' ? \'selected\' : \'\'}>UTF-8（BOMあり）</option>\n              <option ${C.encoding === \'UTF-8（BOMなし）\' ? \'selected\' : \'\'}>UTF-8（BOMなし）</option>\n              <option ${C.encoding === \'Shift_JIS（S-JIS）\' ? \'selected\' : \'\'}>Shift_JIS（S-JIS）</option>\n            </select>\n          </label>\n        </div>\n        <div class="exp-checks">\n          <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? \'checked\' : \'\'} /><span>同一帳票タイプの複数ファイルを 1 ファイルにまとめる（1 ファイル複数レコード）</span></label>\n          <label class="exp-check"><input type="checkbox" data-expcfg="includeFileName" ${C.includeFileName ? \'checked\' : \'\'} /><span>入力ファイル名を出力項目に含める</span></label>\n        </div>\n        <p class="exp-note">列名は横一列のヘッダー行、1 レコード＝1 行で出力します。列名・列順は帳票タイプごとに管理者が設定します。</p>\n      </section>\n      <section class="exp-block">\n        <h4 class="exp-sec">CSV オプション</h4>'
+    # 旧「出力方式」（横向/縦向/結合）は廃止（列定義で表現するため）
+    src = src.replace('<section class="exp-block">\n          <h4 class="exp-sec">出力方式</h4>\n          <div class="exp-radios">\n            ${radio(\'mode\', \'horizontal\', \'横向导出\', \'一般項目を横向に出力\')}\n            ${radio(\'mode\', \'vertical\', \'竖向导出\', \'一般項目を縦向に出力（現状）\')}\n            ${radio(\'mode\', \'combine\', \'結合导出\', \'一般項目と表格項目を Left Join で結合（1人1行）\')}\n          </div>\n        </section>', "")
     if old in src:
         return src.replace(old, new, 1)
     return src
+
 
 
 def apply_list_cleanup(src):

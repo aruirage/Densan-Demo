@@ -3738,14 +3738,7 @@ function renderExportDialog() {
     <div class="modal exp-modal" style="width:min(820px,100%)">
       <div class="modal-head"><b>エクスポート設定</b><span class="spacer"></span><button class="icon-btn" id="expClose"><span class="ico i-close"></span></button></div>
       <div class="modal-canvas exp-canvas">
-        <section class="exp-block">
-          <h4 class="exp-sec">出力方式</h4>
-          <div class="exp-radios">
-            ${radio('mode', 'horizontal', '横向导出', '一般項目を横向に出力')}
-            ${radio('mode', 'vertical', '竖向导出', '一般項目を縦向に出力（現状）')}
-            ${radio('mode', 'combine', '結合导出', '一般項目と表格項目を Left Join で結合（1人1行）')}
-          </div>
-        </section>
+        
 
         <section class="exp-block">
         <h4 class="exp-sec">出力形式・文字コード</h4>
