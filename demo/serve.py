@@ -1737,12 +1737,12 @@ function downloadResultFile(id, fmt) {""", 1)
     if _fn_old in src:
         src = src.replace(_fn_old, _fn_new, 1)
 
-    # ⑩ 絞り込み：読取結果検索（客户）— 帳票タイプの右に入力欄を追加
-    _lay_field = """<div class="field"><span class="lbl">帳票タイプ</span>${fselect('layout', '選択してください', layouts, F.layout)}</div>"""
-    _lay2 = _lay_field + """
-          <div class="field"><span class="lbl">読取結果検索</span><input class="fld" data-rvq placeholder="読取結果を検索" value="${esc(F.rvq || '')}" /></div>"""
-    if _lay_field in src:
-        src = src.replace(_lay_field, _lay2, 1)
+    # ⑩ 絞り込み：読取結果検索（客户）— 「確認日」の右に配置（全体を 3 行に保つ）
+    _ck = """${range('確認日', 'checkedFrom', 'checkedTo')}"""
+    _ck2 = _ck + """
+          <div class="field field-rvq"><span class="lbl">読取結果検索</span><input class="fld" data-rvq placeholder="読取結果を検索" value="${esc(F.rvq || '')}" /></div>"""
+    if _ck in src and 'field-rvq' not in src:
+        src = src.replace(_ck, _ck2, 1)
 
     # ⑨ モック補完（客户 c）：失敗理由・確認担当者・出力担当者を埋めて、操作・処理履歴に出す
     _seed = """
