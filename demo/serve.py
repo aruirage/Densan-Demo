@@ -1606,7 +1606,7 @@ def apply_result_columns_11(src):
         <col style="width:170px">"""
     new_cg = """        <col style="width:44px">
         <col class="col-name" style="width:260px">
-        <col style="width:150px">
+        <col style="width:200px">
         <col style="width:260px">
         <col style="width:110px">
         <col style="width:110px">
@@ -1615,7 +1615,7 @@ def apply_result_columns_11(src):
         <col style="width:150px">
         <col style="width:110px">
         <col style="width:150px">
-        <col style="width:190px">"""
+        <col style="width:150px">"""
     if old_cg in src:
         src = src.replace(old_cg, new_cg, 1)
 
@@ -1830,6 +1830,10 @@ try {
     if 'デモ用モック補完' not in src:
         src = src + _seed
 
+    # ⑮ 行アクションに「再読取」を追加（客户）＋ 列幅の微調整
+    _d_anchor = '<button class="act" data-act="detail" data-file="${f.id}"'
+    if 'data-act="redo"' not in src and _d_anchor in src:
+        src = src.replace(_d_anchor, '<button class="act" data-act="redo" data-file="${f.id}" data-tip="再読取" aria-label="再読取"><span class="ico i-scan" aria-hidden="true"></span></button>' + _d_anchor, 1)
     # ⑥ 並べ替え：業務シーン・作成者・更新者を「名前」で比較できるようにする
     old_sort = "    if (k === 'layout') { va = dispLayout(a.layout); vb = dispLayout(b.layout); return va.localeCompare(vb, 'ja') * dir; }"
     new_sort = old_sort + """
