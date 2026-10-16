@@ -1597,6 +1597,16 @@ def apply_tree_folder_rename(src):
     return src
 
 
+def apply_rename_creator_to_reader(src):
+    """一覧の「作成者」列を「読取者」に（值も読取を実行した人に寄せる）。"""
+    src = src.replace("${th('createdBy', '作成者')}", "${th('readBy', '読取者')}", 1)
+    old = '<td class="result-person" title="${esc((byId(USERS, f.createdBy) || {}).name || f.createdBy || \'—\')}">${esc((byId(USERS, f.createdBy) || {}).name || f.createdBy || \'—\')}</td>'
+    new = '<td class="result-person" title="${esc((byId(USERS, f.readBy || f.updatedBy) || {}).name || f.readBy || f.updatedBy || \'システム（OCR）\')}">${esc((byId(USERS, f.readBy || f.updatedBy) || {}).name || f.readBy || f.updatedBy || \'システム（OCR）\')}</td>'
+    if old in src:
+        src = src.replace(old, new, 1)
+    return src
+
+
 def apply_remove_mytasks_menu(src):
     """メニューから「マイタスク」を外す（route 定義は残す＝画面自体は残す）。"""
     src = re.sub(r"\s*\{\s*(?:id|page):\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
@@ -2654,6 +2664,7 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_rename_creator_to_reader(patched)
     patched = apply_remove_mytasks_menu(patched)
     patched = apply_row_actions_fix(patched)
     patched = apply_remove_detail_action(patched)
