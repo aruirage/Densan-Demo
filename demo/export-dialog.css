@@ -395,3 +395,7 @@ thead th{ background:#eef5fd !important; }
 /* 一括ダウンロードのメニューが「選択帳票読取」の下に出ていたのを修正（.batch-dl を基準に配置） */
 .result-tablebar .batch-dl{ position:relative; }
 .result-tablebar .batch-dl-menu{ left:0; }
+
+/* 左右の固定列の体裁を統一：右（操作・処理）に合わせて、ファイル名の縦線を外す */
+.result-table thead th.col-name,
+.result-table tbody td.col-name{ border-right:0 !important; }
