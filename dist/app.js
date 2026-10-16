@@ -1992,7 +1992,8 @@ function passesFilters(f) {
   const F = state.filters;
   /* 絞り込みは単一選択：未指定（空文字）なら条件なし */
   const one = (sel, val) => !sel || sel === val;
-  if (!one(F.status, f.status)) return false;
+  if (F.status === 'notExported') { if (f.status === 'exported') return false; }
+  else if (!one(F.status, f.status)) return false;
   if (!one(F.biz, (bizOfLayout(f.layout) || {}).id)) return false;
   if (!one(F.layout, f.layout)) return false;
   if (!one(F.createdBy, f.createdBy)) return false;
@@ -2835,7 +2836,7 @@ function renderFilters() {
     })
     .map((l) => [l.id, dispLayout(l.id)]);
   /* 読取待ちは新規アップロード画面のみ。ファイル一覧のステータス絞り込みには出さない */
-  const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting').map((k) => [k, STATUS[k].label, STATUS[k].unused]);
+  const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting').map((k) => [k, STATUS[k].label, STATUS[k].unused]).concat([['notExported', '出力未済', false]]);
   const range = (label, from, to) => `<div class="field"><span class="lbl">${label}</span><div class="result-date-range"><span class="ico i-calendar" aria-hidden="true"></span><input type="date" id="${from}" aria-label="${label} 開始" value="${esc(F[from])}" /><span class="range-sep">-</span><input type="date" id="${to}" aria-label="${label} 終了" value="${esc(F[to])}" /></div></div>`;
   const open = state.filterOpen;
   return `

@@ -1530,6 +1530,23 @@ def apply_read_op_finalize(src):
     return src.replace("'読取': '閲覧', 'アップロード': 'アップロード',", "'アップロード': 'アップロード',", 1)
 
 
+def apply_export_pending_filter(src):
+    """ファイル一覧のステータス絞り込みに「出力未済」を追加する（客户要件）。"""
+    # ① 絞り込み述語：出力未済＝まだ出力していない（出力済以外）
+    old_pred = "  if (!one(F.status, f.status)) return false;"
+    new_pred = ("  if (F.status === 'notExported') { if (f.status === 'exported') return false; }\n"
+                "  else if (!one(F.status, f.status)) return false;")
+    if old_pred in src:
+        src = src.replace(old_pred, new_pred, 1)
+    # ② 選択肢に「出力未済」を足す
+    old_opt = "const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting').map((k) => [k, STATUS[k].label, STATUS[k].unused]);"
+    new_opt = ("const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting').map((k) => [k, STATUS[k].label, STATUS[k].unused])"
+               ".concat([['notExported', '出力未済', false]]);")
+    if old_opt in src:
+        src = src.replace(old_opt, new_opt, 1)
+    return src
+
+
 def apply_confirm_message(src):
     """確認ボタン押下時に「以後の修正ができなくなる」旨のメッセージ（ダイアログ）を出す。"""
     # ① 確認ボタン：必須チェックの後、いきなり確定せずメッセージを出す
@@ -2040,6 +2057,7 @@ def patched_app_js(path):
     patched = apply_stepper_stage_label(patched)
     patched = apply_stage_matrix(patched)
     patched = apply_user_ops_derive_fix(patched)
+    patched = apply_export_pending_filter(patched)
     patched = apply_confirm_message(patched)
     patched = apply_group_roles_sync_fix(patched)
     patched = apply_user_ops_align(patched)
