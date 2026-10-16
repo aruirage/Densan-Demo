@@ -1570,8 +1570,6 @@ def apply_encoding_fix(src):
     src = src.replace('複数ファイルを1ファイルにまとめる', '結合出力')
     src = src.replace('入力ファイル名を出力ファイル名にする', '出力名＝入力名')
     # チェック項目を縦に揃える（2 カラム grid をやめる）
-    if '.exp-modal .exp-checks{flex-direction:column' not in src:
-        src = src.replace('</style>', '.exp-modal .exp-checks{display:flex !important;flex-direction:column !important;align-items:flex-start !important;gap:6px !important;grid-template-columns:none !important;}\n</style>', 1)
     return src
 
 

@@ -162,3 +162,14 @@
 .exp-file-ext {
   color: var(--text-3);
 }
+
+/* ══ エクスポート設定：オプションを縦一列に揃える（客户指摘のレイアウト崩れ） ══ */
+.exp-modal .exp-checks{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-start !important;
+  gap:8px !important;
+}
+.exp-modal .exp-checks .exp-check{ width:auto !important; }
+.exp-modal .exp-field{ align-items:center; }
+.exp-modal .exp-field-label{ white-space:nowrap; }
