@@ -1595,6 +1595,67 @@ def apply_tree_folder_rename(src):
     return src
 
 
+def apply_result_columns_11(src):
+    """読取結果一覧を 11 列に：状態を前へ／業務シーン・作成者・更新者・開始日時・操作・処理履歴。"""
+    # ① colgroup 9 → 11 列
+    old_cg = """        <col style="width:44px">
+        <col class="col-name" style="width:260px">
+        <col style="width:220px">
+        <col style="width:110px">
+        <col style="width:120px">
+        <col style="width:200px">
+        <col style="width:160px">
+        <col style="width:160px">
+        <col style="width:200px">"""
+    new_cg = """        <col style="width:44px">
+        <col class="col-name" style="width:260px">
+        <col style="width:120px">
+        <col style="width:150px">
+        <col style="width:180px">
+        <col style="width:130px">
+        <col style="width:130px">
+        <col style="width:150px">
+        <col style="width:150px">
+        <col style="width:220px">
+        <col style="width:200px">"""
+    if old_cg in src:
+        src = src.replace(old_cg, new_cg, 1)
+
+    # ② thead：サイズ削除／業務シーン・作成者・更新者・開始日時・操作・処理履歴
+    old_th = """${th('layout', '帳票タイプ')}${th('status', 'ステータス')}<th style="width:186px">現在の担当</th>${th('updatedAt', '更新日時')}"""
+    new_th = """${th('layout', '帳票タイプ')}${th('status', 'ステータス')}${th('biz', '業務シーン')}${th('createdBy', '作成者')}${th('updatedBy', '更新者')}${th('createdAt', '開始日時', 'class="col-created"')}${th('updatedAt', '更新日時')}${th('history', '操作・処理履歴')}"""
+    if old_th in src:
+        src = src.replace(old_th, new_th, 1)
+
+    # ③ 行：旧「現在の担当」セルを 業務シーン／作成者／更新者／開始日時 に置き換える
+    old_sub = """<td class="sub" title="${esc(currentAssigneeOf(f))}">${esc(currentAssigneeOf(f))}</td>"""
+    new_sub = """<td class="result-biz" title="${esc(c && c.business ? dispBiz(c.business) : '—')}">${esc(c && c.business ? dispBiz(c.business) : '—')}</td>
+        <td class="result-person">${esc(f.createdBy || '—')}</td>
+        <td class="result-person">${esc(f.updatedBy || f.confirmedBy || '—')}</td>
+        <td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>"""
+    if old_sub in src:
+        src = src.replace(old_sub, new_sub, 1)
+
+    # ④ 操作・処理履歴セルを操作列の直前に挿入（失敗理由／確認担当者／出力担当者）
+    old_act = """<td class="result-actions-cell"><div class="acts act-icons">"""
+    new_act = """<td class="hist ${histCls(f.status)}" title="${esc(histTextOf(f))}">${esc(histTextOf(f))}</td>
+        <td class="result-actions-cell"><div class="acts act-icons">"""
+    if old_act in src:
+        src = src.replace(old_act, new_act, 1)
+
+    # ⑤ 履歴テキストのヘルパー
+    if 'function histTextOf' not in src:
+        src = src.replace("function downloadResultFile(id, fmt) {", """function histTextOf(f) {
+  if (!f) return '—';
+  if (f.status === 'failed') return '読取に失敗しました' + (f.history ? '（' + f.history + '）' : '');
+  if (f.status === 'exported') return '出力担当者: ' + (f.exportedBy || f.confirmedBy || '—');
+  if (f.status === 'confirmed') return '確認担当者: ' + (f.confirmedBy || '—');
+  return '—';
+}
+function downloadResultFile(id, fmt) {""", 1)
+    return src
+
+
 def apply_encoding_fix(src):
     """CSV/JSON の文字エンコード設定を実際の出力に反映（BOM あり/なし）。
 
@@ -2306,6 +2367,7 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_result_columns_11(patched)
     patched = apply_rename_keep_extension(patched)
     patched = apply_tree_folder_rename(patched)
     patched = apply_encoding_fix(patched)
