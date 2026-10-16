@@ -321,3 +321,7 @@
 .result-table thead th.col-name{ z-index:5; }
 .result-table tbody tr.pick td:first-child,
 .result-table tbody tr.pick td.col-name{ background:#f2f6ff; }
+
+/* 固定した列の見出し背景を他の見出しと揃える（#f7f7f7） */
+.result-table thead th:first-child,
+.result-table thead th.col-name{ background:#f7f7f7; }
