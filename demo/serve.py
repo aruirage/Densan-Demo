@@ -1548,6 +1548,10 @@ def apply_encoding_fix(src):
     src = re.sub(r'<label class="exp-field is-wide exp-filefield">[\s\S]*?</label>', '', src)
     # 説明文（注記）は全て削除
     src = re.sub(r'\s*<p class="exp-note">[\s\S]*?</p>', '', src)
+    # 見出しと長い文言を整理（客户：見出し削除・文言短縮）
+    src = src.replace('<h4 class="exp-sec">文字コード・出力オプション</h4>', '')
+    src = src.replace('同一帳票タイプの複数ファイルを 1 ファイルにまとめる（1 ファイル複数レコード）', '複数ファイルを1ファイルにまとめる')
+    src = src.replace('必須項目のみを出力する（オフのときは全項目を出力）', '必須項目のみ出力')
     return src
 
 

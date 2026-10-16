@@ -3740,7 +3740,7 @@ function renderExportDialog() {
         
 
         <section class="exp-block">
-        <h4 class="exp-sec">文字コード・出力オプション</h4>
+        
         
         <div class="exp-fields">
           <label class="exp-field"><span class="exp-field-label">文字エンコード（CSV・JSON）</span>
@@ -3752,8 +3752,8 @@ function renderExportDialog() {
           </label>
         </div>
         <div class="exp-checks">
-          <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>同一帳票タイプの複数ファイルを 1 ファイルにまとめる（1 ファイル複数レコード）</span></label>
-          <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみを出力する（オフのときは全項目を出力）</span></label>
+          <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>複数ファイルを1ファイルにまとめる</span></label>
+          <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみ出力</span></label>
         </div>
       </section>
       </div>
