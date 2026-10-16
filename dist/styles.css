@@ -1550,10 +1550,11 @@ th .ico{font-size:11px;color:var(--accent)}
 .rv-stat-group b.accent-warm{color:var(--warn)}
 .rv-stat-actions{display:flex;gap:8px}
 .rv-doctype-toggles{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.rv-ocr-head{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;padding:8px 16px 6px;border:none}
-.rv-ocr-head .rv-mode-toggle{flex:none}
-.rv-ocr-head .rv-read-tabs{flex:none}
-.rv-ocr-head .rv-doctype-label{min-width:0;flex:1 1 160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.rv-ocr-head{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:8px 16px 6px;border:none}
+.rv-ocr-head .rv-mode-toggle{flex:none;align-self:flex-start}
+.rv-ocr-head .rv-read-tabs{flex:none;align-self:flex-start}
+.rv-doctype-row{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:0}
+.rv-ocr-head .rv-doctype-label{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
 .rv-ocr-head .rv-doctype-toggles{flex:none;margin-left:auto;white-space:nowrap}
 .rv-ocr-head .switch,.rv-ocr-head .chk-inline{white-space:nowrap}
 .rv-mode-row{display:flex;align-items:center;height:auto;padding:0;border:none}

@@ -1554,7 +1554,7 @@ const state = {
   q: '',
   open: {},                       // ツリー（ノード）の開閉
   treeOpen: true,                 // ファイルツリーパネル自体の開閉
-  treeView: 'biz-cat',            // 表示次元：biz-cat | cat
+  treeView: 'cat',                // 表示次元：帳票タイプ → ファイル（業務シーン階層は出さない）
   treeFolders: [],                // 互換用（構造は BUSINESS/CATEGORY を正とする）
   fileFolder: {},                 // ファイルID → 所属帳票タイプID（未分類は null）
   fileOrder: {},                  // ファイルID → 同カテゴリ内の並び順
@@ -1862,17 +1862,9 @@ function filesUnderCat(catId) {
 /** 表示次元に応じたツリー */
 function buildTree() {
   ensureTreeSeeded();
-  const mode = state.treeView === 'cat' ? 'cat' : 'biz-cat';
-  if (mode === 'cat') {
-    return CATEGORY.slice().sort((a, b) => a.order - b.order).map((c) => ({
-      id: c.id, type: 'cat', name: c.name, children: filesUnderCat(c.id),
-    }));
-  }
-  return BUSINESS.slice().sort((a, b) => a.order - b.order).map((b) => ({
-    id: b.id, type: 'biz', name: b.name,
-    children: CATEGORY.filter((c) => c.business === b.id).sort((a, c) => a.order - c.order).map((c) => ({
-      id: c.id, type: 'cat', name: c.name, children: filesUnderCat(c.id),
-    })),
+  /* 第1階層は帳票タイプ。業務シーンはツリーに出さない */
+  return CATEGORY.slice().sort((a, b) => a.order - b.order).map((c) => ({
+    id: c.id, type: 'cat', name: c.name, children: filesUnderCat(c.id),
   }));
 }
 
@@ -2811,7 +2803,7 @@ function renderFilters() {
     })
     .map((l) => [l.id, dispLayout(l.id)]);
   /* 読取待ちは新規アップロード画面のみ。ファイル一覧のステータス絞り込みには出さない */
-  const statusOpts = STATUS_ORDER.map((k) => [k, STATUS[k].label, STATUS[k].unused]);
+  const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting').map((k) => [k, STATUS[k].label, STATUS[k].unused]).concat([['notExported', '出力未済', false]]);
   const range = (label, from, to) => `<div class="field"><span class="lbl">${label}</span><div class="result-date-range"><span class="ico i-calendar" aria-hidden="true"></span><input type="date" id="${from}" aria-label="${label} 開始" value="${esc(F[from])}" /><span class="range-sep">-</span><input type="date" id="${to}" aria-label="${label} 終了" value="${esc(F[to])}" /></div></div>`;
   const open = state.filterOpen;
   return `
@@ -7056,9 +7048,12 @@ function renderReview() {
             <button class="rv-read-tab ${state.reviewReadTab === 'table' ? 'on' : ''}" data-rvread="table">テーブル情報読取</button>
           </div>`}
           ${isApproveUi
-            ? `<div class="rv-doctype-label"><span class="muted">読取文書タイプ : </span><b>${esc(dispLayout(REVIEW_DOC.layoutId) || REVIEW_DOC.title)}</b></div>
-               <div class="rv-doctype-toggles"></div>`
-            : (state.reviewTab === 'json' ? '' : `<div class="rv-doctype-label"><span class="muted">読取文書タイプ : </span><b>${esc(dispLayout(REVIEW_DOC.layoutId) || REVIEW_DOC.title)}</b></div>
+            ? `<div class="rv-doctype-row">
+               <div class="rv-doctype-label"><span class="muted">読取文書タイプ : </span><b>${esc(dispLayout(REVIEW_DOC.layoutId) || REVIEW_DOC.title)}</b></div>
+               <div class="rv-doctype-toggles"></div>
+               </div>`
+            : (state.reviewTab === 'json' ? '' : `<div class="rv-doctype-row">
+          <div class="rv-doctype-label"><span class="muted">読取文書タイプ : </span><b>${esc(dispLayout(REVIEW_DOC.layoutId) || REVIEW_DOC.title)}</b></div>
           <div class="rv-doctype-toggles">
             <label class="switch" for="rvOnlyErr">
               <span class="switch-text">エラー箇所のみ表示</span>
@@ -7066,6 +7061,7 @@ function renderReview() {
               <span class="switch-track" aria-hidden="true"></span>
             </label>
             <label class="chk-inline"><input type="checkbox" id="rvBulkConfirm" ${state.reviewBulkConfirm ? 'checked' : ''} /><span>一括確認</span></label>
+          </div>
           </div>`)}
         </div>
         ${isApproveUi ? approveAuditHtml : `<div class="rv-scroll${state.reviewTab === 'json' ? ' is-json' : ''}">${fieldsHtml}</div>`}
