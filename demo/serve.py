@@ -1533,6 +1533,11 @@ def apply_encoding_fix(src):
     src = re.sub(r'\s*<button[^>]*data-batchdl="excel"[^>]*>[^<]*</button>', '', src)
     src = re.sub(r'\s*<button[^>]*data-dl="excel"[^>]*>[^<]*</button>', '', src)
     src = re.sub(r"\['excel', 'Excelをダウンロード'\],\s*", '', src)
+    # 出力項目の範囲：必須項目のみ／全項目 の切り替え（客户要件）
+    _chk = '''<label class="exp-check"><input type="checkbox" data-expcfg="includeFileName" ${C.includeFileName ? 'checked' : ''} /><span>入力ファイル名を出力項目に含める</span></label>'''
+    _new = _chk + '''
+          <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみを出力する（オフのときは全項目を出力）</span></label>'''
+    src = src.replace(_chk, _new, 1)
     return src
 
 

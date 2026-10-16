@@ -3758,6 +3758,7 @@ function renderExportDialog() {
         <div class="exp-checks">
           <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>同一帳票タイプの複数ファイルを 1 ファイルにまとめる（1 ファイル複数レコード）</span></label>
           <label class="exp-check"><input type="checkbox" data-expcfg="includeFileName" ${C.includeFileName ? 'checked' : ''} /><span>入力ファイル名を出力項目に含める</span></label>
+          <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみを出力する（オフのときは全項目を出力）</span></label>
         </div>
         <p class="exp-note">列名は横一列のヘッダー行、1 レコード＝1 行で出力します。列名・列順は帳票タイプごとに管理者が設定します。</p>
       </section>
