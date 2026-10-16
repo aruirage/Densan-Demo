@@ -1597,6 +1597,13 @@ def apply_tree_folder_rename(src):
     return src
 
 
+def apply_minimal_flow(src):
+    """最小変動：メニューから「マイタスク」を外す（画面自体は残す／要件に無いため）。"""
+    src = src.replace("    { id: 'myTasks', label: 'マイタスク' },\n", "")
+    src = src.replace("{ id: 'myTasks', label: 'マイタスク' },", "")
+    return src
+
+
 def apply_remove_approve_options(src):
     """マイタスクのタスク種別から「要承認」「要再承認」を削除（承認全廃）。"""
     src = re.sub(r"\n?\s*<option[^>]*>\s*要再?承認\s*</option>", "", src)
@@ -1669,7 +1676,7 @@ def apply_result_columns_11(src):
         <col style="width:150px">
         <col style="width:110px">
         <col style="width:150px">
-        <col style="width:150px">"""
+        <col style="width:200px">"""
     if old_cg in src:
         src = src.replace(old_cg, new_cg, 1)
 
@@ -2610,6 +2617,7 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_minimal_flow(patched)
     patched = apply_remove_approve_options(patched)
     patched = apply_kill_approve_tasks(patched)
     patched = apply_tree_perm_filter(patched)
