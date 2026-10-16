@@ -349,7 +349,8 @@ thead th{ background:#eef5fd !important; }
 }
 .result-table thead th.col-name,
 .result-table tbody td.col-name{
-  left:0 !important;
+  position:static !important;
+  left:auto !important;
   border-right:1px solid var(--line,#e5e9f0);
   box-shadow:none;
 }
@@ -458,3 +459,21 @@ thead th{ background:#eef5fd !important; }
 
 /* ══ アップロード画面：投入専用（アップロード済ファイル一覧を非表示） ══ */
 .upload-list-card{ display:none !important; }
+
+/* ══ 確認画面：プレビュー（mock sheet）を幅に合わせて縦スクロール可能に ══ */
+.rv-preview-canvas .sheet,
+.rv-preview-canvas .sheet-zoom{
+  width:100% !important;
+  height:auto !important;
+  max-height:none !important;
+}
+.rv-preview-canvas{ overflow-y:auto !important; }
+.rv-preview-canvas .sheet-zoom{ transform:none !important; }
+
+/* 確認画面：プレビュー領域（stage）を縦スクロールの主体にする */
+.rv-preview-stage{
+  overflow-y:auto !important;
+  max-height:calc(100vh - 210px) !important;
+}
+.rv-preview-canvas{ height:auto !important; min-height:0 !important; overflow:visible !important; }
+.rv-pdf-wrap{ height:auto !important; min-height:0 !important; }
