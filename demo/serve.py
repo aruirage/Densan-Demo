@@ -1662,6 +1662,23 @@ def apply_result_columns_11(src):
 }
 function downloadResultFile(id, fmt) {""", 1)
 
+    # ⑦ 絞り込み：通常行に「業務シーン」、詳細行に「更新者」を追加（客户 b2）
+    _st_field = """<div class="field"><span class="lbl">ステータス</span>${fselect('status', '選択してください', statusOpts, F.status)}</div>"""
+    _biz_field = _st_field + """
+          <div class="field"><span class="lbl">業務シーン</span>${fselect('biz', '選択してください', bizOpts, F.biz)}</div>"""
+    if _st_field in src:
+        src = src.replace(_st_field, _biz_field, 1)
+    _cf_field = """<div class="field"><span class="lbl">確認者</span>${fselect('confirmedBy', '選択してください', confirmers, F.confirmedBy)}</div>"""
+    _up_field = _cf_field + """
+          <div class="field"><span class="lbl">更新者</span>${fselect('updatedBy', '選択してください', users, F.updatedBy)}</div>"""
+    if _cf_field in src:
+        src = src.replace(_cf_field, _up_field, 1)
+    # 更新者での絞り込みを有効化（passesFilters が未対応なら足す）
+    if "F.updatedBy && f.updatedBy !== F.updatedBy" not in src:
+        src = src.replace("function passesFilters(f) {",
+                          """function passesFilters(f) {
+  if (state.filters.updatedBy && f.updatedBy !== state.filters.updatedBy) return false;""", 1)
+
     # ⑥ 並べ替え：業務シーン・作成者・更新者を「名前」で比較できるようにする
     old_sort = "    if (k === 'layout') { va = dispLayout(a.layout); vb = dispLayout(b.layout); return va.localeCompare(vb, 'ja') * dir; }"
     new_sort = old_sort + """
