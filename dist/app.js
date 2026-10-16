@@ -6210,7 +6210,7 @@ function renderCfgNav() {
  * 新規アップロードは頂栏独立メニューのためサイドバーなし。
  */
 function renderSidebarPane() {
-  const treeTip = '表示次元を切替えできます。業務シーン・帳票タイプ名は変更不可（ファイル名のみ変更可）。同階層はドラッグで並び替えできます';
+  const treeTip = '業務シーン・帳票タイプ・ファイルの表示名を変更できます（拡張子は変更不可）。同階層はドラッグで並び替えます';
   return `
   <aside class="panel side with-tree">
   <div class="sidenav-panel">
@@ -6893,8 +6893,6 @@ function renderReview() {
     footCta = dsCta('rvExport', '出力', 'approve', false);
   }
 
-  const flowStrip = `<div class="rv-flow-strip">${flowStepsHtml(f, { compact: true, detail: false })}</div>`;
-
   /* JSON モード：name/value/children 配列。一括確認・エラーのみ表示は出さない */
   const jsonNodes = fieldList.map((x) => ({
     name: x.label,
@@ -7005,7 +7003,6 @@ function renderReview() {
         
         </div>
       </div>
-    ${flowStrip}
     <div class="review-body nl-review-body${isApproveUi ? ' is-approve' : ''}">
       <section class="rv-pane nl-preview-pane">
         <div class="rv-quick-edit" role="toolbar" aria-label="プレビュー操作">
