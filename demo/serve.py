@@ -698,7 +698,7 @@ RESULT_FREEZE_CSS = """
 .result-table th:nth-child(6),  .result-table td:nth-child(6)  { width: 130px; }
 .result-table th:nth-child(7),  .result-table td:nth-child(7)  { width: 130px; }
 .result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 130px; }
-.result-table th:nth-child(9),  .result-table td:nth-child(9)  { width: 150px; }
+.result-table th:nth-child(9),  .result-table td:nth-child(9)  { width: 200px; }
 .result-table th:nth-child(10), .result-table td:nth-child(10) { width: 150px; }
 .result-table th:nth-child(11), .result-table td:nth-child(11) { width: 196px; }
 .result-table thead th.result-actions-cell,
