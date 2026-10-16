@@ -246,3 +246,13 @@
   color: var(--text-3);
   pointer-events: none;
 }
+
+/* ══ 確認画面：プレビュー操作アイコンを上部中央に配置（製品の見た目に合わせる） ══ */
+.review-bar{ position: relative; }
+.review-bar .rv-tools-inline{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}
