@@ -1519,6 +1519,40 @@ def apply_user_ops_derive_fix(src):
     return src
 
 
+def apply_tree_folder_rename(src):
+    """ファイルツリーのフォルダ（業務シーン／帳票タイプ）も名称変更できるようにする。"""
+    # ① ✎ ボタンをフォルダにも出す
+    old_ops = """      const ops = n.type === 'file'
+        ? [`<button class="redo" title="ファイル名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
+        : [];"""
+    new_ops = """      const ops = (n.type === 'file' || n.type === 'biz' || n.type === 'cat')
+        ? [`<button class="redo" title="${n.type === 'file' ? 'ファイル名を変更' : 'フォルダ名を変更'}" data-rename="1"><span class="ico i-edit"></span></button>`]
+        : [];"""
+    src = src.replace(old_ops, new_ops, 1)
+
+    # ② クリックハンドラの制限を外す
+    old_h = "      if (type !== 'file') { toast('業務シーン・帳票タイプ名は変更できません'); return; }"
+    new_h = ("      if (type !== 'file' && type !== 'biz' && type !== 'cat') "
+             "{ toast('この項目の名称は変更できません'); return; }")
+    src = src.replace(old_h, new_h, 1)
+
+    # ③ startRename をフォルダ対応に
+    old_s = """  /* ツリーではファイル名のみ変更可（業務シーン・帳票タイプはマスタ固定） */
+  if (type !== 'file') {
+    toast('業務シーン・帳票タイプ名は変更できません');
+    return;
+  }
+  const key = 'file:' + id;
+  const current = dispFileName(id);"""
+    new_s = """  /* ファイル＝ファイル名、フォルダ（業務シーン／帳票タイプ）＝表示名を変更 */
+  const key = type + ':' + id;
+  const current = type === 'file' ? dispFileName(id) : (type === 'biz' ? dispBiz(id) : dispCat(id));"""
+    src = src.replace(old_s, new_s, 1)
+    src = src.replace("      toast('ファイル表示名を変更しました（表示のみ）');",
+                      "      toast((type === 'file' ? 'ファイル表示名' : 'フォルダ表示名') + 'を変更しました（表示のみ）');", 1)
+    return src
+
+
 def apply_encoding_fix(src):
     """CSV/JSON の文字エンコード設定を実際の出力に反映（BOM あり/なし）。
 
@@ -2312,6 +2346,7 @@ def patched_app_js(path):
     patched = apply_export_format_block(patched)
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
+    patched = apply_tree_folder_rename(patched)
     patched = apply_encoding_fix(patched)
     patched = apply_read_op_finalize(patched)
     # グループ＝権限バケツ：GROUPS / TICKET_PERMS の定義後（レンダリング前）に当てる
