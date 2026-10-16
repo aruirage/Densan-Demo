@@ -1623,15 +1623,20 @@ def apply_result_columns_11(src):
 
     # ② thead：サイズ削除／業務シーン・作成者・更新者・開始日時・操作・処理履歴
     old_th = """${th('layout', '帳票タイプ')}${th('status', 'ステータス')}<th style="width:186px">現在の担当</th>${th('updatedAt', '更新日時')}"""
-    new_th = """${th('layout', '帳票タイプ')}${th('status', 'ステータス')}${th('biz', '業務シーン')}${th('createdBy', '作成者')}${th('updatedBy', '更新者')}${th('createdAt', '開始日時', 'class="col-created"')}${th('updatedAt', '更新日時')}${th('history', '操作・処理履歴')}"""
+    new_th = """${th('status', 'ステータス')}${th('layout', '帳票タイプ')}${th('biz', '業務シーン')}${th('createdBy', '作成者')}${th('updatedBy', '更新者')}${th('createdAt', '開始日時', 'class="col-created"')}${th('updatedAt', '更新日時')}${th('history', '操作・処理履歴')}"""
     if old_th in src:
         src = src.replace(old_th, new_th, 1)
+
+    # ②' 状態セルを帳票タイプの前に移動（客户：状態はファイル名の直後）
+    src = re.sub(
+        r'(<td class="result-type" title="\$\{esc\(dispLayout\(f\.layout\)\)\}">\$\{esc\(dispLayout\(f\.layout\)\)\}</td>)\s*(<td><span class="st [\s\S]*?</span></td>)',
+        r'\2\n        \1', src, count=1)
 
     # ③ 行：旧「現在の担当」セルを 業務シーン／作成者／更新者／開始日時 に置き換える
     old_sub = """<td class="sub" title="${esc(currentAssigneeOf(f))}">${esc(currentAssigneeOf(f))}</td>"""
     new_sub = """<td class="result-biz" title="${esc(c && c.business ? dispBiz(c.business) : '—')}">${esc(c && c.business ? dispBiz(c.business) : '—')}</td>
-        <td class="result-person">${esc(f.createdBy || '—')}</td>
-        <td class="result-person">${esc(f.updatedBy || f.confirmedBy || '—')}</td>
+        <td class="result-person">${esc((byId(USERS, f.createdBy) || {}).name || f.createdBy || '—')}</td>
+        <td class="result-person">${esc((byId(USERS, f.updatedBy) || byId(USERS, f.confirmedBy) || {}).name || f.updatedBy || f.confirmedBy || '—')}</td>
         <td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>"""
     if old_sub in src:
         src = src.replace(old_sub, new_sub, 1)
