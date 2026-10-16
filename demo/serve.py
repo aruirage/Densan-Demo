@@ -1645,7 +1645,20 @@ def apply_result_columns_11(src):
     # ③' 旧「現在の担当」セルが残っていれば削除（行内の重複を防ぐ）
     src = src.replace('<td class="sub" title="${esc(currentAssigneeOf(f))}">${esc(currentAssigneeOf(f))}</td>', '', 1)
 
-    # ③'' 操作・処理履歴セルが二重に入らないよう、操作列の直前の重複を削除
+    # ③'' 各セルに hover でフルネーム（列幅で切れるため）：作成者／更新者／日時にも title を付ける
+    _p_old = '<td class="result-person">${esc((byId(USERS, f.createdBy) || {}).name || f.createdBy || \'—\')}</td>'
+    _p_new = '<td class="result-person" title="${esc((byId(USERS, f.createdBy) || {}).name || f.createdBy || \'—\')}">${esc((byId(USERS, f.createdBy) || {}).name || f.createdBy || \'—\')}</td>'
+    if _p_old in src:
+        src = src.replace(_p_old, _p_new, 1)
+    _u_old = '<td class="result-person">${esc((byId(USERS, f.updatedBy) || byId(USERS, f.confirmedBy) || {}).name || f.updatedBy || f.confirmedBy || \'—\')}</td>'
+    _u_new = '<td class="result-person" title="${esc((byId(USERS, f.updatedBy) || byId(USERS, f.confirmedBy) || {}).name || f.updatedBy || f.confirmedBy || \'—\')}">${esc((byId(USERS, f.updatedBy) || byId(USERS, f.confirmedBy) || {}).name || f.updatedBy || f.confirmedBy || \'—\')}</td>'
+    if _u_old in src:
+        src = src.replace(_u_old, _u_new, 1)
+    src = src.replace('<td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>',
+                      '<td class="col-created" style="white-space:nowrap;color:var(--text-2)" title="${esc(f.createdAt)}">${esc(f.createdAt)}</td>', 1)
+    src = src.replace('<td style="white-space:nowrap;color:var(--text-2)">${esc(f.updatedAt)}</td>',
+                      '<td style="white-space:nowrap;color:var(--text-2)" title="${esc(f.updatedAt)}">${esc(f.updatedAt)}</td>', 1)
+
     _hist_cell = """<td class="hist ${histCls(f.status)}" title="${esc(histTextOf(f))}">${esc(histTextOf(f))}</td>
         <td class="result-actions-cell"><div class="acts act-icons">"""
     if src.count(_hist_cell) > 1:
