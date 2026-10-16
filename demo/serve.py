@@ -1597,6 +1597,12 @@ def apply_tree_folder_rename(src):
     return src
 
 
+def apply_remove_mytasks_menu(src):
+    """メニューから「マイタスク」を外す（route 定義は残す＝画面自体は残す）。"""
+    src = re.sub(r"\s*\{\s*id:\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
+    return src
+
+
 def apply_row_actions_fix(src):
     """行アクションを「再読取・確認・ダウンロード・削除」の順に整える（详情は削除済み）。"""
     anchor = '<button class="act" data-act="confirm" data-file="${f.id}"'
@@ -1704,9 +1710,9 @@ def apply_result_columns_11(src):
         <col style="width:110px">
         <col style="width:220px">
         <col style="width:110px">
-        <col style="width:150px">
+        <col style="width:200px">
         <col style="width:110px">
-        <col style="width:150px">
+        <col style="width:200px">
         <col style="width:200px">"""
     if old_cg in src:
         src = src.replace(old_cg, new_cg, 1)
@@ -2648,6 +2654,7 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_remove_mytasks_menu(patched)
     patched = apply_row_actions_fix(patched)
     patched = apply_remove_detail_action(patched)
     patched = apply_minimal_flow2(patched)

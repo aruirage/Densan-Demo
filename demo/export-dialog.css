@@ -401,8 +401,8 @@ thead th{ background:#eef5fd !important; }
 .result-table tbody td.col-name{ border-right:0 !important; }
 
 /* 列幅を意図どおりにする（合計幅を確保して横スクロールで見せる） */
-.result-table{ min-width:1960px; table-layout:fixed; }
-.result-tablewrap .result-table.result-table{ min-width:1960px !important; table-layout:fixed !important; width:1960px !important; }
+.result-table{ min-width:2060px; table-layout:fixed; }
+.result-tablewrap .result-table.result-table{ min-width:2060px !important; table-layout:fixed !important; width:2060px !important; }
 
 /* ══ 一覧の 3 ボタン：配色を整理＋読み取りボタンでダウンロードメニューが出ないように ══ */
 /* メニューは「一括ダウンロード」を hover / フォーカスした時だけ出す */
@@ -447,3 +447,14 @@ thead th{ background:#eef5fd !important; }
 .rv-preview-stage{ overflow-y:auto !important; min-height:0 !important; }
 .rv-preview-canvas{ min-height:0 !important; overflow-y:auto !important; }
 .rv-pane.nl-preview-pane{ overflow:hidden !important; }
+
+/* ══ 確認画面：プレビューを「幅に合わせて」表示し、縦スクロールできるように ══ */
+.rv-pdf-wrap, .rv-pdf-wrap img, .rv-preview-canvas img{
+  max-height:none !important;
+  height:auto !important;
+}
+.rv-pdf-wrap img, .rv-preview-canvas img{ width:100% !important; }
+.rv-preview-stage, .rv-preview-canvas{ overflow-y:auto !important; }
+
+/* ══ アップロード画面：投入専用（アップロード済ファイル一覧を非表示） ══ */
+.upload-list-card{ display:none !important; }
