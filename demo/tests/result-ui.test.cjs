@@ -25,7 +25,7 @@ test('collapsed result filters show hierarchy row; expanded adds people and all 
   assert.match(html, /業務シーン/);
   assert.match(html, /帳票タイプ/);
   assert.match(html, /もっと見る/);
-  /* 折叠行：業務シーン → 帳票タイプ（帳票カテゴリ・部署は削除） */
+  /* 折叠行：業務シーン → 帳票タイプ（上位類型・部署は削除） */
   assert.ok(html.indexOf('data-fs="biz"') < html.indexOf('data-fs="layout"'));
   assert.doesNotMatch(html, /data-fs="category"|data-fs="dept"/);
   assert.doesNotMatch(html, /帳票カテゴリ|部署/);
