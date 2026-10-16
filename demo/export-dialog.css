@@ -394,15 +394,15 @@ thead th{ background:#eef5fd !important; }
 
 /* 一括ダウンロードのメニューが「選択帳票読取」の下に出ていたのを修正（.batch-dl を基準に配置） */
 .result-tablebar .batch-dl{ position:relative; }
-.result-tablebar .batch-dl-menu{ left:0; }
+.result-tablebar .batch-dl-menu{ left:50%; }
 
 /* 左右の固定列の体裁を統一：右（操作・処理）に合わせて、ファイル名の縦線を外す */
 .result-table thead th.col-name,
 .result-table tbody td.col-name{ border-right:0 !important; }
 
 /* 列幅を意図どおりにする（合計幅を確保して横スクロールで見せる） */
-.result-table{ min-width:1900px; table-layout:fixed; }
-.result-tablewrap .result-table.result-table{ min-width:1900px !important; table-layout:fixed !important; width:1900px !important; }
+.result-table{ min-width:1960px; table-layout:fixed; }
+.result-tablewrap .result-table.result-table{ min-width:1960px !important; table-layout:fixed !important; width:1960px !important; }
 
 /* ══ 一覧の 3 ボタン：配色を整理＋読み取りボタンでダウンロードメニューが出ないように ══ */
 /* メニューは「一括ダウンロード」を hover / フォーカスした時だけ出す */
@@ -442,3 +442,8 @@ thead th{ background:#eef5fd !important; }
   border:1px solid #e8b7b4 !important;
   color:var(--red,#d5305a) !important;
 }
+
+/* ══ 確認画面：プレビューを縦スクロールできるように（客户指摘） ══ */
+.rv-preview-stage{ overflow-y:auto !important; min-height:0 !important; }
+.rv-preview-canvas{ min-height:0 !important; overflow-y:auto !important; }
+.rv-pane.nl-preview-pane{ overflow:hidden !important; }
