@@ -183,7 +183,7 @@ const STATUS = {
   confirmed: { key: 'confirmed', label: '確認済み', phase: 'confirm', actor: '確認権限を持つユーザ', actions: ['view', 'approve', 'return'], unused: false, done: true },
   approved: { key: 'approved', label: '承認済み', phase: 'approve', actor: '承認権限を持つユーザ', actions: ['view', 'export', 'return'], unused: false, done: true },
   returned: { key: 'returned', label: '差戻中', phase: 'approve', actor: '承認権限を持つユーザ', actions: ['view', 'fix', 'confirm'], unused: false, done: false },
-  exported: { key: 'exported', label: '出力済', phase: 'export', actor: '出力権限を持つユーザ', actions: ['view', 'export'], unused: false, done: true },
+  exported: { key: 'exported', label: '出力済み', phase: 'export', actor: '出力権限を持つユーザ', actions: ['view', 'export'], unused: false, done: true },
 };
 /** 処理フロー順のステータス一覧（ステータス絞り込みの選択肢） */
 const STATUS_ORDER = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];
@@ -1534,6 +1534,7 @@ const state = {
   reviewBulkConfirm: false,       // 一括確認スイッチ（表示中項目をまとめて確認済み）
   reviewApprovePane: 'diff',      // 承認画面右：diff（修正差分）| fields（全項目）
   reviewRequiredOpen: false,      // 必須項目が空のときの注意ダイアログ
+  reviewConfirmLockOpen: false,   // 確認ボタン：以後修正できなくなる旨の確認
   saveHistoryOpen: false,         // 保存履历ダイアログ
   flowDialog: null,               // { fileId, action } 承認・確認・差戻のダイアログ
   myTaskTab: 'pending',           // マイタスク：pending(未対応) | done(対応済)
@@ -2722,11 +2723,6 @@ function flowStepsHtml(f, opts) {
 
 /** 帳票1件のフロー操作を実行する */
 function runFlowAction(fileId, action, comment) {
-  /* 確認は取り消せないため、メッセージに同意するまで確定しない */
-  if (action === 'confirm' && !state.reviewConfirmAgreed) {
-    if (!state.reviewConfirmAsk) { state.reviewConfirmAsk = true; render(); }
-    return;
-  }
   const f = byId(FILES_DATA, fileId);
   if (!f) return;
   const { need, stages, done } = flowOf(f);
@@ -2781,8 +2777,7 @@ function runFlowAction(fileId, action, comment) {
     f.history = '差戻中（確認者へ・再確認が必要）';
     toast('確認者へ差し戻しました');
   } else if (action === 'export') {
-    f.status = 'exported'; f.exportedAt = stamp; f.history = '出力済み（CSV）';
-    toast('CSVを出力しました');
+    if (!commitExport(fileId, 'csv')) return;
   } else if (action === 'fix') {
     toast('読取結果の修正画面は製品側の画面です（本デモでは未実装）');
     return;
@@ -2816,7 +2811,7 @@ function renderFilters() {
     })
     .map((l) => [l.id, dispLayout(l.id)]);
   /* 読取待ちは新規アップロード画面のみ。ファイル一覧のステータス絞り込みには出さない */
-  const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting').map((k) => [k, STATUS[k].label, STATUS[k].unused]).concat([['notExported', '出力未済', false]]);
+  const statusOpts = STATUS_ORDER.map((k) => [k, STATUS[k].label, STATUS[k].unused]);
   const range = (label, from, to) => `<div class="field"><span class="lbl">${label}</span><div class="result-date-range"><span class="ico i-calendar" aria-hidden="true"></span><input type="date" id="${from}" aria-label="${label} 開始" value="${esc(F[from])}" /><span class="range-sep">-</span><input type="date" id="${to}" aria-label="${label} 終了" value="${esc(F[to])}" /></div></div>`;
   const open = state.filterOpen;
   return `
@@ -2875,7 +2870,7 @@ function renderTable() {
         <td class="name col-name"><button class="fn link" data-result-preview="${f.id}" title="${esc(dispFileName(f.id))}">${esc(dispFileName(f.id))}</button></td>
         <td class="result-type" title="${esc(dispLayout(f.layout))}">${esc(dispLayout(f.layout))}</td>
         
-        <td><span class="st ${stCls(f.status)}" title="${esc(STATUS[f.status].label)}">${esc(STATUS[f.status].label)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td><td class="sub" title="${esc(currentAssigneeOf(f))}">${esc(currentAssigneeOf(f))}</td>
+        <td><span class="st ${stCls(f.status)}" title="${esc(STATUS[f.status].label)}">${esc(STATUS[f.status].label)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span>${exportDiffBadge(f)}</td><td class="sub" title="${esc(currentAssigneeOf(f))}">${esc(currentAssigneeOf(f))}</td>
         
         
         <td style="white-space:nowrap;color:var(--text-2)">${esc(f.updatedAt)}</td>
@@ -3041,7 +3036,10 @@ function closeTab(id) {
       state.page = 'review';
     } else {
       state.page = nd ? nd.route : 'home';
-      if (state.page !== 'review') state.reviewViewOnly = false;
+      if (state.page !== 'review') {
+        state.reviewViewOnly = false;
+        state.reviewConfirmLockOpen = false;
+      }
     }
   }
   render();
@@ -3178,6 +3176,7 @@ function openReview(fileId, opts) {
   state.reviewConfirmed = state.reviewConfirmed || {};
   state.reviewBulkConfirm = false;
   state.reviewRequiredOpen = false;
+  state.reviewConfirmLockOpen = false;
   state.reviewPage = 1;
   state.reviewPages = REVIEW_DOC.pages;
   state.reviewZoom = 1;
@@ -3207,6 +3206,7 @@ function bindReview() {
       if (state.reviewSessions) delete state.reviewSessions[state.reviewId];
     }
     state.reviewViewOnly = false;
+    state.reviewConfirmLockOpen = false;
     state.page = ret;
     if (ret === 'myTasks' && !isTabOpen('myTasks')) state.tabs.push('myTasks');
     if (ret === 'result' && !isTabOpen('result')) state.tabs.push('result');
@@ -3283,14 +3283,13 @@ function bindReview() {
   const guide = $('#rvGuide'); if (guide) guide.onclick = () => toast('操作ガイド（Demo）');
   const dl = $('#rvDownload'); if (dl) dl.onclick = () => { state.dlMenu = state.reviewId; render(); };
   const leaveReviewToMyTasks = (fileId, myTab) => {
-    /* 確認メッセージ（同意待ち）の間は遷移しない */
-    if (state.reviewConfirmAsk) return;
     const tid = reviewTabId(fileId);
     if (isTabOpen(tid)) {
       state.tabs = state.tabs.filter((x) => x !== tid);
       if (state.reviewSessions) delete state.reviewSessions[fileId];
     }
     if (!isTabOpen('myTasks')) state.tabs.push('myTasks');
+    state.reviewConfirmLockOpen = false;
     state.page = 'myTasks';
     state.myTaskTab = myTab;
     state.reviewViewOnly = false;
@@ -3329,44 +3328,32 @@ function bindReview() {
     runFlowAction(state.reviewId, 'export', '');
   };
   const cf = $('#rvConfirm'); if (cf) cf.onclick = () => {
-    const id = state.reviewId;
-    const list = state.reviewReadTab === 'table' ? OCR_TABLES.default : OCR_FIELDS.b6;
-    const dirtyMap = state.reviewDirty[id] || {};
-    const missing = list.filter((x) => x.required && !String(dirtyMap[x.key] !== undefined ? dirtyMap[x.key] : (x.value || '')).trim());
-    if (missing.length) {
-      state.reviewRequiredOpen = true;
-      render();
-      return;
-    }
-    /* 確認は取り消せないため、メッセージを出して同意を得てから確定する */
-    state.reviewConfirmAsk = true;
+    state.reviewConfirmLockOpen = true;
     render();
   };
-  /* 必須項目が空のときの注意ダイアログ */
-  /* 確認メッセージ（同意してから確認を確定する） */
-  const rvAsk = $('#rvAskBack');
-  if (rvAsk) {
-    const closeAsk = () => { state.reviewConfirmAsk = false; render(); };
-    rvAsk.onclick = (e) => { if (e.target === rvAsk) closeAsk(); };
-    const askX = $('#rvAskClose'); if (askX) askX.onclick = closeAsk;
-    const askC = $('#rvAskCancel'); if (askC) askC.onclick = closeAsk;
-    const askOk = $('#rvAskOk');
-    if (askOk) askOk.onclick = () => {
+  const lockBack = $('#rvLockBack');
+  if (lockBack) {
+    const closeLock = () => { state.reviewConfirmLockOpen = false; render(); };
+    lockBack.onclick = (e) => { if (e.target === lockBack) closeLock(); };
+    const lx = $('#rvLockClose'); if (lx) lx.onclick = closeLock;
+    const lc = $('#rvLockCancel'); if (lc) lc.onclick = closeLock;
+    const lok = $('#rvLockOk');
+    if (lok) lok.onclick = () => {
+      state.reviewConfirmLockOpen = false;
+      state.reviewRequiredOpen = false;
       const id = state.reviewId;
       const list = state.reviewReadTab === 'table' ? OCR_TABLES.default : OCR_FIELDS.b6;
       const map = state.reviewConfirmed[id] || (state.reviewConfirmed[id] = {});
       list.forEach((x) => { map[x.key] = true; });
-      state.reviewConfirmAsk = false;
-      state.reviewConfirmAgreed = true;
       state.reviewBulkConfirm = true;
       runFlowAction(id, 'confirm', '');
-      state.reviewConfirmAgreed = false;
       state.page = 'myTasks';
       state.myTaskTab = 'pending';
       render();
     };
   }
-const rqBack = $('#rvReqBack');
+  /* 必須項目が空のときの注意ダイアログ */
+  const rqBack = $('#rvReqBack');
   if (rqBack) {
     const closeReq = () => { state.reviewRequiredOpen = false; render(); };
     rqBack.onclick = (e) => { if (e.target === rqBack) closeReq(); };
@@ -3491,12 +3478,43 @@ const DL_FORMATS = [
   ['json', 'JSONをダウンロード'],
 ];
 
-/** 読取結果を指定形式でダウンロードする（モック。実ファイルは生成せずテキストを保存） */
-function downloadResultFile(id, fmt) {
-  if (!['csv', 'excel', 'json', 'pdf'].includes(fmt)) return;
-  const rows = [['項目', '値']].concat(OCR_FIELDS.b6.map((x) => [x.label, (state.reviewDirty[id] || {})[x.key] || x.value || '']));
+/** 出力対象の項目値。前回出力スナップショットと比べ、同一データは再出力しない。 */
+function exportValueMap(id) {
+  const dirty = state.reviewDirty[id] || {};
+  const map = {};
+  OCR_FIELDS.b6.forEach((x) => { map[x.key] = dirty[x.key] !== undefined ? String(dirty[x.key]) : String(x.value || ''); });
+  return map;
+}
+function exportDelta(id) {
+  const f = byId(FILES_DATA, id);
+  const now = exportValueMap(id);
+  let prev = null;
+  if (f && f.exportSnapshot) {
+    try { prev = JSON.parse(f.exportSnapshot); } catch (_) { prev = null; }
+  }
+  const changed = Object.keys(now).filter((k) => !prev || String(prev[k] ?? '') !== now[k]);
+  return { now, prev, changed, first: !prev };
+}
+function exportDiffBadge(f) {
+  if (!f || !f.exportSnapshot) return '';
+  const n = exportDelta(f.id).changed.length;
+  return n
+    ? `<span class="st-diff has" title="前回出力以降に変わった項目">差分 ${n}件</span>`
+    : '<span class="st-diff" title="前回出力と同一データ">差分なし</span>';
+}
+/** 差分があるときだけ出力する。同一データはスキップ。戻り値 false は重複スキップ。 */
+function commitExport(id, fmt) {
+  if (!['csv', 'excel', 'json', 'pdf'].includes(fmt)) return false;
+  const f = byId(FILES_DATA, id);
+  const delta = exportDelta(id);
+  if (!delta.first && delta.changed.length === 0) {
+    toast('前回出力以降の差分がないため、同一データの重複出力をスキップしました');
+    return false;
+  }
+  const fields = OCR_FIELDS.b6.filter((x) => delta.changed.includes(x.key));
+  const rows = [['項目', '値']].concat(fields.map((x) => [x.label, delta.now[x.key] || '']));
   const text = fmt === 'json'
-    ? JSON.stringify({ document_id: id, file_name: dispFileName(id), fields: rows.slice(1).map(([k, v]) => ({ label: k, value: v })) }, null, 2)
+    ? JSON.stringify({ document_id: id, file_name: dispFileName(id), since_last_export: !delta.first, fields: rows.slice(1).map(([k, v]) => ({ label: k, value: v })) }, null, 2)
     : rows.map((r) => r.join(',')).join('\r\n');
   const _enc = (state.exportCfg && state.exportCfg.encoding) || 'UTF-8';
   const _bom = _enc.indexOf('BOMなし') >= 0 ? '' : '\ufeff';
@@ -3504,9 +3522,32 @@ function downloadResultFile(id, fmt) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   const ext = fmt === 'excel' ? 'csv' : (fmt === 'pdf' ? 'txt' : fmt);
-  a.download = `${dispFileName(id).replace(/\.[^.]+$/, '')}.${ext}`;
+  a.download = `${dispFileName(id).replace(/\.[^.]+$/, '')}${delta.first ? '' : '_差分'}.${ext}`;
   document.body.appendChild(a); a.click(); a.remove();
-  toast(`${fmt === 'excel' ? 'Excel' : fmt.toUpperCase()} をダウンロードしました（モック）`);
+  if (f) {
+    f.exportSnapshot = JSON.stringify(delta.now);
+    f.status = 'exported';
+    f.exportedAt = nowStamp();
+    f.history = delta.first ? '出力済み（CSV）' : `出力済み（差分 ${delta.changed.length} 件）`;
+  }
+  toast(delta.first
+    ? `${fmt === 'excel' ? 'Excel' : fmt.toUpperCase()} を出力しました`
+    : `前回出力以降の差分 ${delta.changed.length} 件を出力しました`);
+  return true;
+}
+function seedExportSnapshots() {
+  FILES_DATA.forEach((f) => {
+    if (f.status !== 'exported' || f.exportSnapshot) return;
+    const map = exportValueMap(f.id);
+    if (f.id === 'f09') map.move_type = '（前回出力）転居';
+    f.exportSnapshot = JSON.stringify(map);
+  });
+}
+seedExportSnapshots();
+
+/** 読取結果を指定形式でダウンロードする。前回出力と同一なら出さない。 */
+function downloadResultFile(id, fmt) {
+  commitExport(id, fmt);
 }
 
 /* ── 行ダウンロードの hover メニュー ──────────────────────────────
@@ -3587,24 +3628,26 @@ function openFlowDialog(fileId, action) {
   render();
 }
 
-/** 確認画面：必須項目が空のまま確認しようとしたときの注意ダイアログ */
-function renderReviewConfirmAskDialog() {
-  if (!state.reviewConfirmAsk) return '';
+/** 確認ボタン：確定すると以後修正できない旨 */
+function renderReviewConfirmLockDialog() {
+  if (state.page !== 'review' || !state.reviewConfirmLockOpen) return '';
   return `
-  <div class="modal-back" id="rvAskBack">
+  <div class="modal-back" id="rvLockBack">
     <div class="modal" style="width:min(520px,100%)">
-      <div class="modal-head"><b>ご確認ください</b><span class="spacer"></span><button class="icon-btn" id="rvAskClose"><span class="ico i-close"></span></button></div>
-      <div class="modal-canvas" style="background:#fff;display:block;padding:16px 18px">
+      <div class="modal-head"><b>ご確認ください</b><span class="spacer"></span><button class="icon-btn" id="rvLockClose" aria-label="閉じる"><span class="ico i-close"></span></button></div>
+      <div class="modal-canvas" style="background:#fff;display:block;padding:18px 20px">
         <p style="margin:0;font-size:13px;line-height:1.7;color:var(--text)">確認をした場合は以後の修正ができなくなります。確認前に更新したい場合は保存を選択してください。</p>
       </div>
       <div class="modal-foot">
         <span class="spacer"></span>
-        <button class="btn" id="rvAskCancel">キャンセル</button>
-        <button class="btn primary" id="rvAskOk">確認する</button>
+        <button class="btn" id="rvLockCancel">キャンセル</button>
+        <button class="btn primary" id="rvLockOk">確認する</button>
       </div>
     </div>
   </div>`;
 }
+
+/** 確認画面：必須項目が空のまま確認しようとしたときの注意ダイアログ */
 function renderReviewRequiredDialog() {
   if (!state.reviewRequiredOpen) return '';
   const list = state.reviewReadTab === 'table' ? OCR_TABLES.default : OCR_FIELDS.b6;
@@ -6382,7 +6425,8 @@ function render() {
   ${renderFlowDialog()}
   ${renderAccessKeyDialog()}
   ${renderUserAddDialog()}
-  ${renderReviewConfirmAskDialog()} ${renderReviewRequiredDialog()}
+  ${renderReviewConfirmLockDialog()}
+  ${renderReviewRequiredDialog()}
   ${renderSaveHistoryDialog()}
   ${renderExportDialog()}
   <div class="toast" id="toast"></div>`;
@@ -6746,14 +6790,13 @@ function bindFlowDialogs() {
     }
     const ok = $('#flowOk');
     const leaveReviewToMyTasks = (fileId, myTab) => {
-    /* 確認メッセージ（同意待ち）の間は遷移しない */
-    if (state.reviewConfirmAsk) return;
       const tid = reviewTabId(fileId);
       if (isTabOpen(tid)) {
         state.tabs = state.tabs.filter((x) => x !== tid);
         if (state.reviewSessions) delete state.reviewSessions[fileId];
       }
       if (!isTabOpen('myTasks')) state.tabs.push('myTasks');
+      state.reviewConfirmLockOpen = false;
       state.page = 'myTasks';
       state.myTaskTab = myTab;
       state.reviewViewOnly = false;
@@ -7003,30 +7046,29 @@ function renderReview() {
       </section>
 
       <section class="rv-right nl-ocr-pane">
-        ${isApproveUi ? '' : `<div class="rv-mode-row">
-          <div class="rv-mode-toggle">
+        <div class="rv-ocr-head">
+          ${isApproveUi ? '' : `<div class="rv-mode-toggle">
             <button class="rv-mode-btn ${state.reviewTab === 'preview' ? 'on' : ''}" data-rvtab="preview">Preview</button>
             <button class="rv-mode-btn ${state.reviewTab === 'json' ? 'on' : ''}" data-rvtab="json">JSON</button>
           </div>
-        </div>
-        <div class="rv-read-tabs">
-          <button class="rv-read-tab ${state.reviewReadTab === 'text' ? 'on' : ''}" data-rvread="text">テキスト読取</button>
-          <button class="rv-read-tab ${state.reviewReadTab === 'table' ? 'on' : ''}" data-rvread="table">テーブル情報読取</button>
-        </div>`}
-        ${isApproveUi
-          ? `<div class="rv-doctype">
-              <div class="rv-doctype-label"><span class="muted">読取文書タイプ : </span><b>${esc(dispLayout(REVIEW_DOC.layoutId) || REVIEW_DOC.title)}</b></div>
-              <div class="rv-doctype-toggles"></div>
-            </div>
-            ${approveAuditHtml}`
-          : `${state.reviewTab === 'json' ? '' : `<div class="rv-doctype">
-          <div class="rv-doctype-label"><span class="muted">読取文書タイプ : </span><b>${esc(dispLayout(REVIEW_DOC.layoutId) || REVIEW_DOC.title)}</b></div>
+          <div class="rv-read-tabs">
+            <button class="rv-read-tab ${state.reviewReadTab === 'text' ? 'on' : ''}" data-rvread="text">テキスト読取</button>
+            <button class="rv-read-tab ${state.reviewReadTab === 'table' ? 'on' : ''}" data-rvread="table">テーブル情報読取</button>
+          </div>`}
+          ${isApproveUi
+            ? `<div class="rv-doctype-label"><span class="muted">読取文書タイプ : </span><b>${esc(dispLayout(REVIEW_DOC.layoutId) || REVIEW_DOC.title)}</b></div>
+               <div class="rv-doctype-toggles"></div>`
+            : (state.reviewTab === 'json' ? '' : `<div class="rv-doctype-label"><span class="muted">読取文書タイプ : </span><b>${esc(dispLayout(REVIEW_DOC.layoutId) || REVIEW_DOC.title)}</b></div>
           <div class="rv-doctype-toggles">
-            <label class="switch"><span>エラー箇所のみ表示</span><input type="checkbox" id="rvOnlyErr" ${state.reviewOnlyErr ? 'checked' : ''} /></label>
+            <label class="switch" for="rvOnlyErr">
+              <span class="switch-text">エラー箇所のみ表示</span>
+              <input type="checkbox" id="rvOnlyErr" ${state.reviewOnlyErr ? 'checked' : ''} />
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
             <label class="chk-inline"><input type="checkbox" id="rvBulkConfirm" ${state.reviewBulkConfirm ? 'checked' : ''} /><span>一括確認</span></label>
-          </div>
-        </div>`}
-        <div class="rv-scroll${state.reviewTab === 'json' ? ' is-json' : ''}">${fieldsHtml}</div>`}
+          </div>`)}
+        </div>
+        ${isApproveUi ? approveAuditHtml : `<div class="rv-scroll${state.reviewTab === 'json' ? ' is-json' : ''}">${fieldsHtml}</div>`}
         <div class="review-foot nl-review-foot${isApproveUi ? ' is-approve' : ''}">
           <div class="rv-foot-left">
             <span class="rv-foot-note" title="${esc(tip)}">担当：確認 ${esc(assigneeUserNames(cfg.confirmGroups))}・承認 ${esc(assigneeUserNames(cfg.approveGroups))}${cfg.stages === 2 ? `・再承認 ${esc(assigneeUserNames(cfg.reapproveGroups))}` : ''}</span>
@@ -7958,8 +8000,16 @@ function bindUploadPanel() {
       const fmt = b.dataset.batchdl;
       const ids = Object.keys(state.picked).filter((id) => state.picked[id]);
       if (!ids.length) { toast('ダウンロードするファイルを選択してください'); return; }
-      const label = fmt === 'excel' ? 'Excel' : fmt.toUpperCase();
-      toast(`${ids.length} 件を${label}でダウンロードしました（モック）`);
+      let out = 0;
+      let skip = 0;
+      ids.forEach((id) => {
+        const delta = exportDelta(id);
+        if (!delta.first && delta.changed.length === 0) { skip += 1; return; }
+        if (commitExport(id, fmt)) out += 1;
+      });
+      if (!out) toast('選択したデータは前回出力と同一のため、重複出力をスキップしました');
+      else if (skip) toast(`${out} 件を出力しました（${skip} 件は差分がないためスキップ）`);
+      render();
     };
   });
   const sb = $('#searchBtn'); if (sb) sb.onclick = () => runSearch('result');

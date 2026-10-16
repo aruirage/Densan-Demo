@@ -166,13 +166,15 @@ window.isSuperUser = isSuperUser;
     var t = e.target;
     if (!t || !t.closest) return;
 
-    /* 確認ボタン：必須項目の注意ダイアログを出さずに、そのまま確認を確定する。
-       app.js 側は「必須が空なら注意ダイアログを出して return」するので、
-       クリックを乗っ取り確認アクションを直接実行する。 */
+    /* 確認ボタン：以後修正できない旨を出してから確定する（即確定しない） */
     if (t.closest('#rvConfirm')) {
       e.stopPropagation();
       e.preventDefault();
-      runConfirmFromOverlay();
+      var h = hook();
+      if (h && h.state) {
+        h.state.reviewConfirmLockOpen = true;
+        h.render();
+      }
       return;
     }
     /* 万一ダイアログが出てしまった場合：そのボタン操作は閉じるだけにする */

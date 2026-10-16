@@ -286,3 +286,6 @@
 
 /* リネーム時の拡張子（固定・編集不可の見た目） */
 .rename-ext{ font-size:12px; color:var(--text-3,#6b7280); margin-left:4px; }
+
+/* ══ 表示次元の切替を廃止（3 層ツリー固定：業務シーン ＞ 帳票タイプ ＞ ファイル） ══ */
+#treeView, .tree-view-pills{ display:none !important; }
