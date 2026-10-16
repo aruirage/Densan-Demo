@@ -3755,6 +3755,7 @@ function renderExportDialog() {
           <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>複数ファイルを1ファイルにまとめる</span></label>
           <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみ出力</span></label>
           <label class="exp-check"><input type="checkbox" data-expcfg="fileNameFromInput" ${C.fileNameFromInput !== false ? 'checked' : ''} /><span>入力ファイル名を出力ファイル名にする</span></label>
+          ${C.fileNameFromInput === false ? `<label class="exp-field is-wide exp-filefield"><span class="exp-field-label"><i class="req">*</i>ファイル名</span><span class="exp-filename"><input class="fld exp-name-input" id="expFileName" type="text" value="${esc((C && C.fileName) || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span></label>` : ''}
         </div>
       </section>
       </div>

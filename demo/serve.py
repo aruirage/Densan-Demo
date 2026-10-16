@@ -1560,6 +1560,11 @@ def apply_encoding_fix(src):
     _add = _req + '''
           <label class="exp-check"><input type="checkbox" data-expcfg="fileNameFromInput" ${C.fileNameFromInput !== false ? 'checked' : ''} /><span>入力ファイル名を出力ファイル名にする</span></label>'''
     src = src.replace(_req, _add, 1)
+    # スイッチ OFF のときだけ、出力ファイル名の入力欄を出す
+    _sw = '''<label class="exp-check"><input type="checkbox" data-expcfg="fileNameFromInput" ${C.fileNameFromInput !== false ? 'checked' : ''} /><span>入力ファイル名を出力ファイル名にする</span></label>'''
+    _sw2 = _sw + '''
+          ${C.fileNameFromInput === false ? `<label class="exp-field is-wide exp-filefield"><span class="exp-field-label"><i class="req">*</i>ファイル名</span><span class="exp-filename"><input class="fld exp-name-input" id="expFileName" type="text" value="${esc((C && C.fileName) || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span></label>` : ''}'''
+    src = src.replace(_sw, _sw2, 1)
     return src
 
 
