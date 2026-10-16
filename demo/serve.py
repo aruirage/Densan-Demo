@@ -1703,6 +1703,12 @@ function downloadResultFile(id, fmt) {""", 1)
     if _old_cls in src:
         src = src.replace(_old_cls, _new_cls)
 
+    # ⑪ ファイル名の hover でフルネームを表示（切り詰められるため）
+    _fn_old = """<button class="fn link" data-result-preview="${f.id}" title="${esc(dispFileName(f.id))}">"""
+    _fn_new = """<button class="fn link" data-result-preview="${f.id}" data-tip="${esc(dispFileName(f.id))}" title="${esc(dispFileName(f.id))}">"""
+    if _fn_old in src:
+        src = src.replace(_fn_old, _fn_new, 1)
+
     # ⑩ 絞り込み：読取結果検索（客户）— 帳票タイプの右に入力欄を追加
     _lay_field = """<div class="field"><span class="lbl">帳票タイプ</span>${fselect('layout', '選択してください', layouts, F.layout)}</div>"""
     _lay2 = _lay_field + """
