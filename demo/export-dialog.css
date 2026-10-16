@@ -402,3 +402,4 @@ thead th{ background:#eef5fd !important; }
 
 /* 列幅を意図どおりにする（合計幅を確保して横スクロールで見せる） */
 .result-table{ min-width:1900px; table-layout:fixed; }
+.result-tablewrap .result-table.result-table{ min-width:1900px !important; table-layout:fixed !important; width:1900px !important; }
