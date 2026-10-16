@@ -1979,6 +1979,18 @@ const TAB_MATCH = { all: (f) => TAB_STATUS.includes(f.status) };
 STATUS_ORDER.forEach((k) => { TAB_MATCH[k] = (f) => f.status === k; });
 
 /** 絞り込み条件（AND）。同一条件内の複数選択は OR。 */
+/* 固定ワークフロー（アップロード→読取→確認→出力）で「いま誰が担当か」 */
+function currentAssigneeOf(f) {
+  if (!f) return '—';
+  const p = (typeof permsOf === 'function') ? permsOf(f.layout) : {};
+  const resolve = (id) => { const n = (typeof permTargetName === 'function') ? permTargetName(id) : id; return (n && n !== id) ? n : ''; };
+  const names = (ids) => (ids || []).map(resolve).filter(Boolean).join('、');
+  if (['waiting', 'reading', 'classifying'].includes(f.status)) return 'システム（OCR）';
+  if (f.status === 'exported') return '—';
+  if (f.status === 'confirmed') { const n = names(p.export); return n ? ('出力待ち：' + n) : '出力待ち'; }
+  const n = names(p.confirm);
+  return n || '確認待ち';
+}
 function passesFilters(f) {
   const F = state.filters;
   /* 絞り込みは単一選択：未指定（空文字）なら条件なし */
@@ -2817,14 +2829,13 @@ function renderFilters() {
         ${open ? `<div class="result-filter-row" id="resultAdvanced">
           <div class="field"><span class="lbl">作成者</span>${fselect('createdBy', '選択してください', users, F.createdBy)}</div>
           <div class="field"><span class="lbl">確認者</span>${fselect('confirmedBy', '選択してください', confirmers, F.confirmedBy)}</div>
-          <div class="field"><span class="lbl">承認者</span>${fselect('approvedBy', '選択してください', approvers, F.approvedBy)}</div>
-        </div>
+                  </div>
         <div class="result-filter-row result-date-row">
       ${range('作成日時', 'createdFrom', 'createdTo')}
           ${range('更新日時', 'updatedFrom', 'updatedTo')}
           ${range('読取日', 'readFrom', 'readTo')}
           ${range('確認日', 'checkedFrom', 'checkedTo')}
-          ${range('承認日', 'approvedFrom', 'approvedTo')}
+          
         </div>` : ''}
       </div>
       <div class="result-search-actions filter-acts">
@@ -2861,10 +2872,10 @@ function renderTable() {
         <td><input type="checkbox" class="cb" data-pick="${f.id}" ${state.picked[f.id] ? 'checked' : ''} /></td>
         <td class="name col-name"><button class="fn link" data-result-preview="${f.id}" title="${esc(dispFileName(f.id))}">${esc(dispFileName(f.id))}</button></td>
         <td class="result-type" title="${esc(dispLayout(f.layout))}">${esc(dispLayout(f.layout))}</td>
-        <td class="result-size">${fmtSize(f.size)}</td>
-        <td><span class="st ${stCls(f.status)}" title="${esc(STATUS[f.status].label)}">${esc(STATUS[f.status].label)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td><td class="sub" title="${esc(userName(f.createdBy) || '')}">${esc(userName(f.createdBy) || '—')}</td><td class="sub" title="${esc(userName(f.confirmedBy) || '')}">${esc(userName(f.confirmedBy) || '—')}</td><td class="sub" title="${esc(userName(f.approvedBy) || '')}">${esc(userName(f.approvedBy) || '—')}</td>
         
-        <td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>
+        <td><span class="st ${stCls(f.status)}" title="${esc(STATUS[f.status].label)}">${esc(STATUS[f.status].label)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td><td class="sub" title="${esc(currentAssigneeOf(f))}">${esc(currentAssigneeOf(f))}</td>
+        
+        
         <td style="white-space:nowrap;color:var(--text-2)">${esc(f.updatedAt)}</td>
         <td class="result-actions-cell"><div class="acts act-icons">${(() => {
           /* 行アクション：詳細／確認／ダウンロード／削除 */
@@ -2892,7 +2903,7 @@ function renderTable() {
 
   return `
   <div class="tablebar result-tablebar">
-    <button class="btn primary sm" id="batchRead" ${pickedCount ? '' : 'disabled'}>選択帳票読取</button>
+    
     <div class="batch-dl${pickedCount ? '' : ' is-disabled'}">
       <button type="button" class="btn sm result-download" id="batchExport" ${pickedCount ? '' : 'disabled'} aria-haspopup="true" title="選択行を一括ダウンロード"><span class="ico i-download" aria-hidden="true"></span>一括ダウンロード</button>
       <div class="batch-dl-menu" role="menu">
@@ -2910,15 +2921,13 @@ function renderTable() {
         <col style="width:44px">
         <col class="col-name" style="width:210px">
         <col style="width:190px">
-        <col style="width:110px">
         <col style="width:120px">
-        <col style="width:160px">
         <col style="width:160px">
         <col style="width:170px">
       </colgroup>
       <thead><tr>
         <th><input type="checkbox" class="cb" data-pickall="1" aria-label="このページを全選択" ${rows.length && rows.every((f) => state.picked[f.id]) ? 'checked' : ''} /></th>
-        <th data-sort="name" class="col-name" style="cursor:pointer">ファイル名${arrow('name')}</th>${th('layout', '帳票タイプ')}${th('size', 'ファイルサイズ')}${th('status', 'ステータス')}<th style="width:132px">作成者</th><th style="width:132px">確認者</th><th style="width:132px">承認者</th>${th('createdAt', '作成日時', 'class="col-created"')}${th('updatedAt', '更新日時')}<th class="result-actions-cell centered">操作・処理</th>
+        <th data-sort="name" class="col-name" style="cursor:pointer">ファイル名${arrow('name')}</th>${th('layout', '帳票タイプ')}${th('status', 'ステータス')}<th style="width:186px">現在の担当</th>${th('updatedAt', '更新日時')}<th class="result-actions-cell centered">操作・処理</th>
       </tr></thead>
       <tbody>${body}</tbody>
     </table>

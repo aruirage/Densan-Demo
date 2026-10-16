@@ -1142,17 +1142,14 @@ def apply_result_person_columns(src):
         return src
     # ① colgroup：ステータス(120px)の後ろに 2 列
     col_old = '<col style="width:120px">\n        <col style="width:160px">'
-    col_new = ('<col style="width:120px">\n        <col style="width:132px">\n        '
-               '<col style="width:132px">\n        <col style="width:132px">\n        '
+    col_new = ('<col style="width:120px">\n        <col style="width:186px">\n        '
                '<col style="width:160px">')
     if col_old in src:
         src = src.replace(col_old, col_new, 1)
     # ② 見出し
     th_old = "${th('status', 'ステータス')}"
     th_new = (th_old
-              + '<th style="width:132px">作成者</th>'
-              + '<th style="width:132px">確認者</th>'
-              + '<th style="width:132px">承認者</th>')
+              + '<th style="width:186px">現在の担当</th>')
     if th_old in src:
         src = src.replace(th_old, th_new, 1)
     # ③ セル（ステータスセルの直後）
@@ -1160,9 +1157,7 @@ def apply_result_person_columns(src):
     if m:
         cell = m.group(1)
         add = (cell
-               + '<td class="sub" title="${esc(userName(f.createdBy) || \'\')}">${esc(userName(f.createdBy) || \'—\')}</td>'
-               + '<td class="sub" title="${esc(userName(f.confirmedBy) || \'\')}">${esc(userName(f.confirmedBy) || \'—\')}</td>'
-               + '<td class="sub" title="${esc(userName(f.approvedBy) || \'\')}">${esc(userName(f.approvedBy) || \'—\')}</td>')
+               + '<td class="sub" title="${esc(currentAssigneeOf(f))}">${esc(currentAssigneeOf(f))}</td>')
         src = src.replace(cell, add, 1)
     return src
 
@@ -1527,6 +1522,58 @@ def apply_read_op_finalize(src):
     GROUP_NODE_ALIAS は apply_group_nodes が注入するため、パイプラインの最後で当てる。
     """
     return src.replace("'読取': '閲覧', 'アップロード': 'アップロード',", "'アップロード': 'アップロード',", 1)
+
+
+def apply_list_cleanup(src):
+    """ファイル一覧を整理：不要列・重複フィルタ・選択帳票読取を外し、現在の担当を出す。"""
+    rep = []
+
+    def sub(old, new, cnt=-1):
+        nonlocal src
+        if old in src:
+            n = src.count(old)
+            src = src.replace(old, new)
+            rep.append(old[:34].replace('\n', ' ') + f' x{n}')
+            return True
+        return False
+
+    # ① 現在の担当を求めるヘルパー
+    helper = """/* 固定ワークフロー（アップロード→読取→確認→出力）で「いま誰が担当か」 */
+function currentAssigneeOf(f) {
+  if (!f) return '—';
+  const p = (typeof permsOf === 'function') ? permsOf(f.layout) : {};
+  const resolve = (id) => { const n = (typeof permTargetName === 'function') ? permTargetName(id) : id; return (n && n !== id) ? n : ''; };
+  const names = (ids) => (ids || []).map(resolve).filter(Boolean).join('、');
+  if (['waiting', 'reading', 'classifying'].includes(f.status)) return 'システム（OCR）';
+  if (f.status === 'exported') return '—';
+  if (f.status === 'confirmed') { const n = names(p.export); return n ? ('出力待ち：' + n) : '出力待ち'; }
+  const n = names(p.confirm);
+  return n || '確認待ち';
+}
+"""
+    anchor = "function passesFilters(f) {"
+    if anchor in src and 'function currentAssigneeOf' not in src:
+        src = src.replace(anchor, helper + anchor, 1)
+        rep.append('currentAssigneeOf 追加')
+
+    # ② ファイルサイズ・作成日時の列を削除
+    sub("${th('size', 'ファイルサイズ')}", "")
+    sub("<td class=\"result-size\">${fmtSize(f.size)}</td>", "")
+    sub("${th('createdAt', '作成日時', 'class=\"col-created\"')}", "")
+    sub('<td class="col-created" style="white-space:nowrap;color:var(--text-2)">${esc(f.createdAt)}</td>', "")
+    sub('<col style="width:110px">\n        ', "")
+    sub('<col style="width:160px">\n        <col style="width:160px">', '<col style="width:160px">')
+
+    # ③ 承認者フィルタ・承認日の範囲を削除
+    sub("<div class=\"field\"><span class=\"lbl\">承認者</span>${fselect('approvedBy', '選択してください', approvers, F.approvedBy)}</div>\n", "")
+    sub("${range('承認日', 'approvedFrom', 'approvedTo')}", "")
+
+    # ④ 結果一覧ツールバーから「選択帳票読取」を外す
+    sub('<button class="btn primary sm" id="batchRead" ${pickedCount ? \'\' : \'disabled\'}>選択帳票読取</button>', "")
+
+    # ⑤ 横スクロール幅を詰める（列が減ったため）
+    sub("min-width: 1720px !important;", "min-width: 1240px !important;")
+    return src
 
 
 def apply_no_approval(src):
@@ -2168,6 +2215,7 @@ def patched_app_js(path):
     patched = apply_admin_nav(patched)
     patched = apply_user_group_checks(patched)
     patched = hide_actor_switch(patched)
+    patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_read_op_finalize(patched)
     # グループ＝権限バケツ：GROUPS / TICKET_PERMS の定義後（レンダリング前）に当てる
