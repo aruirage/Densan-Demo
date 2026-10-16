@@ -749,7 +749,7 @@ def apply_remove_group_hint(src):
 
 GROUP_CAT_HELPERS = r"""/* 権限ラベル → 帳票権限表のキー（serve.py 注入） */
 const GROUP_ROLE_OP_KEY = {
-  '閲覧': 'view', 'アップロード': 'upload', '読取': 'read', 'OCR結果修正': 'fix', '確認': 'confirm',
+  '閲覧': 'view', 'アップロード': 'upload', '読取': 'read', '修正': 'fix', 'OCR結果修正': 'fix', '確認': 'confirm',
   '承認': 'approve', '再承認': 'reapprove', '出力': 'export', '帳票設定変更': 'settings',
 };
 /** グループが持つ帳票権限のキー一覧 */
@@ -1592,6 +1592,31 @@ def apply_tree_folder_rename(src):
     src = src.replace(
         "'表示次元を切替えできます。業務シーン・帳票タイプ名は変更不可（ファイル名のみ変更可）。同階層はドラッグで並び替えできます'",
         "'帳票タイプ・ファイルの表示名を変更できます（拡張子は変更不可）。同階層はドラッグで並び替えます'", 1)
+    return src
+
+
+def apply_tree_perm_filter(src):
+    """ツリーの権限連動：閲覧権限のない帳票タイプ（配下に閲覧可ファイルが 1 件も無い）を隠す。"""
+    old = """function buildTree() {
+  ensureTreeSeeded();
+  /* 第1階層は帳票タイプ。業務シーンはツリーに出さない */
+  return CATEGORY.slice().sort((a, b) => a.order - b.order).map((c) => ({
+    id: c.id, type: 'cat', name: c.name, children: filesUnderCat(c.id),
+  }));
+}"""
+    new = """function buildTree() {
+  ensureTreeSeeded();
+  const _cv = (typeof window !== 'undefined' && window.__demoPerm && window.__demoPerm.canViewFile)
+    ? window.__demoPerm.canViewFile : null;
+  return CATEGORY.slice().sort((a, b) => a.order - b.order)
+    .filter((c) => !_cv || filesUnderCat(c.id).filter(_cv).length > 0)
+    .map((c) => ({
+      id: c.id, type: 'cat', name: c.name,
+      children: _cv ? filesUnderCat(c.id).filter(_cv) : filesUnderCat(c.id),
+    }));
+}"""
+    if old in src:
+        src = src.replace(old, new, 1)
     return src
 
 
@@ -2556,6 +2581,7 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_tree_perm_filter(patched)
     patched = apply_result_columns_11(patched)
     patched = apply_rename_keep_extension(patched)
     patched = apply_tree_folder_rename(patched)
