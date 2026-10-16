@@ -339,3 +339,17 @@ thead th{ background:#eef5fd !important; }
   border:1px solid var(--line, #e5e9f0);
   border-radius:8px;
 }
+
+/* 固定はファイル名列だけにする（チェック列との間に白い隙間が出ていたため） */
+.result-table thead th:first-child,
+.result-table tbody td:first-child{
+  position:static !important;
+  z-index:auto !important;
+  box-shadow:none !important;
+}
+.result-table thead th.col-name,
+.result-table tbody td.col-name{
+  left:0 !important;
+  border-right:1px solid var(--line,#e5e9f0);
+  box-shadow:none;
+}
