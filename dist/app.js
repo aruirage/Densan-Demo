@@ -183,7 +183,7 @@ const STATUS = {
   confirmed: { key: 'confirmed', label: '確認済み（承認待ち）', phase: 'confirm', actor: '確認権限を持つユーザ', actions: ['view', 'approve', 'return'], unused: false, done: true },
   approved: { key: 'approved', label: '承認済み', phase: 'approve', actor: '承認権限を持つユーザ', actions: ['view', 'export', 'return'], unused: false, done: true },
   returned: { key: 'returned', label: '差戻中', phase: 'approve', actor: '承認権限を持つユーザ', actions: ['view', 'fix', 'confirm'], unused: false, done: false },
-  exported: { key: 'exported', label: '出力済み', phase: 'export', actor: '出力権限を持つユーザ', actions: ['view', 'export'], unused: false, done: true },
+  exported: { key: 'exported', label: '出力済', phase: 'export', actor: '出力権限を持つユーザ', actions: ['view', 'export'], unused: false, done: true },
 };
 /** 処理フロー順のステータス一覧（ステータス絞り込みの選択肢） */
 const STATUS_ORDER = ['classifying', 'waiting', 'reading', 'done', 'failed', 'checking', 'confirmed', 'approved', 'returned', 'exported'];
@@ -2741,6 +2741,11 @@ function flowStepsHtml(f, opts) {
 
 /** 帳票1件のフロー操作を実行する */
 function runFlowAction(fileId, action, comment) {
+  /* 確認は取り消せないため、メッセージに同意するまで確定しない */
+  if (action === 'confirm' && !state.reviewConfirmAgreed) {
+    if (!state.reviewConfirmAsk) { state.reviewConfirmAsk = true; render(); }
+    return;
+  }
   const f = byId(FILES_DATA, fileId);
   if (!f) return;
   const { need, stages, done } = flowOf(f);
@@ -3301,6 +3306,8 @@ function bindReview() {
   const guide = $('#rvGuide'); if (guide) guide.onclick = () => toast('操作ガイド（Demo）');
   const dl = $('#rvDownload'); if (dl) dl.onclick = () => { state.dlMenu = state.reviewId; render(); };
   const leaveReviewToMyTasks = (fileId, myTab) => {
+    /* 確認メッセージ（同意待ち）の間は遷移しない */
+    if (state.reviewConfirmAsk) return;
     const tid = reviewTabId(fileId);
     if (isTabOpen(tid)) {
       state.tabs = state.tabs.filter((x) => x !== tid);
@@ -3354,17 +3361,35 @@ function bindReview() {
       render();
       return;
     }
-    /* 全項目を確認済みにしてから、確認タスクを確定する */
-    const map = state.reviewConfirmed[id] || (state.reviewConfirmed[id] = {});
-    list.forEach((x) => { map[x.key] = true; });
-    state.reviewBulkConfirm = true;
-    runFlowAction(id, 'confirm', '');
-    state.page = 'myTasks';
-    state.myTaskTab = 'pending';
+    /* 確認は取り消せないため、メッセージを出して同意を得てから確定する */
+    state.reviewConfirmAsk = true;
     render();
   };
   /* 必須項目が空のときの注意ダイアログ */
-  const rqBack = $('#rvReqBack');
+  /* 確認メッセージ（同意してから確認を確定する） */
+  const rvAsk = $('#rvAskBack');
+  if (rvAsk) {
+    const closeAsk = () => { state.reviewConfirmAsk = false; render(); };
+    rvAsk.onclick = (e) => { if (e.target === rvAsk) closeAsk(); };
+    const askX = $('#rvAskClose'); if (askX) askX.onclick = closeAsk;
+    const askC = $('#rvAskCancel'); if (askC) askC.onclick = closeAsk;
+    const askOk = $('#rvAskOk');
+    if (askOk) askOk.onclick = () => {
+      const id = state.reviewId;
+      const list = state.reviewReadTab === 'table' ? OCR_TABLES.default : OCR_FIELDS.b6;
+      const map = state.reviewConfirmed[id] || (state.reviewConfirmed[id] = {});
+      list.forEach((x) => { map[x.key] = true; });
+      state.reviewConfirmAsk = false;
+      state.reviewConfirmAgreed = true;
+      state.reviewBulkConfirm = true;
+      runFlowAction(id, 'confirm', '');
+      state.reviewConfirmAgreed = false;
+      state.page = 'myTasks';
+      state.myTaskTab = 'pending';
+      render();
+    };
+  }
+const rqBack = $('#rvReqBack');
   if (rqBack) {
     const closeReq = () => { state.reviewRequiredOpen = false; render(); };
     rqBack.onclick = (e) => { if (e.target === rqBack) closeReq(); };
@@ -3586,6 +3611,23 @@ function openFlowDialog(fileId, action) {
 }
 
 /** 確認画面：必須項目が空のまま確認しようとしたときの注意ダイアログ */
+function renderReviewConfirmAskDialog() {
+  if (!state.reviewConfirmAsk) return '';
+  return `
+  <div class="modal-back" id="rvAskBack">
+    <div class="modal" style="width:min(520px,100%)">
+      <div class="modal-head"><b>ご確認ください</b><span class="spacer"></span><button class="icon-btn" id="rvAskClose"><span class="ico i-close"></span></button></div>
+      <div class="modal-canvas" style="background:#fff;display:block;padding:16px 18px">
+        <p style="margin:0;font-size:13px;line-height:1.7;color:var(--text)">確認をした場合は以後の修正ができなくなります。確認前に更新したい場合は保存を選択してください。</p>
+      </div>
+      <div class="modal-foot">
+        <span class="spacer"></span>
+        <button class="btn" id="rvAskCancel">キャンセル</button>
+        <button class="btn primary" id="rvAskOk">確認する</button>
+      </div>
+    </div>
+  </div>`;
+}
 function renderReviewRequiredDialog() {
   if (!state.reviewRequiredOpen) return '';
   const list = state.reviewReadTab === 'table' ? OCR_TABLES.default : OCR_FIELDS.b6;
@@ -6146,7 +6188,7 @@ function render() {
   ${renderFlowDialog()}
   ${renderAccessKeyDialog()}
   ${renderUserAddDialog()}
-  ${renderReviewRequiredDialog()}
+  ${renderReviewConfirmAskDialog()} ${renderReviewRequiredDialog()}
   ${renderSaveHistoryDialog()}
   ${renderExportDialog()}
   <div class="toast" id="toast"></div>`;
@@ -6510,6 +6552,8 @@ function bindFlowDialogs() {
     }
     const ok = $('#flowOk');
     const leaveReviewToMyTasks = (fileId, myTab) => {
+    /* 確認メッセージ（同意待ち）の間は遷移しない */
+    if (state.reviewConfirmAsk) return;
       const tid = reviewTabId(fileId);
       if (isTabOpen(tid)) {
         state.tabs = state.tabs.filter((x) => x !== tid);

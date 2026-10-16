@@ -1530,6 +1530,95 @@ def apply_read_op_finalize(src):
     return src.replace("'読取': '閲覧', 'アップロード': 'アップロード',", "'アップロード': 'アップロード',", 1)
 
 
+def apply_confirm_message(src):
+    """確認ボタン押下時に「以後の修正ができなくなる」旨のメッセージ（ダイアログ）を出す。"""
+    # ① 確認ボタン：必須チェックの後、いきなり確定せずメッセージを出す
+    old_tail = """    /* 全項目を確認済みにしてから、確認タスクを確定する */
+    const map = state.reviewConfirmed[id] || (state.reviewConfirmed[id] = {});
+    list.forEach((x) => { map[x.key] = true; });
+    state.reviewBulkConfirm = true;
+    runFlowAction(id, 'confirm', '');
+    state.page = 'myTasks';
+    state.myTaskTab = 'pending';
+    render();
+  };"""
+    new_tail = """    /* 確認は取り消せないため、メッセージを出して同意を得てから確定する */
+    state.reviewConfirmAsk = true;
+    render();
+  };"""
+    if old_tail in src:
+        src = src.replace(old_tail, new_tail, 1)
+    # ② ダイアログの描画関数
+    dialog_fn = """function renderReviewConfirmAskDialog() {
+  if (!state.reviewConfirmAsk) return '';
+  return `
+  <div class="modal-back" id="rvAskBack">
+    <div class="modal" style="width:min(520px,100%)">
+      <div class="modal-head"><b>ご確認ください</b><span class="spacer"></span><button class="icon-btn" id="rvAskClose"><span class="ico i-close"></span></button></div>
+      <div class="modal-canvas" style="background:#fff;display:block;padding:16px 18px">
+        <p style="margin:0;font-size:13px;line-height:1.7;color:var(--text)">確認をした場合は以後の修正ができなくなります。確認前に更新したい場合は保存を選択してください。</p>
+      </div>
+      <div class="modal-foot">
+        <span class="spacer"></span>
+        <button class="btn" id="rvAskCancel">キャンセル</button>
+        <button class="btn primary" id="rvAskOk">確認する</button>
+      </div>
+    </div>
+  </div>`;
+}
+"""
+    anchor = "function renderReviewRequiredDialog() {"
+    if anchor in src and 'renderReviewConfirmAskDialog' not in src:
+        src = src.replace(anchor, dialog_fn + anchor, 1)
+        src = src.replace("${renderReviewRequiredDialog()}", "${renderReviewConfirmAskDialog()} ${renderReviewRequiredDialog()}", 1)
+    # ③ バインド
+    bind = """/* 確認メッセージ（同意してから確認を確定する） */
+  const rvAsk = $('#rvAskBack');
+  if (rvAsk) {
+    const closeAsk = () => { state.reviewConfirmAsk = false; render(); };
+    rvAsk.onclick = (e) => { if (e.target === rvAsk) closeAsk(); };
+    const askX = $('#rvAskClose'); if (askX) askX.onclick = closeAsk;
+    const askC = $('#rvAskCancel'); if (askC) askC.onclick = closeAsk;
+    const askOk = $('#rvAskOk');
+    if (askOk) askOk.onclick = () => {
+      const id = state.reviewId;
+      const list = state.reviewReadTab === 'table' ? OCR_TABLES.default : OCR_FIELDS.b6;
+      const map = state.reviewConfirmed[id] || (state.reviewConfirmed[id] = {});
+      list.forEach((x) => { map[x.key] = true; });
+      state.reviewConfirmAsk = false;
+      state.reviewConfirmAgreed = true;
+      state.reviewBulkConfirm = true;
+      runFlowAction(id, 'confirm', '');
+      state.reviewConfirmAgreed = false;
+      state.page = 'myTasks';
+      state.myTaskTab = 'pending';
+      render();
+    };
+  }
+"""
+    anchor2 = "const rqBack = $('#rvReqBack');"
+    if anchor2 in src:
+        src = src.replace(anchor2, bind + anchor2, 1)
+    # ④ runFlowAction：確認は同意するまで確定しない（経路が複数あっても効く）
+    guard_old = "function runFlowAction(fileId, action, comment) {"
+    guard_new = ("function runFlowAction(fileId, action, comment) {\n"
+                 "  /* 確認は取り消せないため、メッセージに同意するまで確定しない */\n"
+                 "  if (action === 'confirm' && !state.reviewConfirmAgreed) {\n"
+                 "    if (!state.reviewConfirmAsk) { state.reviewConfirmAsk = true; render(); }\n"
+                 "    return;\n"
+                 "  }")
+    if guard_old in src and 'reviewConfirmAgreed' not in src.split('function runFlowAction')[1][:400]:
+        src = src.replace(guard_old, guard_new, 1)
+    # ⑤ 確認メッセージ表示中は画面遷移しない（裏でマイタスクへ飛ぶのを防ぐ）
+    src = src.replace("const leaveReviewToMyTasks = (fileId, myTab) => {",
+                      "const leaveReviewToMyTasks = (fileId, myTab) => {\n"
+                      "    /* 確認メッセージ（同意待ち）の間は遷移しない */\n"
+                      "    if (state.reviewConfirmAsk) return;")
+    # ⑥ 出力後のステータス表記を「出力済」に（要件のステータス一覧に合わせる）
+    src = src.replace("label: '出力済み'", "label: '出力済'")
+    return src
+
+
 def apply_group_roles_sync_fix(src):
     """グループ保存時、既存グループでも roles を kind から同期する（一覧のチップが古いままになるバグ）。"""
     old = "        exist.kind = f.kind;\n        exist.desc = f.desc || '';"
@@ -1951,6 +2040,7 @@ def patched_app_js(path):
     patched = apply_stepper_stage_label(patched)
     patched = apply_stage_matrix(patched)
     patched = apply_user_ops_derive_fix(patched)
+    patched = apply_confirm_message(patched)
     patched = apply_group_roles_sync_fix(patched)
     patched = apply_user_ops_align(patched)
     patched = apply_group_role_label(patched)
