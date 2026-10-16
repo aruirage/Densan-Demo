@@ -1677,10 +1677,16 @@ function downloadResultFile(id, fmt) {""", 1)
           <div class="field"><span class="lbl">更新者</span>${fselect('updatedBy', '選択してください', users, F.updatedBy)}</div>"""
     if _cf_field in src:
         src = src.replace(_cf_field, _up_field, 1)
-    # 更新者での絞り込みを有効化（passesFilters が未対応なら足す）
-    if "F.updatedBy && f.updatedBy !== F.updatedBy" not in src:
-        src = src.replace("function passesFilters(f) {",
-                          """function passesFilters(f) {
+    # 更新者・読取結果検索での絞り込みを有効化（passesFilters の本文に足す）
+    _pf_head = "function passesFilters(f) {"
+    if _pf_head in src and 'rvq' not in src.split(_pf_head, 1)[1][:400]:
+        src = src.replace(_pf_head, _pf_head + """
+  var _rvq = String((state.filters && state.filters.rvq) || '').toLowerCase();
+  if (_rvq) {
+    var _p = [f.name, dispFileName(f.id), f.history];
+    try { (OCR_FIELDS.b6 || []).forEach(function (x) { _p.push(x.label || ''); _p.push((state.reviewDirty[f.id] || {})[x.key] || x.value || ''); }); } catch (_e4) {}
+    if (_p.join(' ').toLowerCase().indexOf(_rvq) < 0) return false;
+  }
   if (state.filters.updatedBy && f.updatedBy !== state.filters.updatedBy) return false;""", 1)
 
     # ⑦' 帳票タイプの絞り込みを追加（客户）／読取日の絞り込みを削除（客户）
@@ -1697,6 +1703,13 @@ function downloadResultFile(id, fmt) {""", 1)
     if _old_cls in src:
         src = src.replace(_old_cls, _new_cls)
 
+    # ⑩ 絞り込み：読取結果検索（客户）— 帳票タイプの右に入力欄を追加
+    _lay_field = """<div class="field"><span class="lbl">帳票タイプ</span>${fselect('layout', '選択してください', layouts, F.layout)}</div>"""
+    _lay2 = _lay_field + """
+          <div class="field"><span class="lbl">読取結果検索</span><input class="fld" data-rvq placeholder="読取結果を検索" value="${esc(F.rvq || '')}" /></div>"""
+    if _lay_field in src:
+        src = src.replace(_lay_field, _lay2, 1)
+
     # ⑨ モック補完（客户 c）：失敗理由・確認担当者・出力担当者を埋めて、操作・処理履歴に出す
     _seed = """
 /* ── デモ用モック補完：失敗理由・確認担当者・出力担当者 ───────────────── */
@@ -1711,6 +1724,35 @@ try {
       if (!f.confirmedBy) f.confirmedBy = f.createdBy;
     }
   });
+} catch (_e) { /* ignore */ }
+
+/* ── デモ用：読取結果検索（OCR 項目値・ファイル名・履歴を対象） ───────── */
+try {
+  document.addEventListener('input', (ev) => {
+    const t = ev.target;
+    if (t && t.hasAttribute && t.hasAttribute('data-rvq')) {
+      state.filters.rvq = t.value;
+      clearTimeout(window.__rvqTimer);
+      window.__rvqTimer = setTimeout(() => { try { render(); } catch (_e2) {} }, 250);
+    }
+  }, true);
+  if (typeof passesFilters === 'function' && !passesFilters.__rvqPatched) {
+    const _pf = passesFilters;
+    window.passesFilters = function (f) {
+      if (!_pf(f)) return false;
+      const q = String((state.filters && state.filters.rvq) || '').toLowerCase();
+      if (!q) return true;
+      const parts = [f.name, f.history, dispFileName(f.id)];
+      try {
+        (typeof OCR_FIELDS !== 'undefined' ? (OCR_FIELDS.b6 || []) : []).forEach((x) => {
+          parts.push(x.label || '');
+          parts.push((state.reviewDirty[f.id] || {})[x.key] || x.value || '');
+        });
+      } catch (_e3) { /* ignore */ }
+      return parts.join(' ').toLowerCase().indexOf(q) >= 0;
+    };
+    window.passesFilters.__rvqPatched = true;
+  }
 } catch (_e) { /* ignore */ }
 """
     if 'デモ用モック補完' not in src:
