@@ -3743,7 +3743,7 @@ function renderExportDialog() {
         
         
         <div class="exp-fields">
-          <label class="exp-field"><span class="exp-field-label">文字エンコード（CSV・JSON）</span>
+          <label class="exp-field"><span class="exp-field-label"><i class="req">*</i>文字エンコード（CSV・JSON）</span>
             <select class="fld exp-control" data-expcfg="encoding">
               <option ${C.encoding === 'UTF-8（BOMあり）' ? 'selected' : ''}>UTF-8（BOMあり）</option>
               <option ${C.encoding === 'UTF-8（BOMなし）' ? 'selected' : ''}>UTF-8（BOMなし）</option>

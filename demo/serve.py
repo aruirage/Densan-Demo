@@ -1552,6 +1552,9 @@ def apply_encoding_fix(src):
     src = src.replace('<h4 class="exp-sec">文字コード・出力オプション</h4>', '')
     src = src.replace('同一帳票タイプの複数ファイルを 1 ファイルにまとめる（1 ファイル複数レコード）', '複数ファイルを1ファイルにまとめる')
     src = src.replace('必須項目のみを出力する（オフのときは全項目を出力）', '必須項目のみ出力')
+    # 文字エンコードは必須なので、ラベルに必須マークを付ける
+    src = src.replace('<span class="exp-field-label">文字エンコード（CSV・JSON）</span>',
+                      '<span class="exp-field-label"><i class="req">*</i>文字エンコード（CSV・JSON）</span>')
     return src
 
 
