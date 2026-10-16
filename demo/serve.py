@@ -1599,14 +1599,11 @@ def apply_result_columns_11(src):
     """読取結果一覧を 11 列に：状態を前へ／業務シーン・作成者・更新者・開始日時・操作・処理履歴。"""
     # ① colgroup 9 → 11 列
     old_cg = """        <col style="width:44px">
-        <col class="col-name" style="width:260px">
-        <col style="width:220px">
-        <col style="width:110px">
+        <col class="col-name" style="width:210px">
+        <col style="width:190px">
         <col style="width:120px">
-        <col style="width:200px">
         <col style="width:160px">
-        <col style="width:160px">
-        <col style="width:200px">"""
+        <col style="width:170px">"""
     new_cg = """        <col style="width:44px">
         <col class="col-name" style="width:300px">
         <col style="width:150px">
