@@ -3753,26 +3753,11 @@ function renderExportDialog() {
         </div>
         <div class="exp-checks">
           <label class="exp-check"><input type="checkbox" data-expcfg="combineFiles" ${C.combineFiles ? 'checked' : ''} /><span>同一帳票タイプの複数ファイルを 1 ファイルにまとめる（1 ファイル複数レコード）</span></label>
-          <label class="exp-check"><input type="checkbox" data-expcfg="includeFileName" ${C.includeFileName ? 'checked' : ''} /><span>入力ファイル名を出力項目に含める</span></label>
           <label class="exp-check"><input type="checkbox" data-expcfg="requiredOnly" ${C.requiredOnly ? 'checked' : ''} /><span>必須項目のみを出力する（オフのときは全項目を出力）</span></label>
         </div>
         <p class="exp-note">列名は横一列のヘッダー行、1 レコード＝1 行で出力します。列名・列順は帳票タイプごとに管理者が設定します。</p>
       </section>
-      <section class="exp-block">
-        <h4 class="exp-sec">CSV オプション</h4>
-          <div class="exp-checks">
-            <label class="exp-check"><input type="checkbox" data-expcfg="header" ${C.header ? 'checked' : ''} /><span>ヘッダー行を出力</span></label>
-            <label class="exp-check"><input type="checkbox" data-expcfg="merge" ${C.merge ? 'checked' : ''} /><span>同一帳票タイプを1ファイルに結合</span></label>
-          </div>
-          <div class="exp-fields">
-            ${field('文字コード', select('encoding', ['UTF-8（BOMあり）', 'UTF-8（BOMなし）', 'Shift_JIS（S-JIS）']))}
-            ${field('改行コード', select('newline', ['CRLF', 'LF']))}
-            ${field('区切り文字', select('delimiter', ['カンマ', 'タブ']))}
-            ${field('空値の表示', select('emptyValue', ['空欄', 'NULL', '-']))}
-            ${field('日付形式', select('dateFormat', ['YYYY-MM-DD', 'YYYY/MM/DD']))}
-            ${field('最大出力件数', `<input class="fld exp-control" type="number" min="1" max="10000" data-expcfg="maxRows" value="${esc(String(C.maxRows))}" />`)}
-          </div>
-        </section>
+      
 
         <label class="exp-field is-wide exp-filefield"><span class="exp-field-label">ファイル名</span>
           <span class="exp-filename"><span class="ico i-file"></span><input class="fld exp-name-input" id="expFileName" type="text" value="${esc((state.exportCfg && state.exportCfg.fileName) || exportFileName())}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span>

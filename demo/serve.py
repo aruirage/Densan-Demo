@@ -1541,6 +1541,9 @@ def apply_encoding_fix(src):
     # 出力形式（CSV/JSON/PDF）のチェックは設定から削除（形式はダウンロード時に選ぶ）
     src = re.sub(r'\n\s*<label class="exp-check"><input type="checkbox" data-expcfg="format(?:Csv|Json|Pdf)"[^\n]*', '', src)
     src = re.sub(r'<div class="exp-checks">\s*</div>', '', src)
+    # 設定は 3 つだけに絞る：文字コード／必須項目のみ／複数ファイルを1ファイルに
+    src = re.sub(r'<section class="exp-block">\s*<h4 class="exp-sec">CSV オプション</h4>[\s\S]*?</section>', '', src)
+    src = re.sub(r'\n\s*<label class="exp-check"><input type="checkbox" data-expcfg="includeFileName"[^\n]*', '', src)
     return src
 
 
