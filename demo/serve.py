@@ -413,6 +413,9 @@ PERM_TABLE_CSS = """
 .user-ops { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; }
 .grp-users.is-compact { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
 .grp-note { color: var(--text-3); font-size: 11px; line-height: 1.6; grid-column: 2; }
+
+/* 帳票設定-タイプ：幅 100% ＋ 左右 margin 12px で右にはみ出していたのを補正 */
+.type-list .btn.block { width: calc(100% - 24px); box-sizing: border-box; }
 """
 
 
