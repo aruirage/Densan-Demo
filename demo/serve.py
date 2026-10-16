@@ -1521,6 +1521,9 @@ def apply_user_ops_derive_fix(src):
 
 def apply_status_opts_fix(src):
     """ファイル一覧のステータス絞り込み：読取待ちはアップロード画面専用なので除外し、出力未済を足す。"""
+    # ステータス欄の「差分なし／差分あり」バッジは不要（客户指摘）→ 出力しない
+    src = src.replace("${exportDiffBadge(f)}", "", 1)
+    src = src.replace("${exportDiffBadge(f)}", "")
     old = "const statusOpts = STATUS_ORDER.map((k) => [k, STATUS[k].label, STATUS[k].unused]);"
     new = ("const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting')"
            ".map((k) => [k, STATUS[k].label, STATUS[k].unused])"
