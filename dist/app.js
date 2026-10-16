@@ -167,7 +167,7 @@ const ALL_ACTIONS = ['view', 'fix', 'confirm', 'approve', 'return', 'export'];
 const ACTIONS = {
   view: { label: '閲覧', icon: 'i-view', title: 'プレビュー（閲覧）' },
   fix: { label: '修正', icon: 'i-edit', title: '読取結果を修正' },
-  confirm: { label: '確認', icon: '✓', title: '確認して承認待ちへ' },
+  confirm: { label: '確認', icon: '✓', title: '確認済みにする' },
   approve: { label: '承認', icon: '◎', title: '承認する' },
   return: { label: '差戻', icon: '↩', title: '差戻す' },
   export: { label: '出力', icon: 'i-export', title: 'CSVダウンロード（出力）' },
@@ -180,18 +180,18 @@ const STATUS = {
   waiting: { key: 'waiting', label: '読取待ち', phase: 'upload', actor: 'アップロード実行者（窓口・職員）', actions: ['view'], unused: false, done: false },
   done: { key: 'done', label: '読取完了', phase: 'ocr', actor: 'システム（OCR／AI）', actions: ['view', 'fix', 'confirm'], unused: false, done: true },
   checking: { key: 'checking', label: '確認中', phase: 'confirm', actor: '確認権限を持つユーザ', actions: ['view', 'fix', 'confirm'], unused: false, done: false },
-  confirmed: { key: 'confirmed', label: '確認済み（承認待ち）', phase: 'confirm', actor: '確認権限を持つユーザ', actions: ['view', 'approve', 'return'], unused: false, done: true },
+  confirmed: { key: 'confirmed', label: '確認済み', phase: 'confirm', actor: '確認権限を持つユーザ', actions: ['view', 'approve', 'return'], unused: false, done: true },
   approved: { key: 'approved', label: '承認済み', phase: 'approve', actor: '承認権限を持つユーザ', actions: ['view', 'export', 'return'], unused: false, done: true },
   returned: { key: 'returned', label: '差戻中', phase: 'approve', actor: '承認権限を持つユーザ', actions: ['view', 'fix', 'confirm'], unused: false, done: false },
   exported: { key: 'exported', label: '出力済', phase: 'export', actor: '出力権限を持つユーザ', actions: ['view', 'export'], unused: false, done: true },
 };
 /** 処理フロー順のステータス一覧（ステータス絞り込みの選択肢） */
-const STATUS_ORDER = ['classifying', 'waiting', 'reading', 'done', 'failed', 'checking', 'confirmed', 'approved', 'returned', 'exported'];
+const STATUS_ORDER = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];
 /**
  * タブに出すステータス。
  * 「読取待ち」は新規アップロード画面のみの状態（選択帳票読取で即「読取中」になり一覧へ遷移するため、結果一覧のタブには出さない）。
  */
-const TAB_STATUS = ['reading', 'done', 'failed', 'checking', 'confirmed', 'approved', 'returned', 'exported'];
+const TAB_STATUS = ['reading', 'done', 'failed', 'confirmed', 'exported'];
 /** ステータスタブ（上記＋すべて） */
 const TABS = [{ id: 'all', label: 'すべて' }].concat(TAB_STATUS.map((k) => ({ id: k, label: STATUS[k].label })));
 function phaseOf(statusKey) { return STATUS_PHASES.find((p) => p.id === STATUS[statusKey].phase); }
@@ -208,10 +208,10 @@ const FILES = [
   ['f08', '④-1-1_不備なし_独自様式_ゴム印なし.pdf', 'l4', 123260, 'failed', '帳票の処理中にエラーが発生', '2026-10-14 17:55:28', '2026-10-14 16:59:07', '2026-10-14 17:55:52', null, null, 'u2', 'u2', null],
   ['f09', '10_A団体_住民異動届.pdf', 'l1', 412100, 'exported', '出力済み（CSV）', '2026-10-13 09:14:02', '2026-10-13 09:20:31', '2026-10-13 09:14:40', '2026-10-13 14:02:11', '2026-10-13 15:40:00', 'u1', 'u1', 'u3'],
   ['f10', '20_B団体_住民異動届.pdf', 'l2', 388240, 'approved', '承認済み', '2026-10-13 09:16:20', '2026-10-13 09:22:05', '2026-10-13 09:16:52', '2026-10-13 16:31:40', '2026-10-14 10:05:12', 'u1', 'u1', 'u3'],
-  ['f11', '21_B団体_住民異動届_記入済(全部転入).pdf', 'l3', 522900, 'confirmed', '確認済み・承認待ち', '2026-10-13 09:18:44', '2026-10-14 11:40:02', '2026-10-13 09:19:10', '2026-10-14 11:42:33', null, 'u1', 'u2', null],
+  ['f11', '21_B団体_住民異動届_記入済(全部転入).pdf', 'l3', 522900, 'confirmed', '確認済み', '2026-10-13 09:18:44', '2026-10-14 11:40:02', '2026-10-13 09:19:10', '2026-10-14 11:42:33', null, 'u1', 'u2', null],
   ['f12', '01_令和8年度分市民税・県民税申告書（兼・国保税申告書）.pdf', 'l4', 1860400, 'done', '読取完了', '2026-10-14 08:31:10', '2026-10-14 08:39:55', '2026-10-14 08:32:02', null, null, 'u4', 'u4', null],
   ['f13', '01_令和8年度分市民税・県民税申告書（兼・国保税申告書）_2.pdf', 'l4', 1204500, 'reading', '読取処理中（3/8ページ）', '2026-10-15 10:02:41', '2026-10-15 10:03:05', '2026-10-15 10:02:48', null, null, 'u4', 'u4', null],
-  ['f14', '02_特別徴収関係一式.pdf', 'l5', 2688400, 'confirmed', '確認済み・承認待ち', '2026-10-14 13:20:11', '2026-10-15 09:44:20', '2026-10-14 13:21:35', '2026-10-15 09:50:02', null, 'u5', 'u5', null],
+  ['f14', '02_特別徴収関係一式.pdf', 'l5', 2688400, 'confirmed', '確認済み', '2026-10-14 13:20:11', '2026-10-15 09:44:20', '2026-10-14 13:21:35', '2026-10-15 09:50:02', null, 'u5', 'u5', null],
   ['f15', '10_給与支払報告書（総括表・個人別明細書）.pdf', 'l6', 7412300, 'returned', '差戻中（確認者より差戻）', '2026-10-14 13:25:44', '2026-10-15 08:55:10', '2026-10-14 13:27:02', null, null, 'u5', 'u5', null],
   ['f16', '02_令和8年度保育所等利用申込書.pdf', 'l7', 934500, 'done', '読取完了', '2026-10-14 15:02:33', '2026-10-14 15:11:20', '2026-10-14 15:03:01', null, null, 'u6', 'u6', null],
   ['f17', '01_施設型給付費・地域型保育給付費等教育・保育給付認定申請書.pdf', 'l8', 1102300, 'classifying', '分類中（AIが帳票タイプを判定）', '2026-10-15 10:31:02', '2026-10-15 10:31:05', '2026-10-15 10:31:02', null, null, 'u6', 'u6', null],
@@ -221,7 +221,7 @@ const FILES = [
   ['f21', '40-01_児童手当 認定請求書_記入済.pdf', 'l10', 889100, 'done', '読取完了', '2026-10-14 16:40:00', '2026-10-14 16:52:11', '2026-10-14 16:40:28', null, null, 'u8', 'u8', null],
   ['f22', '03_児童手当 別居監護申立書.pdf', 'l11', 401300, 'reading', '読取処理中（2秒経過）', '2026-10-15 10:44:12', '2026-10-15 10:44:15', '2026-10-15 10:44:12', null, null, 'u8', 'u8', null],
   ['f23', '01_介護保険認定申請書（新規・更新）.pdf', 'l12', 702800, 'done', '読取完了', '2026-10-14 10:11:20', '2026-10-14 10:20:02', '2026-10-14 10:11:58', null, null, 'u3', 'u3', null],
-  ['f24', '02_介護保険認定申請書.pdf', 'l12', 698400, 'confirmed', '確認済み・承認待ち', '2026-10-14 10:14:44', '2026-10-14 10:52:33', '2026-10-14 10:15:09', '2026-10-14 11:30:20', null, 'u3', 'u3', null],
+  ['f24', '02_介護保険認定申請書.pdf', 'l12', 698400, 'confirmed', '確認済み', '2026-10-14 10:14:44', '2026-10-14 10:52:33', '2026-10-14 10:15:09', '2026-10-14 11:30:20', null, 'u3', 'u3', null],
   ['f25', '高齢者等実態調査票.pdf', 'l13', 512700, 'done', '読取完了', '2026-10-13 13:41:02', '2026-10-13 13:50:44', '2026-10-13 13:41:39', null, null, 'u6', 'u6', null],
   ['f26', '61_高齢者等実態調査票_記入済(既存_修正).pdf', 'l14', 733100, 'failed', '帳票の処理中にエラーが発生', '2026-10-13 13:44:20', '2026-10-13 13:44:58', '2026-10-13 13:45:02', null, null, 'u6', 'u6', null],
   ['f27', '62_高齢者等実態調査票_記入済(新規_年齢到達).pdf', 'l14', 749600, 'reading', '読取処理中（5/12ページ）', '2026-10-15 10:05:12', '2026-10-15 10:06:01', '2026-10-15 10:05:20', null, null, 'u6', 'u6', null],
@@ -237,9 +237,9 @@ const FILES = [
   ['f37', '21_B団体_住民異動届_記入済(全部転入)_読取失敗.pdf', 'l3', 289400, 'failed', '帳票の処理中にエラーが発生', '2026-10-14 20:02:31', '2026-10-14 20:03:05', '2026-10-14 20:02:44', null, null, 'u6', 'u6', null],
   ['f38', '10_給与支払報告書（総括表・個人別明細書）_読取失敗.pdf', 'l6', 733100, 'failed', '帳票の処理中にエラーが発生', '2026-10-14 20:10:12', '2026-10-14 20:11:02', '2026-10-14 20:10:30', null, null, 'u3', 'u3', null],
   ['f39', '高齢者等実態調査票_読取失敗.pdf', 'l13', 512700, 'failed', '帳票の処理中にエラーが発生', '2026-10-14 20:18:47', '2026-10-14 20:19:20', '2026-10-14 20:19:01', null, null, 'u8', 'u8', null],
-  ['f40', '10_A団体_住民異動届_確認済み.pdf', 'l1', 333300, 'confirmed', '確認済み・承認待ち', '2026-10-13 09:12:44', '2026-10-14 10:02:33', '2026-10-13 09:14:09', '2026-10-14 10:02:20', null, 'u2', 'u4', null],
-  ['f41', '02_特別徴収関係一式_確認済み.pdf', 'l5', 418200, 'confirmed', '確認済み・承認待ち', '2026-10-13 09:30:02', '2026-10-14 10:20:15', '2026-10-13 09:31:39', '2026-10-14 10:19:58', null, 'u3', 'u4', null],
-  ['f42', '01_児童手当 認定請求書_確認済み.pdf', 'l11', 355600, 'confirmed', '確認済み・承認待ち', '2026-10-13 10:05:20', '2026-10-14 10:41:02', '2026-10-13 10:06:58', '2026-10-14 10:40:47', null, 'u5', 'u4', null],
+  ['f40', '10_A団体_住民異動届_確認済み.pdf', 'l1', 333300, 'confirmed', '確認済み', '2026-10-13 09:12:44', '2026-10-14 10:02:33', '2026-10-13 09:14:09', '2026-10-14 10:02:20', null, 'u2', 'u4', null],
+  ['f41', '02_特別徴収関係一式_確認済み.pdf', 'l5', 418200, 'confirmed', '確認済み', '2026-10-13 09:30:02', '2026-10-14 10:20:15', '2026-10-13 09:31:39', '2026-10-14 10:19:58', null, 'u3', 'u4', null],
+  ['f42', '01_児童手当 認定請求書_確認済み.pdf', 'l11', 355600, 'confirmed', '確認済み', '2026-10-13 10:05:20', '2026-10-14 10:41:02', '2026-10-13 10:06:58', '2026-10-14 10:40:47', null, 'u5', 'u4', null],
   ['f43', '20_B団体_住民異動届_承認済み.pdf', 'l2', 329800, 'approved', '承認済み・出力待ち', '2026-10-12 13:31:10', '2026-10-14 11:20:31', '2026-10-12 13:32:44', '2026-10-13 09:10:12', '2026-10-14 11:20:05', 'u2', 'u4', 'u3'],
   ['f44', '01_令和8年度分市民税・県民税申告書_差戻中.pdf', 'l4', 648900, 'returned', '差戻中（確認者より差戻）', '2026-10-13 15:02:44', '2026-10-14 14:10:02', '2026-10-13 15:04:20', '2026-10-14 09:30:11', null, 'u2', 'u3', 'u3'],
   ['f45', '10_給与支払報告書（総括表・個人別明細書）_出力済み.pdf', 'l6', 702500, 'exported', '出力済み', '2026-10-11 11:12:02', '2026-10-14 16:02:11', '2026-10-11 11:13:40', '2026-10-12 09:20:30', '2026-10-13 10:05:00', 'u3', 'u3', 'u4'],
@@ -333,8 +333,7 @@ let ROLES = [
   { id: 'R1', name: 'システム管理者', code: 'tenant_admin', desc: '万能権限。メニュー全到達に加え、帳票／アップロード権限表をバイパスして全業務を実行できる', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R2', name: '運用管理者', code: 'operation_admin', desc: '帳票設定＋利用設定＋ユーザー管理。日常運用の管理者', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R3', name: '確認者', code: 'confirmer', desc: '読取結果の確認・修正。マイタスクの確認作業', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R4', name: '承認者', code: 'approver', desc: '確認済み帳票の承認・再承認。マイタスクの承認作業', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R5', name: 'アップロード者', code: 'uploader', desc: 'ファイルのアップロードと読取結果の閲覧', created: '2025-10-01 00:00:00', status: '有効' },
+    { id: 'R5', name: 'アップロード者', code: 'uploader', desc: 'ファイルのアップロードと読取結果の閲覧', created: '2025-10-01 00:00:00', status: '有効' },
 ];
 /** システム管理者ロール ID（メニュー全許可＋業務権限バイパス） */
 const TENANT_ADMIN_ROLE = 'R1';
@@ -343,7 +342,7 @@ const TENANT_ADMIN_ROLE = 'R1';
  * 操作権限のラベル定義（付与はユーザーグループの「役割」で行う）。
  * システム権限（メニュー到達）とは別物。OCR結果修正は確認に付随。
  */
-const USER_OPS = [ { key: 'view', label: '閲覧' }, { key: 'upload', label: 'アップロード' }, { key: 'read', label: '読取' }, { key: 'confirm', label: '確認' }, { key: 'approve', label: '承認' }, { key: 'export', label: '出力' }, ];
+const USER_OPS = [ { key: 'view', label: '閲覧' }, { key: 'upload', label: 'アップロード' }, { key: 'read', label: '読取' }, { key: 'confirm', label: '確認' }, { key: 'export', label: '出力' }, ];
 
 const DATA_PERMISSIONS = ['自身のみ', '全件参照'];
 
@@ -448,8 +447,6 @@ const PERM_ACTS = [
   { key: 'upload', label: 'アップロード', hint: '帳票を取り込む' },
   { key: 'fix', label: 'OCR結果修正', hint: '読取結果を修正する' },
   { key: 'confirm', label: '確認', hint: '読取結果を確認済みにする' },
-  { key: 'approve', label: '承認', hint: '1 段目の承認' },
-  { key: 'reapprove', label: '再承認', hint: '2 段目の承認（2 段承認のときのみ）' },
   { key: 'export', label: 'CSV出力', hint: 'CSV を出力する' },
   { key: 'settings', label: '帳票設定変更', hint: '帳票タイプの設定を変更する' }
 ];
@@ -1144,16 +1141,10 @@ const PERM_COL_BASE = [
 ];
 const PERM_COL_TAIL = [
   { key: 'export', label: '出力', hint: 'CSV を出力する' },
-  { key: 'settings', label: '帳票設定変更', hint: '帳票タイプの設定を変更する' },
 ];
-const permHeadOf = () => {
-  const n = maxApprovalStageCount();
-  const appr = [];
-  for (let k = 1; k <= n; k++) appr.push('<th style="width:132px">' + (n === 1 ? '承認' : '承認' + k) + '</th>');
-  return PERM_COL_BASE.map((a) => '<th style="width:132px">' + a.label + '</th>').join('')
-    + appr.join('')
-    + PERM_COL_TAIL.map((a) => '<th style="width:132px">' + a.label + '</th>').join('');
-};
+const permHeadOf = () =>
+  PERM_COL_BASE.map((a) => '<th style="width:132px">' + a.label + '</th>').join('')
+  + PERM_COL_TAIL.map((a) => '<th style="width:132px">' + a.label + '</th>').join('');
 const permCellHtml = (layoutId, key, label, hint, cur) =>
   '<td class="permcell"><button type="button" class="perm-cell" data-permcell="' + layoutId + ':' + key + '"'
   + ' title="' + esc(hint) + '：' + esc((cur || []).map(permTargetName).join('、') || '未設定') + '">'
@@ -1197,7 +1188,7 @@ const permActLabelOf = (key) => {
 const WF_STEPS = ['アップロード', '読取', '確認', '承認', '出力'];
 const WF_FIXED = ['アップロード', '読取', '確認', '出力'];       /* 常に存在する工程 */
 /* グループが担当する権限（7 項目）。工作流の定義（工程の並び・承認段数）は帳票タイプ側。 */
-const GROUP_NODES = ['閲覧', 'アップロード', '読取', '確認', '承認', '出力'].map((l) => ({ key: l, label: l }));
+const GROUP_NODES = ['閲覧', 'アップロード', '読取', '確認', '出力'].map((l) => ({ key: l, label: l }));
 const GROUP_NODE_LABELS = GROUP_NODES.map((n) => n.label);
 /* 旧ラベル（閲覧／再承認／アップロード／CSV出力 等）を新しい工程名へ寄せる */
 const GROUP_NODE_ALIAS = {
@@ -1585,7 +1576,7 @@ let FILES_DATA = buildFiles();
 (() => {
   const f = FILES_DATA.find((x) => x.id === 'f40');
   if (!f) return;
-  f.history = '承認1済み・再承認待ち';
+  f.history = '確認済み';
   f.flow = [
     { stage: null, action: '確認', user: '田中 実', at: f.confirmedAt || '2026-10-14 10:02:20', comment: '' },
     { stage: 1, action: '承認1', user: '田中 実', at: '2026-10-14 15:20:00', comment: '' },
@@ -2217,7 +2208,7 @@ function fselect(id, placeholder, opts, current) {
 
 /**
  * 承認フローの状態遷移
- * 確認: 読取完了 → 確認済み（承認待ち）
+ * 確認: 読取完了 → 確認済み
  * 承認: 確認済み → 承認1 → 承認2 → 承認済み（stages=1 なら承認1で承認済み）
  *      承認機能を使わない帳票タイプは 確認済み → そのまま出力可
  * 差戻: 常に「確認」へ戻す（2段承認中でも承認1へは戻さない）。理由コメント必須。
@@ -2355,22 +2346,9 @@ function myTaskRows(bucket) {
       if (['done', 'returned', 'checking'].includes(f.status) && canSeeMyTask(f, 'confirm', 'pending')) {
         rows.push({ file: f, kind: 'confirm' });
       }
-      const pk = pendingApproveKind(f, cfg);
-      if (pk === 'approve' && canSeeMyTask(f, 'approve', 'pending')) {
-        rows.push({ file: f, kind: 'approve' });
-      } else if (pk === 'reapprove' && canSeeMyTask(f, 'reapprove', 'pending')) {
-        rows.push({ file: f, kind: 'reapprove' });
-      }
     } else {
       if (['confirmed', 'approved', 'exported'].includes(f.status) && canSeeMyTask(f, 'confirm', 'done')) {
         rows.push({ file: f, kind: 'confirm' });
-      }
-      if (['approved', 'exported'].includes(f.status) && cfg.need !== false) {
-        if (cfg.stages >= 2 && canSeeMyTask(f, 'reapprove', 'done')) {
-          rows.push({ file: f, kind: 'reapprove' });
-        } else if (canSeeMyTask(f, 'approve', 'done')) {
-          rows.push({ file: f, kind: 'approve' });
-        }
       }
     }
   });
@@ -2446,25 +2424,13 @@ function reviewFootFlags(f) {
     };
   }
   if (f.status === 'confirmed') {
-    if (need && done < stages) {
-      return {
-        phase: 'approve',
-        readonly: true,
-        canSave: false,
-        canConfirm: false,
-        canApprove: true,
-        canReturn: true,
-        canExport: false,
-        need, stages, done,
-      };
-    }
     return {
       phase: 'export',
       readonly: true,
       canSave: false,
       canConfirm: false,
       canApprove: false,
-      canReturn: true,
+      canReturn: false,
       canExport: true,
       need, stages, done,
     };
@@ -2678,7 +2644,7 @@ function flowProgress(f) {
     user: (confRec && confRec.user) || '', comment: (confRec && confRec.comment) || '',
   });
 
-  if (need) {
+  if (false) {
     for (let n = 1; n <= stages; n += 1) {
       const rec = byStage(n);
       let state = 'todo';
@@ -2712,7 +2678,7 @@ function flowProgress(f) {
     : f.status === 'exported' ? '完了'
       : f.status === 'approved' ? '承認済み・出力待ち'
         : f.status === 'confirmed'
-          ? (!need ? '確認済み（承認不要）' : (stages === 2 ? `承認${done + 1}/${stages} 待ち` : '承認待ち'))
+          ? (!need ? '確認済み（承認不要）' : '確認済み')
           : confirmState === 'current' ? '確認待ち'
             : '読取中';
   return { need, stages, done, steps, current: cur, state, label, lastReturn };
@@ -2771,7 +2737,7 @@ function runFlowAction(fileId, action, comment) {
       confirmedCount: Object.keys(state.reviewConfirmed[fileId] || {}).length || OCR_FIELDS.b6.length,
     });
     f.history = `確認担当者: ${who}`;
-    toast(need ? '確認しました（承認待ち）' : '確認しました（承認不要のため出力できます）');
+    toast('確認しました');
   } else if (action === 'approve') {
     if (!need) { toast('この帳票タイプは承認機能を使用しません'); return; }
     const next = done + 1;
@@ -3983,7 +3949,7 @@ function renderAccessUrlTab() {
    状態そのもの（読取完了／出力済み／読取中…）は履歴ではないので空にし、
    確認・承認・出力などの実行者が分かる記録だけを残す。 */
 (function normalizeFileHistory() {
-  var STATUS_TEXT = /^(読取完了|読取中|読取待ち|確認中|確認済み（承認待ち）|承認済み|出力済み|分類中|差戻中|読取失敗|—|-)$/;
+  var STATUS_TEXT = /^(読取完了|読取中|読取待ち|確認中|確認済み|承認済み|出力済み|分類中|差戻中|読取失敗|—|-)$/;
   var PROGRESS_TEXT = /(処理中|作業中|より差戻|ページ）$)/;
   FILES_DATA.forEach(function (f) {
     var h = String(f.history || '').trim();
@@ -4009,47 +3975,10 @@ function renderAccessUrlTab() {
   }
   window.__recordText = recordText;
 })();
-
-
-/* ══ 2 段承認のモックデータ（serve.py 注入） ══
-   帳票タイプを 2 段承認にし、1 段目だけ承認済みのファイルを数件用意する。 */
-(function seedTwoStageApproval() {
-  var two = { c1: 2, c4: 2, c5: 2 };   /* 住民異動届 / 利用申込 / 保育必要事由 */
-  Object.keys(two).forEach(function (catId) {
-    if (!APPROVAL_CONFIG[catId]) APPROVAL_CONFIG[catId] = { need: true };
-    APPROVAL_CONFIG[catId].stages = 2;
-    APPROVAL_CONFIG[catId].need = true;
-    LAYOUT.forEach(function (l) {
-      var c = catOf(l.id) || {};
-      if (c.id !== catId) return;
-      var p = TICKET_PERMS[l.id];
-      if (!p) { p = TICKET_PERMS[l.id] = { view: [], confirm: [], approve: [], reapprove: [], stages: [] }; }
-      var first = (p.approve && p.approve.length) ? p.approve.slice() : ['gc'];
-      var second = (p.reapprove && p.reapprove.length) ? p.reapprove.slice() : ['ga'];
-      p.approve = first;
-      p.reapprove = second;
-      p.stages = [first, second];
-    });
-  });
-  /* 2 段目の承認待ち（1 段目は承認済み）を 4 件作る */
-  var picked = 0;
-  FILES_DATA.forEach(function (f) {
-    if (picked >= 4) return;
-    var c = catOf(f.layout) || {};
-    if (!two[c.id]) return;
-    if (f.status === 'approved' || f.status === 'exported') return;
-    f.status = 'confirmed';
-    f.history = '承認1済み（承認2待ち）';
-    f.flow = [
-      { action: '確認', user: '佐藤 一郎', at: '2026-10-14 10:12:00',
-        comment: '確認担当者が必須項目を目視確認し、誤読箇所を修正しました' },
-      { stage: 1, action: '承認1', user: '田中 実', at: '2026-10-14 15:20:00', comment: '' },
-    ];
-    f.confirmedAt = '2026-10-14 10:12:00';
-    f.confirmedBy = 'u1';
-    f.updatedAt = '2026-10-14 15:20:00';
-    picked += 1;
-  });
+/* ══ 承認廃止に伴い、モックのステータスを新体系（6 種）へ寄せる ══ */
+(function remapApprovalStatuses() {
+  var REMAP = { classifying: 'waiting', checking: 'reading', approved: 'confirmed', returned: 'done' };
+  FILES_DATA.forEach(function (f) { if (REMAP[f.status]) f.status = REMAP[f.status]; });
 })();
 
 
@@ -5209,8 +5138,6 @@ function canEditWorkflow_() {
       '<button type="button" class="fab" id="tpDescAi" title="AIで説明文を生成"><span class="ico i-scan"></span></button>',
       '<button type="button" class="fab plain" id="tpDescClear" title="クリア"><span class="ico i-delete"></span></button>',
       '</div></div></label>',
-      flowBlock,
-        catFlowBlockFor(t),
     ].join('');
   }
   if (step === 2) {
@@ -6661,12 +6588,10 @@ function renderReview() {
   let footCta = '';
   if (fl.canConfirm) {
     footCta = dsCta('rvConfirm', '確認', 'confirm', false);
-  } else if (fl.canApprove || fl.canReturn || fl.canExport) {
-    footCta = (fl.canReturn ? '<button class="btn danger" id="rvReturn" title="確認者へ差戻（理由必須）"><span class="ico i-back"></span>差戻</button>' : '')
-      + (fl.canExport
-        ? dsCta('rvExport', '出力', 'approve', false)
-        : dsCta('rvApprove', approveBtnLabel, 'approve', !fl.canApprove));
+  } else if (fl.canExport) {
+    footCta = dsCta('rvExport', '出力', 'approve', false);
   }
+
   const flowStrip = `<div class="rv-flow-strip">${flowStepsHtml(f, { compact: true, detail: false })}</div>`;
 
   /* JSON モード：name/value/children 配列。一括確認・エラーのみ表示は出さない */
@@ -6825,7 +6750,7 @@ function renderReview() {
         ${isApproveUi
           ? `<div class="rv-doctype">
               <div class="rv-doctype-label"><span class="muted">読取文書タイプ : </span><b>${esc(dispLayout(REVIEW_DOC.layoutId) || REVIEW_DOC.title)}</b></div>
-              <div class="rv-doctype-toggles"><span class="rv-approve-hint">承認者は項目を編集できません。確認済み内容を照合してください。</span></div>
+              <div class="rv-doctype-toggles"></div>
             </div>
             ${approveAuditHtml}`
           : `${state.reviewTab === 'json' ? '' : `<div class="rv-doctype">

@@ -1088,6 +1088,11 @@ HISTORY_NORMALIZE = """
   }
   window.__recordText = recordText;
 })();
+/* ══ 承認廃止に伴い、モックのステータスを新体系（6 種）へ寄せる ══ */
+(function remapApprovalStatuses() {
+  var REMAP = { classifying: 'waiting', checking: 'reading', approved: 'confirmed', returned: 'done' };
+  FILES_DATA.forEach(function (f) { if (REMAP[f.status]) f.status = REMAP[f.status]; });
+})();
 """
 
 
@@ -1284,17 +1289,11 @@ const PERM_COL_BASE = [
   { key: 'confirm', label: '確認', hint: '読取結果を確認済みにする' },
 ];
 const PERM_COL_TAIL = [
-  { key: 'export', label: 'CSV出力', hint: 'CSV を出力する' },
-  { key: 'settings', label: '帳票設定変更', hint: '帳票タイプの設定を変更する' },
+  { key: 'export', label: '出力', hint: 'CSV を出力する' },
 ];
-const permHeadOf = () => {
-  const n = maxApprovalStageCount();
-  const appr = [];
-  for (let k = 1; k <= n; k++) appr.push('<th style="width:132px">' + (n === 1 ? '承認' : '承認' + k) + '</th>');
-  return PERM_COL_BASE.map((a) => '<th style="width:132px">' + a.label + '</th>').join('')
-    + appr.join('')
-    + PERM_COL_TAIL.map((a) => '<th style="width:132px">' + a.label + '</th>').join('');
-};
+const permHeadOf = () =>
+  PERM_COL_BASE.map((a) => '<th style="width:132px">' + a.label + '</th>').join('')
+  + PERM_COL_TAIL.map((a) => '<th style="width:132px">' + a.label + '</th>').join('');
 const permCellHtml = (layoutId, key, label, hint, cur) =>
   '<td class="permcell"><button type="button" class="perm-cell" data-permcell="' + layoutId + ':' + key + '"'
   + ' title="' + esc(hint) + '：' + esc((cur || []).map(permTargetName).join('、') || '未設定') + '">'
@@ -1528,6 +1527,92 @@ def apply_read_op_finalize(src):
     GROUP_NODE_ALIAS は apply_group_nodes が注入するため、パイプラインの最後で当てる。
     """
     return src.replace("'読取': '閲覧', 'アップロード': 'アップロード',", "'アップロード': 'アップロード',", 1)
+
+
+def apply_no_approval(src):
+    """承認を全廃し、ワークフローを アップロード → 読取 → 確認 → 出力 に固定する。"""
+    rep = []
+
+    def sub(old, new, cnt=-1):
+        nonlocal src
+        if old in src:
+            n = src.count(old)
+            src = src.replace(old, new)
+            rep.append(old[:36].replace('\n', ' ') + f' x{n}')
+            return True
+        return False
+
+    # ① グループ操作権限：承認を外す
+    sub("const GROUP_NODES = ['閲覧', 'アップロード', '読取', '確認', '承認', '出力']",
+        "const GROUP_NODES = ['閲覧', 'アップロード', '読取', '確認', '出力']")
+    # ② USER_OPS：承認を外す
+    sub("{ key: 'read', label: '読取' }, { key: 'confirm', label: '確認' }, { key: 'approve', label: '承認' }, ",
+        "{ key: 'read', label: '読取' }, { key: 'confirm', label: '確認' }, ")
+    # ③ 帳票権限の操作から承認・再承認・帳票設定変更を外す（③の列＝客户の 5 項目）
+    sub("  { key: 'approve', label: '承認', hint: '1 段目の承認' },\n  { key: 'reapprove', label: '再承認', hint: '2 段目の承認（2 段承認のときのみ）' },\n", "")
+    sub("  { key: 'export', label: '出力', hint: 'CSV を出力する' },\n  { key: 'settings', label: '帳票設定変更', hint: '帳票タイプの設定を変更する' },\n",
+        "  { key: 'export', label: '出力', hint: 'CSV を出力する' },\n")
+    # ④ ステータス：承認まわりをタブ／順序から外す
+    sub("const STATUS_ORDER = ['classifying', 'waiting', 'reading', 'done', 'failed', 'checking', 'confirmed', 'approved', 'returned', 'exported'];",
+        "const STATUS_ORDER = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];")
+    sub("const TAB_STATUS = ['reading', 'done', 'failed', 'checking', 'confirmed', 'approved', 'returned', 'exported'];",
+        "const TAB_STATUS = ['reading', 'done', 'failed', 'confirmed', 'exported'];")
+    sub("confirmed: { key: 'confirmed', label: '確認済み（承認待ち）'", "confirmed: { key: 'confirmed', label: '確認済み'")
+    # ⑤ ワークフロー：承認工程を消す（固定 4 工程）＋ 要約を「確認済み」に
+    k = src.find("if (need) { for (let n = 1; n <= stages; n += 1)")
+    if k > 0:
+        m = src.find("let exportState = 'todo';", k)
+        if m > k:
+            src = src[:k] + src[m:]
+            rep.append('flowProgress 承認ループ')
+    sub("(stages === 2 ? `承認${done + 1}/${stages} 待ち` : '承認待ち')", "'確認済み'")
+    # ⑥ マイタスク：承認タスクを出さない（未対応・対応済とも）
+    sub("""      const pk = pendingApproveKind(f, cfg);
+      if (pk === 'approve' && canSeeMyTask(f, 'approve', 'pending')) {
+        rows.push({ file: f, kind: 'approve' });
+      } else if (pk === 'reapprove' && canSeeMyTask(f, 'reapprove', 'pending')) {
+        rows.push({ file: f, kind: 'reapprove' });
+      }
+""", "")
+    sub("""      if (['approved', 'exported'].includes(f.status) && cfg.need !== false) {
+        if (cfg.stages >= 2 && canSeeMyTask(f, 'reapprove', 'done')) {
+          rows.push({ file: f, kind: 'reapprove' });
+        } else if (canSeeMyTask(f, 'approve', 'done')) {
+          rows.push({ file: f, kind: 'approve' });
+        }
+      }
+""", "")
+    # ⑥b 表示文言から「承認待ち」を消す
+    src = src.replace("'確認済み・承認待ち'", "'確認済み'")
+    src = src.replace("'承認1済み・再承認待ち'", "'確認済み'")
+    src = src.replace("title: '確認して承認待ちへ'", "title: '確認済みにする'")
+    src = src.replace("toast(need ? '確認しました（承認待ち）' : '確認しました（承認不要のため出力できます）')", "toast('確認しました')")
+    src = src.replace("'確認済み（承認待ち）'", "'確認済み'")
+    src = src.replace("確認済み（承認待ち）", "確認済み")
+    # ⑦ 確認画面：承認者向けの注意書きを外す
+    sub('<span class="rv-approve-hint">承認者は項目を編集できません。確認済み内容を照合してください。</span>', '')
+    # ⑧ 帳票タイプ設定：工作流ブロックを出さない（固定のため設定不要）
+    sub("      flowBlock,\n        catFlowBlockFor(t),\n    ].join('');", "    ].join('');")
+    # フォルダ権限表から「承認1..N」列を外す（承認が無いため）
+    sub('const permHeadOf = () => { const n = maxApprovalStageCount(); const appr = []; for (let k = 1; k <= n; k++) appr.push(\'<th style="width:132px">\' + (n === 1 ? \'承認\' : \'承認\' + k) + \'</th>\'); return PERM_COL_BASE.map((a) => \'<th style="width:132px">\' + a.label + \'</th>\').join(\'\') + appr.join(\'\') + PERM_COL_TAIL.map((a) => \'<th style="width:132px">\' + a.label + \'</th>\').join(\'\'); };',
+        'const permHeadOf = () => PERM_COL_BASE.map((a) => \'<th style="width:132px">\' + a.label + \'</th>\').join(\'\') + PERM_COL_TAIL.map((a) => \'<th style="width:132px">\' + a.label + \'</th>\').join(\'\');')
+    # 確認画面の CTA：確認 → 出力 のみ（承認・差戻は無し）
+    sub('if (fl.canConfirm) { footCta = dsCta(\'rvConfirm\', \'確認\', \'confirm\', false); } else if (fl.canApprove || fl.canReturn || fl.canExport) { footCta = (fl.canReturn ? \'<button class="btn danger" id="rvReturn" title="確認者へ差戻（理由必須）"><span class="ico i-back"></span>差戻</button>\' : \'\') + (fl.canExport ? dsCta(\'rvExport\', \'出力\', \'approve\', false) : dsCta(\'rvApprove\', approveBtnLabel, \'approve\', !fl.canApprove)); }',
+        "if (fl.canConfirm) { footCta = dsCta('rvConfirm', '確認', 'confirm', false); } else if (fl.canExport) { footCta = dsCta('rvExport', '出力', 'approve', false); }")
+    # 承認ステップのループを無効化（固定 4 工程）
+    sub('  if (need) {\n    for (let n = 1; n <= stages; n += 1) {', '  if (false) {\n    for (let n = 1; n <= stages; n += 1) {')
+    # 確認画面 CTA：確認 → 出力 のみ（承認・差戻を削除）
+    sub('  } else if (fl.canApprove || fl.canReturn || fl.canExport) {\n    footCta = (fl.canReturn ? \'<button class="btn danger" id="rvReturn" title="確認者へ差戻（理由必須）"><span class="ico i-back"></span>差戻</button>\' : \'\')\n      + (fl.canExport\n        ? dsCta(\'rvExport\', \'出力\', \'approve\', false)\n        : dsCta(\'rvApprove\', approveBtnLabel, \'approve\', !fl.canApprove));\n  }',
+        "  } else if (fl.canExport) {\n    footCta = dsCta('rvExport', '出力', 'approve', false);\n  }\n")
+    # 出力可能条件：確認済みなら出力できる（承認が無いため）
+    sub("function canExportFile(f) { if (!f) return false; const { need } = flowOf(f); return f.status === 'approved' || f.status === 'exported' || (!need && f.status === 'confirmed'); }",
+        "function canExportFile(f) { if (!f) return false; return f.status === 'confirmed' || f.status === 'approved' || f.status === 'exported'; }")
+    # 確認済みの画面フラグ：出力のみ（承認・差戻は無し）
+    sub("if (f.status === 'confirmed') {\n    if (need && done < stages) {\n      return {\n        phase: 'approve',\n        readonly: true,\n        canSave: false,\n        canConfirm: false,\n        canApprove: true,\n        canReturn: true,\n        canExport: false,\n        need, stages, done,\n      };\n    }\n    return {\n      phase: 'export',\n      readonly: true,\n      canSave: false,\n      canConfirm: false,\n      canApprove: false,\n      canReturn: true,\n      canExport: true,\n      need, stages, done,\n    };\n  }",
+        "if (f.status === 'confirmed') {\n    return {\n      phase: 'export',\n      readonly: true,\n      canSave: false,\n      canConfirm: false,\n      canApprove: false,\n      canReturn: false,\n      canExport: true,\n      need, stages, done,\n    };\n  }")
+    # ⑨ 権限一覧から承認者ロールを外す
+    sub("{ id: 'R4', name: '承認者', code: 'approver', desc: '確認済み帳票の承認・再承認。マイタスクの承認作業', created: '2025-10-01 00:00:00', status: '有効' },\n", "")
+    return src, rep
 
 
 def apply_export_pending_filter(src):
@@ -2046,7 +2131,6 @@ def patched_app_js(path):
     patched = apply_result_person_columns(patched)
     patched = apply_drop_history_column(patched)
     patched = apply_history_normalize(patched)
-    patched = apply_two_stage_mock(patched)
     patched = apply_file_click_preview(patched)
     patched, _stage_report = _patch_stage_selection(patched)
     patched = apply_category_flow(patched)
@@ -2078,6 +2162,7 @@ def patched_app_js(path):
     patched = apply_admin_nav(patched)
     patched = apply_user_group_checks(patched)
     patched = hide_actor_switch(patched)
+    patched, _no_appr = apply_no_approval(patched)
     patched = apply_read_op_finalize(patched)
     # グループ＝権限バケツ：GROUPS / TICKET_PERMS の定義後（レンダリング前）に当てる
     m_anchor = re.search(r"(function renderUserAddDialog)", patched)
