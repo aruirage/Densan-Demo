@@ -1521,6 +1521,15 @@ def apply_user_ops_derive_fix(src):
     return src
 
 
+def apply_role_rename3(src):
+    """ロール名の一括改名：運用管理者 → 業務管理者（診断ログ付き）。"""
+    try:
+        open("/tmp/role_debug.txt", "w").write(str(src.count("運用管理者")))
+    except Exception:
+        pass
+    return src.replace("運用管理者", "業務管理者")
+
+
 def apply_status_opts_fix(src):
     """ファイル一覧のステータス絞り込み：読取待ちはアップロード画面専用なので除外し、出力未済を足す。"""
     # ステータス欄の「差分なし／差分あり」バッジは不要（客户指摘）→ 出力しない
@@ -2664,6 +2673,7 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_role_rename3(patched)
     patched = apply_rename_creator_to_reader(patched)
     patched = apply_remove_mytasks_menu(patched)
     patched = apply_row_actions_fix(patched)
