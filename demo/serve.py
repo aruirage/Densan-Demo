@@ -1521,6 +1521,42 @@ def apply_user_ops_derive_fix(src):
     return src
 
 
+def apply_menu_perm_fix(src):
+    """権限設定のメニュー権限ツリー補正：グループ項目の重複削除＋ユーザー削除を追加。"""
+    triple = ("{ id: 'usage-groups-add', label: 'グループ追加' }, "
+              "{ id: 'usage-groups-edit', label: 'グループ編集' }, "
+              "{ id: 'usage-groups-del', label: 'グループ削除' }, ")
+    if (triple + triple) in src:
+        src = src.replace(triple + triple, triple, 1)
+    src = src.replace("{ id: 'usage-users-toggle', label: 'ユーザー無効化' },", "{ id: 'usage-users-toggle', label: 'ユーザー無効化' }, { id: 'usage-users-del', label: 'ユーザー削除' },", 1)
+    return src
+
+
+def apply_roles_9(src):
+    """新設計の 9 ロールに整える（R3〜R5 改名 ＋ R6〜R9 追加 ＋ MENU_PERMS 補完）。"""
+    src = src.replace("name: '確認者'", "name: 'OCR結果確認'")
+    src = src.replace("name: '承認者'", "name: 'OCR結果修正'")
+    src = src.replace("name: 'アップロード者'", "name: 'アップロード'")
+    seed = """
+/* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
+try {
+  const _extraRoles = [
+    { id: 'R6', name: '閲覧', code: 'viewer', desc: '一覧の閲覧のみ（操作なし）', created: '2026-01-01 00:00:00', status: '有効' },
+    { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
+    { id: 'R8', name: '読取', code: 'reader', desc: 'OCR 読取の実行', created: '2026-01-01 00:00:00', status: '有効' },
+    { id: 'R9', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
+  ];
+  _extraRoles.forEach((r) => { if (!ROLES.some((x) => x.id === r.id)) ROLES.push(r); });
+  ['R6', 'R7', 'R8', 'R9'].forEach((id) => {
+    if (!MENU_PERMS[id]) MENU_PERMS[id] = ['home', 'result'];
+  });
+} catch (_e) { /* ignore */ }
+"""
+    if '追加ロール（9 組設計）' not in src:
+        src = src + seed
+    return src
+
+
 def apply_role_rename3(src):
     """ロール名の一括改名：運用管理者 → 業務管理者（診断ログ付き）。"""
     try:
@@ -2673,6 +2709,8 @@ def patched_app_js(path):
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
+    patched = apply_menu_perm_fix(patched)
+    patched = apply_roles_9(patched)
     patched = apply_role_rename3(patched)
     patched = apply_rename_creator_to_reader(patched)
     patched = apply_remove_mytasks_menu(patched)
