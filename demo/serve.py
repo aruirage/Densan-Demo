@@ -1529,6 +1529,7 @@ def apply_menu_perm_fix(src):
     if (triple + triple) in src:
         src = src.replace(triple + triple, triple, 1)
     src = src.replace("{ id: 'usage-users-toggle', label: 'ユーザー無効化' },", "{ id: 'usage-users-toggle', label: 'ユーザー無効化' }, { id: 'usage-users-del', label: 'ユーザー削除' },", 1)
+    src = src.replace("{ id: 'op-read', label: '読み取り実行' },", "{ id: 'op-read', label: '読み取り実行' }, { id: 'op-classify', label: 'AI分類結果修正' },", 1)
     return src
 
 
