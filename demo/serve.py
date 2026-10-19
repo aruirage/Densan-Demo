@@ -186,7 +186,7 @@ var GROUP_OPS = {
     { id: 'groot', name: '電算', kind: '', roles: [], desc: 'すべての操作グループの最上位（削除不可）', userIds: [], root: true, permId: 'R1', parentId: null },
     { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u2', 'u6', 'u7'], permId: 'R5', parentId: 'groot' },
     { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u3', 'u5', 'u8'], permId: 'R3', parentId: 'groot' },
-    { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: '承認（1 段目・2 段目）', userIds: ['u4', 'u5'], permId: 'R4', parentId: 'groot' },
+    { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: 'CSV/JSON/PDF の出力', userIds: ['u4', 'u5'], permId: 'R4', parentId: 'groot' },
     /* 新設計（9 グループ）で追加した 5 つ */
     { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u1'], permId: 'R2', parentId: 'groot' },
     { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: '一覧の閲覧のみ（操作なし）', userIds: ['u2'], permId: 'R4', parentId: 'groot' },
