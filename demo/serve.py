@@ -2793,6 +2793,11 @@ def patched_app_js(path):
     m_anchor = re.search(r"(function renderUserAddDialog)", patched)
     if m_anchor and 'GROUP_OPS' not in patched:
         patched = patched[:m_anchor.start()] + GROUP_MODEL + "\n" + patched[m_anchor.start():]
+    # グループ名を新設計（承認なし）に更新（GROUP_MODEL 注入の直後に当てる）
+    patched = patched.replace("name: '承認グループ'", "name: '出力グループ'")
+    patched = patched.replace("name: '読取グループ'", "name: 'アップロードグループ'")
+    patched = patched.replace("name: '確認グループ'", "name: 'OCR結果確認グループ'")
+    patched = patched.replace("name: '管理者グループ'", "name: 'システム管理者グループ'")
     # 閲覧権限の判定に必要な実データを __demo から読めるようにする
     if 'window.__demo = {' in patched and 'GROUPS,' not in patched.split('window.__demo = {')[1][:400]:
         patched = re.sub(r"(window\.__demo = \{)", r"\1\n  GROUPS, ROLE_MEMBERS, USER_OPS, LAYOUT, CATEGORY, BUSINESS, UPLOAD_PERMS, ROLES, catStagesOf, setCatStages, approvalStageCountOf, maxApprovalStageCount, stageTargetsOf, setStageTargets,", patched, count=1)
