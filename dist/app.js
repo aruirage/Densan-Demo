@@ -129,7 +129,7 @@ const USERS = [
 const DEMO_ACTORS = [
   { id: 'u1', role: 'システム管理者', email: 'ichiro.sato@itso.co.jp', hint: '全メニュー・全帳票・全操作' },
   { id: 'u7', role: '読取・アップロード', email: 'aya.yamamoto@itso.co.jp', hint: '閲覧とアップロードのみ（確認・出力は不可）' },
-  { id: 'u8', role: '確認・修正', email: 'ryo.nakamura@itso.co.jp', hint: '閲覧・アップロード・修正・確認・出力（設定は不可）' },
+  { id: 'u8', role: '確認・修正', email: 'ryo.nakamura@itso.co.jp', hint: '閲覧・修正・確認（アップロードと設定は不可）' },
   { id: 'u4', role: '閲覧のみ', email: 'minoru.tanaka@itso.co.jp', hint: '一覧の閲覧のみ（操作ボタンは出ない）' },
 ];
 
@@ -4910,7 +4910,6 @@ function renderUsers() {
     }).join('');
   const g = byId(GROUPS, focus);
   const ug = state.ug || (state.ug = { q: '', email: '', role: '', status: '', page: 1, perPage: 10 });
-  const permName = g ? ((byId(ROLES, g.permId) || {}).name || '—') : '—';
   const direct = g ? ENT_USERS.filter((u) => (g.userIds || []).includes(u.uid)) : [];
   /* 配下含む人数＝子・孫グループのメンバーも数える */
   const scopeIds = g ? [g.id, ...groupDescendantIds(g.id)] : [];
