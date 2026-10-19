@@ -20,8 +20,9 @@
  */
 (function () {
   var src = location.search + location.hash;
-  /* ?perm=1 / #perm=1 / &perm=1 のいずれでも「制限あり」に切替 */
-  var restricted = /(?:^|[?&#])perm=1(?:&|$)/.test(src);
+  /* ?perm=1 / #perm=1 / &perm=1 のいずれでも「制限あり」に切替。
+     search と hash を連結して判定するため、perm=1 の直後が # になる形も許可する。 */
+  var restricted = /(?:^|[?&#])perm=1(?:&|#|$)/.test(src);
   window.DEMO_FULL_ADMIN = !restricted;
   /* ヘッダーの「デモ」バッジは review-fix 側が DOM から外すため、
      いまどちらのモードなのかはコンソールに出す。 */

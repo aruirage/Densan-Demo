@@ -307,29 +307,6 @@
 .st.ok .dot{ background:#12a150; }
 .st.ng{ color:#e5484d; }
 
-/* ══ ファイル名列を固定（横スクロールしても左に残す）＋チェック列も固定 ══ */
-.result-table thead th:first-child,
-.result-table tbody td:first-child{
-  position:sticky; left:0; z-index:4; background:#fff;
-}
-.result-table thead th.col-name,
-.result-table tbody td.col-name{
-  position:sticky; left:44px; z-index:3; background:#fff;
-  box-shadow:1px 0 0 var(--line,#e5e9f0);
-}
-.result-table thead th:first-child{ z-index:5; }
-.result-table thead th.col-name{ z-index:5; }
-.result-table tbody tr.pick td:first-child,
-.result-table tbody tr.pick td.col-name{ background:#f2f6ff; }
-
-/* 固定した列の見出し背景を他の見出しと揃える（#f7f7f7） */
-.result-table thead th:first-child,
-.result-table thead th.col-name{ background:#f7f7f7; }
-
-/* 固定列の見出し背景を実測値（#eef5fd）に合わせる */
-.result-table thead th:first-child,
-.result-table thead th.col-name{ background:#eef5fd; }
-
 /* ══ 全テーブルの見出し色をファイル一覧（#eef5fd）に統一（客户：home と揃える） ══ */
 thead th{ background:#eef5fd !important; }
 
@@ -340,19 +317,12 @@ thead th{ background:#eef5fd !important; }
   border-radius:8px;
 }
 
-/* 固定はファイル名列だけにする（チェック列との間に白い隙間が出ていたため） */
-.result-table thead th:first-child,
-.result-table tbody td:first-child{
-  position:static !important;
-  z-index:auto !important;
-  box-shadow:none !important;
-}
-.result-table thead th.col-name,
-.result-table tbody td.col-name{
-  position:static !important;
-  left:auto !important;
-  border-right:1px solid var(--line,#e5e9f0);
-  box-shadow:none;
+/* チェック列：見出しでも枠が見えるように */
+.result-table th.col-pick .cb,
+.result-table td.col-pick .cb{
+  display:inline-block;
+  appearance:auto;
+  -webkit-appearance:checkbox;
 }
 
 /* ══ 絞り込み欄のレイアウト：3 行で横幅を均等に使う（空きを減らす） ══ */
@@ -371,39 +341,9 @@ thead th{ background:#eef5fd !important; }
 .result-filter-row .field input.fld,
 .result-filter-row .field .result-date-range{ flex:1 1 auto; min-width:0; width:100%; }
 
-/* ══ 左の 2 列（チェック・ファイル名）の体裁を揃える（客户） ══ */
-.result-table thead th:first-child,
-.result-table thead th.col-name{
-  background:#eef5fd !important;
-  border-right:0 !important;
-}
-.result-table thead th.col-name{
-  border-right:1px solid var(--line,#e5e9f0) !important;
-}
-.result-table tbody td:first-child,
-.result-table tbody td.col-name{
-  background:#fff !important;
-  border-right:0 !important;
-}
-.result-table tbody td.col-name{
-  border-right:1px solid var(--line,#e5e9f0) !important;
-}
-.result-table tbody tr:hover td:first-child,
-.result-table tbody tr:hover td.col-name{ background:#f5f8ff !important; }
-.result-table tbody tr.pick td:first-child,
-.result-table tbody tr.pick td.col-name{ background:#eef5fd !important; }
-
 /* 一括ダウンロードのメニューが「選択帳票読取」の下に出ていたのを修正（.batch-dl を基準に配置） */
 .result-tablebar .batch-dl{ position:relative; }
 .result-tablebar .batch-dl-menu{ left:50%; }
-
-/* 左右の固定列の体裁を統一：右（操作・処理）に合わせて、ファイル名の縦線を外す */
-.result-table thead th.col-name,
-.result-table tbody td.col-name{ border-right:0 !important; }
-
-/* 列幅を意図どおりにする（合計幅を確保して横スクロールで見せる） */
-.result-table{ min-width:2060px; table-layout:fixed; }
-.result-tablewrap .result-table.result-table{ min-width:2060px !important; table-layout:fixed !important; width:2060px !important; }
 
 /* ══ 一覧の 3 ボタン：配色を整理＋読み取りボタンでダウンロードメニューが出ないように ══ */
 /* メニューは「一括ダウンロード」を hover / フォーカスした時だけ出す */
@@ -456,9 +396,6 @@ thead th{ background:#eef5fd !important; }
 }
 .rv-pdf-wrap img, .rv-preview-canvas img{ width:100% !important; }
 .rv-preview-stage, .rv-preview-canvas{ overflow-y:auto !important; }
-
-/* ══ アップロード画面：投入専用（アップロード済ファイル一覧を非表示） ══ */
-.upload-list-card{ display:none !important; }
 
 /* ══ 確認画面：プレビュー（mock sheet）を幅に合わせて縦スクロール可能に ══ */
 .rv-preview-canvas .sheet,

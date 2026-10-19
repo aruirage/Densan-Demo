@@ -6,7 +6,12 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
 const styles = fs.readFileSync(path.join(__dirname, '../styles.css'), 'utf8');
 function app() {
-  const ctx = vm.createContext({ console, setTimeout, clearTimeout, setInterval, clearInterval });
+  /* syncHashFromState が location を触るので、ブラウザ相当の最小スタブを渡す */
+  const ctx = vm.createContext({
+    console, setTimeout, clearTimeout, setInterval, clearInterval,
+    location: { hash: '', search: '', pathname: '/', href: 'http://localhost/' },
+    history: { replaceState() {}, pushState() {} },
+  });
   vm.runInContext(source.slice(0, source.lastIndexOf('\napplyHash();')), ctx);
   return (code) => vm.runInContext(code, ctx);
 }
@@ -39,34 +44,34 @@ test('collapsed result filters show hierarchy row; expanded adds people and all 
   assert.equal((html.match(/class="result-filter-row/g) || []).length, 3);
   assert.doesNotMatch(html, /data-fs="dept"|部署/);
   assert.match(html, /data-fs="createdBy"/);
-  assert.match(html, /data-fs="confirmedBy"/);
-  assert.match(html, /data-fs="approvedBy"/);
-  assert.doesNotMatch(html, /data-fs="operator"|data-fs="updatedBy"/);
-  assert.doesNotMatch(html, /処理ユーザ|更新者/);
+  assert.match(html, /data-fs="processedBy"/);
+  assert.match(html, /data-fs="exportPending"/);
+  /* 5 状態に絞ったので確認者／承認者の絞り込みは持たない */
+  assert.doesNotMatch(html, /data-fs="confirmedBy"|data-fs="approvedBy"|data-fs="operator"/);
+  assert.doesNotMatch(html, /確認者|承認者|処理ユーザ|更新者/);
   assert.match(html, /作成者/);
-  assert.match(html, /確認者/);
-  assert.match(html, /承認者/);
+  assert.match(html, /処理者/);
   assert.doesNotMatch(html, /id="resultQuery"|読取結果検索/);
   assert.match(html, /result-date-row/);
-  for (const id of ['createdFrom', 'updatedFrom', 'readFrom', 'checkedFrom', 'approvedFrom']) {
+  for (const id of ['createdFrom', 'createdTo', 'updatedFrom', 'updatedTo']) {
     assert.ok(html.includes(`id="${id}"`), id);
   }
-  assert.match(html, /読取日/);
-  assert.match(html, /確認日/);
-  assert.match(html, /承認日/);
+  assert.match(html, /作成日時/);
+  assert.match(html, /処理日時/);
   assert.match(html, /閉じる/);
   assert.doesNotMatch(html, /id="fName"|ファイル名/);
 });
-test('result table has nine columns, compact rows, three browse-only action slots and page jump', () => {
+test('result table has thirteen columns, compact rows, four browse-only action slots and page jump', () => {
   const run = app();
   const html = run('renderTable()');
   assert.match(html, /result-tablewrap/);
   assert.match(html, /class="result-table"/);
   assert.match(html, /<colgroup>/);
-  assert.match(html, /width:260px/);
+  assert.equal((html.match(/<col /g) || []).length, 13);
+  assert.match(html, /<col class="col-actions">/);
   assert.match(styles, /\.result-tablewrap\{[^}]*overflow:\s*auto/);
   assert.match(styles, /\.result-tablewrap\.is-dragging/);
-  assert.match(styles, /\.result-tablewrap \.result-table\{[^}]*min-width:\s*1474px/);
+  assert.match(styles, /\.result-tablewrap \.result-table\{[^}]*min-width:\s*1760px/);
   assert.match(source, /function bindResultTableScroll\(/);
   assert.match(source, /resultScrollLeft/);
   assert.doesNotMatch(html, /class="meta"|type-pill|class="dot"|class="ctx"/);
@@ -75,40 +80,31 @@ test('result table has nine columns, compact rows, three browse-only action slot
   assert.match(html, /data-resultgoto/);
   assert.match(html, /一括ダウンロード/);
   assert.match(html, /class="batch-dl/);
-  for (const fmt of ['csv', 'excel', 'json', 'pdf']) assert.match(html, new RegExp(`data-batchdl="${fmt}"`));
+  for (const fmt of ['csv', 'json', 'pdf']) assert.match(html, new RegExp(`data-batchdl="${fmt}"`));
   assert.match(html, /CSVをダウンロード/);
-  assert.match(html, /Excelをダウンロード/);
+  assert.doesNotMatch(html, /Excelをダウンロード/);
   assert.match(html, /JSONをダウンロード/);
   assert.match(html, /PDFをダウンロード/);
   const row = html.match(/<tr[^>]*data-row="[^"]+"[\s\S]*?<\/tr>/)[0];
-  /* 行アクション：详情／再読取／ダウンロード／削除。ダウンロードは hover メニュー（data-dlmenu）なので data-act は3つ */
-  assert.equal((row.match(/data-act="/g) || []).length, 3);
-  assert.match(row, /data-act="detail"/);
+  /* 行アクション：再読取／修正／確認／削除。ダウンロードは hover メニュー（data-dlmenu）なので data-act は4つ */
+  assert.equal((row.match(/data-act="/g) || []).length, 4);
+  for (const act of ['redo', 'fix', 'confirm', 'delete']) assert.match(row, new RegExp(`data-act="${act}"`), act);
   assert.doesNotMatch(row, /data-act="download"/);
   assert.match(row, /data-dlmenu="[^"]+"/);
   assert.match(row, /aria-haspopup="menu"/);
   assert.match(row, /i-download/);
-  assert.doesNotMatch(row, /data-act="confirm"|data-act="approve"/);
+  assert.doesNotMatch(row, /data-act="approve"|data-act="reapprove"/);
   assert.match(row, /class="fn link"/);
 });
-test('tree builds from masters; rename only files; view mode and reorder', () => {
+test('tree builds from masters; files stay in the right pane; view mode and reorder', () => {
   const run = app();
   const html = run('renderTree()');
   assert.match(html, /tree-icon-folder/);
-  assert.match(html, /tree-icon-document/);
-  assert.match(html, /data-type="biz" data-id="b1"/);
+  /* ファイルはツリーに並べない（選択した帳票タイプの一覧が右ペインに出る） */
+  assert.doesNotMatch(html, /data-type="file"/);
+  /* 名称変更は帳票タイプ（ツリー第2階層）で行う。ファイルは右ペインの一覧側 */
+  assert.match(html, /data-rename=/);
   assert.match(html, /data-type="cat" data-id="c1"/);
-  assert.match(html, /data-type="file" data-id="f01"/);
-  /* 名称変更ボタンはファイル行にのみ付く。長い名前は省略＋hover で全文（data-tip） */
-  const fileRow = html.match(/data-type="file" data-id="f01"[\s\S]*?<\/div>/)[0];
-  assert.match(fileRow, /data-rename="1"/);
-  assert.match(fileRow, /class="label"[^>]*data-tip="/);
-  assert.doesNotMatch(fileRow, /class="label"[^>]*\btitle=/);
-  const bizRow = html.match(/data-type="biz" data-id="b1"[\s\S]*?<\/div>/)[0];
-  assert.doesNotMatch(bizRow, /data-rename=/);
-  const catRow = html.match(/data-type="cat" data-id="c1"[\s\S]*?<\/div>/)[0];
-  assert.doesNotMatch(catRow, /data-rename=/);
-  assert.doesNotMatch(html, /data-treedel=/);
   assert.equal(run('FILES_DATA.length'), 45);
   assert.equal(run('state.fileFolder.f01'), 'c2');
   run('moveFileToFolder("f01", "c1")');
@@ -125,69 +121,61 @@ test('tree builds from masters; rename only files; view mode and reorder', () =>
   assert.match(panel, /role="tablist"/);
   assert.match(panel, /data-treeview="biz-cat"/);
   assert.match(panel, /data-treeview="cat"/);
-  assert.match(panel, /tree-view-pill on" data-treeview="biz-cat"/);   // 既定は業務シーンビュー
+  assert.match(panel, /tree-view-pill on" data-treeview="biz-cat"/);   // 既定は業務シーン階層
   assert.doesNotMatch(panel, /id="treeAddFolder"/);
   run('state.treeView = "cat"');
   const catTree = run('renderTree()');
-  assert.doesNotMatch(catTree, /data-type="biz"/);
+  /* 帳票タイプ表示でも業務シーンの見出しは残る（グルーピング用） */
   assert.match(catTree, /data-type="cat" data-id="c1"/);
   const side = run('renderSidebarPane()');
-  assert.match(side, /ファイル一覧/);
+  assert.match(side, /読取結果一覧/);
   assert.match(side, /info-i/);
   assert.match(side, /表示次元/);
-  assert.match(side, /ファイル名のみ/);
+  assert.match(side, /業務シーン/);
   assert.doesNotMatch(side, /class="tree-hint"/);
 });
 test('status strip omits waiting tab because upload jumps to reading on result list', () => {
   const run = app();
   const tabs = run('renderTabs()');
-  assert.equal((tabs.match(/data-tab=/g) || []).length, 9);
+  assert.equal((tabs.match(/data-tab=/g) || []).length, 6);
   assert.doesNotMatch(tabs, /data-tab="waiting"/);
-  for (const id of ['reading', 'done', 'failed', 'checking', 'confirmed', 'approved', 'returned', 'exported']) {
+  /* 状態は 5 つ（読取中／完了／失敗／確認済み／出力済み）＋すべて */
+  for (const id of ['all', 'reading', 'done', 'failed', 'confirmed', 'exported']) {
     assert.ok(tabs.includes(`data-tab="${id}"`), id);
   }
   const filters = run('renderFilters()');
   assert.doesNotMatch(filters, /value="waiting"/);
   assert.doesNotMatch(filters, /読取待ち/);
-  assert.ok(filters.includes('value="approved"'));
-  assert.ok(filters.includes('value="returned"'));
+  assert.doesNotMatch(filters, /value="approved"|value="returned"/);
   assert.ok(filters.includes('value="exported"'));
 });
-test('review footer is status-driven: confirmed shows approve/return without confirm', () => {
+test('review footer is status-driven: 読取完了は確認、確認済みは出力のみ', () => {
   const run = app();
-  run('state.reviewId = "f11"; state.page = "review"; state.reviewViewOnly = false; state.reviewReturn = "myTasks"');
-  const html = run('renderReview()');
-  assert.doesNotMatch(html, /id="rvConfirm"/);
-  assert.match(html, /id="rvReturn"/);
-  assert.match(html, /id="rvApprove"/);
-  assert.match(html, /確認済み/);
-  const flags = run('JSON.stringify(reviewFootFlags(byId(FILES_DATA, "f11")))');
-  assert.equal(JSON.parse(flags).canApprove, true);
-  assert.equal(JSON.parse(flags).canReturn, true);
-  assert.equal(JSON.parse(flags).canConfirm, false);
-  assert.equal(JSON.parse(flags).phase, 'approve');
-  assert.equal(JSON.parse(flags).readonly, true);
-  /* 承認画面：編集不可・進捗・直前操作サマリ・差分／全項目タブ・一括確認なし */
-  assert.match(html, /rv-approve-audit/);
-  assert.match(html, /帳票の進捗/);
-  assert.match(html, /直前の操作結果/);
-  assert.match(html, /読取結果（原文）/);
-  assert.match(html, /確認者の修正/);
-  assert.match(html, /承認者は項目を編集できません/);
-  assert.match(html, /data-rv-apane="diff"/);
-  assert.match(html, /data-rv-apane="fields"/);
-  assert.doesNotMatch(html, /id="rvBulkConfirm"/);
-  assert.doesNotMatch(html, /data-ocr=/);
-  assert.match(html, /rv-audit-diff|rv-field-diff|rv-field-ro/);
-  assert.match(html, /btn-ds/);
+  const flagsOf = (s) => JSON.parse(run(`byId(FILES_DATA, "f11").status = "${s}"; JSON.stringify(reviewFootFlags(byId(FILES_DATA, "f11")))`));
+  const done = flagsOf('done');
+  assert.equal(done.phase, 'confirm');
+  assert.equal(done.canConfirm, true);
+  assert.equal(done.readonly, false);
+  const conf = flagsOf('confirmed');
+  assert.equal(conf.phase, 'export');
+  assert.equal(conf.canExport, true);
+  assert.equal(conf.canConfirm, false);
+  assert.equal(conf.readonly, true);
+  const exp = flagsOf('exported');
+  assert.equal(exp.canExport, true);
+  assert.equal(exp.canConfirm, false);
+  /* 承認・差戻の CTA は廃止（5 状態） */
+  const html = run('state.reviewId = "f11"; state.page = "review"; state.reviewViewOnly = false; state.reviewReturn = "myTasks"; renderReview()');
+  assert.doesNotMatch(html, /id="rvApprove"|id="rvReturn"/);
+  assert.match(html, /id="rvBulkConfirm"/);
 });
 
-test('returned file shows return records on approve-style audit', () => {
+test('confirm audit keeps its shape and has no return records after the 5-state cut', () => {
   const run = app();
   run('ensureConfirmAudit(byId(FILES_DATA, "f15"))');
   const audit = JSON.parse(run('JSON.stringify(confirmAuditOf(byId(FILES_DATA, "f15")))'));
-  assert.ok(audit.returns.length >= 1);
-  assert.match(audit.returns[0].action, /差戻/);
+  assert.deepEqual(Object.keys(audit).sort(), ['changes', 'confirm', 'confirmedCount', 'returns']);
+  assert.deepEqual(audit.returns, []);
 });
 
 test('approve is one-click; return always goes to confirm with required reason and OA progress', () => {
@@ -229,16 +217,10 @@ test('approve is one-click; return always goes to confirm with required reason a
 
 test('my tasks lists pending and done with filters', () => {
   const run = app();
-  /* 承認・確認兼務の u4。自身のみでも割当が当たればタスクが見える */
+  /* 確認担当 u4。5 状態に絞ったので承認タスクは持たない */
   run('state.currentUser = "u4"');
-  const nConfirm = run('myTaskFiles("confirm").length');
-  const nApprove = run('myTaskFiles("approve").length');
-  run('state.currentUser = "u1"');
-  const nReapprove = run('myTaskFiles("reapprove").length');
-  run('state.currentUser = "u4"');
-  assert.ok(nConfirm > 0);
-  assert.ok(nApprove > 0);
-  assert.ok(nReapprove > 0, '2段目待ちの再承認タスクがある');
+  assert.ok(run('myTaskFiles("confirm").length') > 0);
+  assert.equal(run('myTaskFiles("approve").length'), 0);
   assert.ok(run('myTaskRows("pending").length') > 0);
   assert.ok(run('myTaskRows("done").length') > 0);
   run('state.page = "myTasks"; state.myTaskTab = "pending"; state.currentUser = "u4"');
@@ -250,31 +232,23 @@ test('my tasks lists pending and done with filters', () => {
   assert.match(html, /id="mtName"/);
   assert.match(html, /id="mtBiz"/);
   assert.match(html, /id="mtCat"/);
-  assert.match(html, /確認する|承認する|再承認する/);
-  assert.match(html, /要承認（1段目）|要承認/);
-  /* 再承認はシステム管理者 u1（全件参照）で見える */
-  const htmlRe = run('state.currentUser = "u1"; renderMyTasks()');
-  assert.match(htmlRe, /要再承認（2段目）/);
+  assert.match(html, /確認する/);
+  assert.doesNotMatch(html, /承認する|再承認する|要再承認（2 段目）/);
   /* 担当は具体ユーザ名（グループ名ではない） */
   assert.match(html, /田中 実|伊藤 由美|佐藤 一郎/);
   assert.doesNotMatch(html, /確認者グループ|承認者グループ|窓口グループ/);
   assert.doesNotMatch(html, /担当グループに割り当てられた/);
 });
-test('confirmers do not see approve tasks; approvers do not see confirm tasks', () => {
+test('confirm-only users never get approve tasks because approval was dropped', () => {
   const run = app();
-  /* 確認専任 u2：approve 操作なし → 承認タスク 0 */
+  /* 確認専任 u2：承認タスク 0 */
   assert.equal(run('userHasOp("confirm", "u2")'), true);
-  assert.equal(run('userHasOp("approve", "u2")'), false);
   run('state.currentUser = "u2"');
   assert.equal(run('myTaskRows("pending").filter((r) => r.kind === "approve" || r.kind === "reapprove").length'), 0);
   assert.equal(run('myTaskRows("done").filter((r) => r.kind === "approve" || r.kind === "reapprove").length'), 0);
   assert.ok(run('myTaskRows("pending").filter((r) => r.kind === "confirm").length') >= 0);
-  /* 承認専任 u5：confirm 操作なし → 確認タスク 0 */
-  assert.equal(run('userHasOp("confirm", "u5")'), false);
-  assert.equal(run('userHasOp("approve", "u5")'), true);
-  run('state.currentUser = "u5"');
-  assert.equal(run('myTaskRows("pending").filter((r) => r.kind === "confirm").length'), 0);
-  assert.equal(run('myTaskRows("done").filter((r) => r.kind === "confirm").length'), 0);
+  /* 承認操作そのものを使わないので、承認・再承認タスクは誰にも出ない */
+  assert.equal(run('myTaskRows("pending").filter((r) => r.kind === "approve" || r.kind === "reapprove").length'), 0);
 });
 test('dataPerm 自身のみ hides others tasks; 全件参照 and admin show pool', () => {
   const run = app();
@@ -348,12 +322,11 @@ test('top nav exposes upload and file list as separate menus', () => {
   run('state.page = "home"; state.tabs = ["home", "upload", "result"]');
   // render() needs document - check TABS_DEF and tabOfRoute instead
   assert.equal(run('TABS_DEF.upload.label'), '新規アップロード');
-  assert.equal(run('TABS_DEF.result.label'), 'ファイル一覧');
+  assert.equal(run('TABS_DEF.result.label'), '読取結果一覧');
   assert.equal(run('tabOfRoute("upload")'), 'upload');
   assert.equal(run('tabOfRoute("result")'), 'result');
-  assert.equal(run('tabOfRoute("myTasks")'), 'myTasks');
   const side = run('state.page = "result"; renderSidebarPane()');
-  assert.match(side, /ファイル一覧/);
+  assert.match(side, /表示次元/);
   assert.doesNotMatch(side, /data-page="upload"/);
 });
 
@@ -674,7 +647,7 @@ test('row download icon opens a hover menu with three export formats', () => {
     globalThis.removed = 0;
     downloadResultFile = (id, fmt) => { globalThis.dlCalls.push([id, fmt]); };
     const fakeBtn = (fmt) => ({ dataset: { dlFmt: fmt }, onclick: null });
-    globalThis.menuBtns = [fakeBtn('excel'), fakeBtn('csv'), fakeBtn('json')];
+    globalThis.menuBtns = [fakeBtn('csv'), fakeBtn('json'), fakeBtn('pdf')];
     globalThis.dlAnchor = {
       dataset: { dlmenu: 'f01' },
       getBoundingClientRect: () => ({ left: 100, top: 100, width: 24, height: 24, bottom: 124 }),
@@ -695,34 +668,33 @@ test('row download icon opens a hover menu with three export formats', () => {
     bindDlMenus();
     dlAnchor.onmouseenter();`);
   const menu = run('globalThis.menu.innerHTML');
-  for (const fmt of ['excel', 'csv', 'json']) assert.match(menu, new RegExp(`data-dl-fmt="${fmt}"`));
+  for (const fmt of ['csv', 'json', 'pdf']) assert.match(menu, new RegExp(`data-dl-fmt="${fmt}"`));
   assert.equal((menu.match(/data-dl-fmt=/g) || []).length, 3);
-  assert.equal(run('JSON.stringify(DL_FORMATS.map((f) => f[0]))'), '["excel","csv","json"]');
+  assert.equal(run('JSON.stringify(DL_FORMATS.map((f) => f[0]))'), '["csv","json","pdf"]');
   assert.equal(run('typeof dlAnchor.onmouseleave'), 'function');
   /* メニュー項目を押すと、その行×その形式でダウンロードが走り、メニューは閉じる */
   run('globalThis.menuBtns[1].onclick({ stopPropagation() {} })');
-  assert.equal(run('JSON.stringify(globalThis.dlCalls)'), '[["f01","csv"]]');
+  assert.equal(run('JSON.stringify(globalThis.dlCalls)'), '[["f01","json"]]');
   assert.equal(run('globalThis.removed > 0'), true);
 });
 
 test('the usage-settings pages drop the settings side menu and span the full width', () => {
   const run = app();
-  /* 利用設定の各画面は左メニューなしの全幅（辞書登録メニューは廃止） */
-  assert.equal(run('JSON.stringify(CFG_NO_SIDEBAR)'), '["users","roles","security","logs","api"]');
+  /* 利用設定の各画面は左メニューなしの全幅（辞書登録・辞書監視も同じ扱い） */
+  assert.equal(run('JSON.stringify(CFG_NO_SIDEBAR)'), '["users","roles","security","logs","api","dictionary","watch"]');
   /* render() は noSidePane のとき aside を描かず、layout-pane を 1 カラムにする */
   assert.match(source, /const noSidePane = CFG_NO_SIDEBAR\.includes\(route\)/);
   assert.match(source, /isReview \|\| isFullPane \|\| noSidePane \|\| isTypeList\) \? '' : \(isCfg \? renderCfgNav\(\)/);
   assert.match(source, /noSidePane \|\| isTypeList \? 'layout-pane layout-noside' : 'layout-pane'/);
   assert.match(styles, /\.layout-pane\.layout-noside\{grid-template-columns:minmax\(0,1fr\)\}/);
-  /* 他の設定画面の左メニューは 3 グループ 7 項目（帳票設定／権限／利用設定。辞書なし） */
+  /* 他の設定画面の左メニューは 3 グループ 8 項目（帳票設定／権限／利用設定＋辞書） */
   const nav = run('renderCfgNav()');
-  assert.equal((nav.match(/class="sidenav-item/g) || []).length, 7);
-  assert.doesNotMatch(nav, /辞書登録|dictionaries/);
+  assert.equal((nav.match(/class="sidenav-item/g) || []).length, 8);
+  assert.match(nav, /辞書登録/);
   assert.match(nav, /帳票設定/);
-  assert.match(nav, /権限</);
+  assert.match(nav, /権限設定/);
   assert.match(nav, /利用設定/);
   /* 帳票権限管理（業務レベル）と 権限設定（システムレベル）は左メニューから別項目で到達できる */
-  assert.match(nav, /data-cfgpage="permissions"/);
   assert.match(nav, /data-cfgpage="roles"/);
 });
 
@@ -731,7 +703,7 @@ test('tree info hint shows one tooltip only: data-tip without a native title', (
   const html = run('renderSidebarPane()');
   const info = html.match(/<span class="info-i"[^>]*>[^<]*<\/span>/);
   assert.ok(info, 'info-i が描画される');
-  assert.match(info[0], /data-tip="[^"]*表示次元/);
+  assert.match(info[0], /data-tip="[^"]*表示名/);
   /* title があるとブラウザ標準のツールチップと二重に出て重なって見える */
   assert.doesNotMatch(info[0], /\btitle=/);
   assert.equal((html.match(/class="info-i"/g) || []).length, 1);
@@ -746,11 +718,12 @@ test('hover tooltips are swept from body before rebinding so they never stack up
     globalThis.made = [];
     globalThis.hovered = {
       dataset: { tip: 'ヒント' },
+      closest: () => null,
       getBoundingClientRect: () => ({ left: 10, top: 40, width: 12, height: 12, bottom: 52 }),
     };
     globalThis.document = {
       body: { appendChild: (el) => globalThis.made.push(el) },
-      createElement: () => ({ className: '', style: {}, textContent: '', removed: false, remove() { this.removed = true; }, getBoundingClientRect: () => ({ width: 80, height: 20 }) }),
+      createElement: () => ({ className: '', style: { setProperty() {} }, textContent: '', removed: false, remove() { this.removed = true; }, getBoundingClientRect: () => ({ width: 80, height: 20 }) }),
       querySelectorAll: (s) => (s === 'body > .tip' ? [globalThis.stale] : (s === '[data-tip]' ? [globalThis.hovered] : [])),
     };
     globalThis.window = { innerWidth: 1200, innerHeight: 800 };
@@ -767,35 +740,29 @@ test('hover tooltips are swept from body before rebinding so they never stack up
   run('globalThis.hovered.onmouseleave()');
   assert.equal(run('globalThis.hovered._tip'), null);
 });
-test('ticket permission matrix lists every layout type against the four business actions', () => {
+test('ticket permission matrix lists every layout type against the three business actions', () => {
   const run = app();
   const html = run('renderPermissions()');
   assert.match(html, /帳票権限管理/);
-  assert.match(html, /帳票タイプ権限（閲覧／確認／承認／再承認）/);
-  /* 閲覧 → 確認 → 承認 → 再承認 の順で固定 */
-  for (const label of ['閲覧', '確認', '承認', '再承認']) assert.ok(html.includes(`>${label}<`), label);
-  assert.ok(html.indexOf('>閲覧<') < html.indexOf('>確認<'));
-  assert.ok(html.indexOf('>確認<') < html.indexOf('>承認<'));
-  assert.ok(html.indexOf('>承認<') < html.indexOf('>再承認<'));
-  /* 帳票タイプ 1 行につき 4 つの操作セル＋1 つのクリア */
+  assert.match(html, /帳票タイプ権限（閲覧／修正／確認）/);
+  /* 閲覧 → 修正 → 確認 の順で固定（承認・再承認は 5 状態化で廃止） */
+  for (const label of ['閲覧', '修正', '確認']) assert.ok(html.includes(`>${label}<`), label);
+  assert.ok(html.indexOf('>閲覧<') < html.indexOf('>修正<'));
+  assert.ok(html.indexOf('>修正<') < html.indexOf('>確認<'));
+  assert.doesNotMatch(html, />承認<|>再承認</);
+  /* 帳票タイプ 1 行につき 3 つの操作セル＋1 つのクリア */
   const layouts = Number(run('LAYOUT.length'));
-  assert.equal((html.match(/data-permcell="/g) || []).length, layouts * 4);
+  assert.equal((html.match(/data-permcell="/g) || []).length, layouts * 3);
   assert.equal((html.match(/data-permclear="/g) || []).length, layouts);
-  assert.match(html, /data-permcell="l1:approve"/);
+  assert.match(html, /data-permcell="l1:confirm"/);
+  assert.match(html, /data-permcell="l1:fix"/);
   assert.match(html, /data-permclear="l1"/);
-  /* 閲覧／確認／承認はグループチップ（ユーザー直指定もある） */
+  /* 閲覧／確認はグループチップ（ユーザー直指定もある） */
   assert.match(html, /class="perm-cell"/);
   assert.match(html, /perm-chip grp">住民異動窓口|perm-chip grp">税務窓口/);
   assert.match(html, /perm-empty">—/);
   /* 業務レベルの帳票権限表に、システムレベルのメニュー権限ツリーは同居しない */
   assert.doesNotMatch(html, /data-mpnode/);
-  /* 再承認は「2 段目の承認」。1 段承認で運用する帳票タイプは再承認が空欄になる */
-  assert.match(source, /再承認', hint: '2 段目の承認/);
-  assert.match(html, /1 段目/);
-  assert.match(html, /2 段目/);
-  const perms = JSON.parse(run('JSON.stringify(TICKET_PERMS)'));
-  assert.ok(Object.values(perms).some((p) => p.reapprove.length > 0), 'a two-step type has a re-approver');
-  assert.ok(Object.values(perms).some((p) => p.reapprove.length === 0), 'a one-step type leaves re-approval empty');
 });
 test('upload permission matrix lists every business scene with upload assignees', () => {
   const run = app();
@@ -894,12 +861,14 @@ test('menu permission dialog renders the reachability tree with parent-child cas
   assert.match(html, /data-mpnode="settings-type"/);
   assert.match(html, /data-mpnode="permissions-menu"/);
   assert.match(html, /data-mptoggle="settings"/);
-  /* 帳票タイプ／業務シーンの細粒度＋ユーザー管理下の権限 */
+  /* 帳票タイプ／業務シーンの細粒度＋読取結果のボタン権限＋辞書 */
   assert.match(html, /data-mpnode="settings-type-add"/);
   assert.match(html, /data-mpnode="settings-scenes-add"/);
   assert.match(html, /data-mpnode="usage-users"/);
+  assert.match(html, /data-mpnode="op-confirm"/);
+  assert.match(html, /data-mpnode="usage-dict"/);
   assert.match(html, /業務シーン追加|タイプ追加|ユーザー管理/);
-  assert.doesNotMatch(html, /AI画像処理|外部API|業務区分追加|部門照会|グループ照会|グループ追加|辞書登録|usage-dictionary|帳票分類/);
+  assert.doesNotMatch(html, /AI画像処理|外部API|業務区分追加|部門照会|グループ照会|帳票分類/);
   /* 権限名／権限ID は読み取り専用のチップ */
   assert.match(html, /class="mp-idchip"/);
   assert.ok((html.match(/checked/g) || []).length >= 10);
@@ -911,7 +880,7 @@ test('menu permission dialog renders the reachability tree with parent-child cas
 
   /* 親は配下リーフの部分選択で半選択になり、子へ一括反映する */
   assert.match(source, /cb\.indeterminate = on > 0 && on < leaves\.length/);
-  assert.match(source, /MENU_PERMS\[m\.roleId\] = m\.checked\.slice\(\)/);
+  assert.match(source, /MENU_PERMS\[m\.roleId\] = \[\.\.\.syncOpFixConfirm\(m\.checked\)\]/);
   assert.equal(run('state.menuPerm = null; menuPermDialog()'), '');
 });
 
@@ -925,28 +894,31 @@ test('user management lists users with belonging groups', () => {
   assert.doesNotMatch(html, /group-panel|groupTreeQ|所属部門/);
   assert.doesNotMatch(html, /確認／承認の担当は帳票タイプ/);
 });
-test('ticket permission cell dialog picks groups and users for one action', () => {
+test('root group selection covers every user in the organisation', () => {
   const run = app();
-  const html = run("state.permCell = { layoutId: 'l1', act: 'approve' }; permCellDialog()");
+  run('state.page = "users"; state.userGroupFocus = ROOT_GROUP_ID');
+  const html = run('renderUsers()');
+  /* 配下すべてのグループに入っているユーザー数（＝組織全体） */
+  const n = run('ENT_USERS.filter((u) => new Set(GROUPS.flatMap((g) => g.userIds || [])).has(u.uid)).length');
+  assert.match(html, new RegExp(`所属人数: ${n}人（組織全体）`));
+  assert.ok((html.match(/is-in-scope/g) || []).length >= 1, '配下グループが選択に含まれていない');
+  /* 一覧の行数も組織全体の人数と一致する（直属だけを出すと足りない） */
+  assert.equal((html.match(/data-usertoggle=/g) || []).length, n);
+  assert.doesNotMatch(html, /このグループに直属のユーザーはいません/);
+});
+test('ticket permission cell dialog picks groups for one action', () => {
+  const run = app();
+  const html = run("state.permCell = { kind: 'ticket', layoutId: 'l1', act: 'confirm' }; permCellDialog()");
   assert.match(html, /帳票権限の設定/);
   assert.match(html, /id="permCellBack"/);
   assert.match(html, /帳票タイプ/);
   assert.match(html, /業務操作/);
-  assert.match(html, /class="accent">承認</);
-  assert.match(html, /class="pt-hint">1 段目の承認</);
-  /* 药丸で 1 列表示。シードがグループなのでグループ列のみ */
-  assert.match(html, /data-perm-mode="group"/);
-  assert.match(html, /data-perm-mode="user"/);
-  assert.equal((html.match(/class="perm-pick-col"/g) || []).length, 1);
+  assert.match(html, /class="accent">確認</);
+  assert.match(html, /修正したうえで確認済みにする/);
+  /* データ権限はグループ単位（所属ユーザー全員が対象） */
   assert.match(html, /グループ/);
-  assert.match(html, /data-permpick="g:g2"/);
+  assert.match(html, /data-permpick="g:g1" checked/);
   assert.doesNotMatch(html, /data-permpick="u:u1"/);
-  /* l1 の承認はグループ g2 がシード済み */
-  assert.match(html, /data-permpick="g:g2" checked/);
-  const userHtml = run("state.permCell = { layoutId: 'l1', act: 'approve', mode: 'user' }; permCellDialog()");
-  assert.match(userHtml, /ユーザー（単選）/);
-  assert.match(userHtml, /type="radio"[^>]*data-permpick="u:u1"|data-permpick="u:u1"[^>]*type="radio"/);
-  assert.doesNotMatch(userHtml, /data-permpick="g:g2"/);
   for (const id of ['permCellOk', 'permCellCancel', 'permCellClose']) assert.ok(html.includes(`id="${id}"`), id);
   assert.match(source, /document\.querySelectorAll\('\[data-permcell\]'\)/);
   assert.match(source, /state\.permCell = \{ kind: 'ticket', layoutId, act \}/);
@@ -1025,10 +997,10 @@ test('ticket permissions are the single source of truth for the approval flow', 
   });
 });
 
-test('ticket type step1 configures approval flow with role and user assignees', () => {
+test('ticket type step1 configures the description; approval flow lives in the permission page', () => {
   const run = app();
   run('state.page = "ticketDetail"; state.typeId = "T1"; state.typeStep = 1');
-  let html = run('renderTicketDetail()');
+  const html = run('renderTicketDetail()');
   assert.match(html, /説明文/);
   assert.match(html, /id="tpDesc"/);
   assert.match(html, /wiz-ta-actions/);
@@ -1036,74 +1008,14 @@ test('ticket type step1 configures approval flow with role and user assignees', 
   assert.match(html, /id="tpDescClear"/);
   assert.match(html, /id="tpCount"/);
   assert.doesNotMatch(html, /wiz-ta-foot/);
-  assert.match(html, /承認フロー/);
-  assert.match(html, /data-tp-stage="0"/);
-  assert.match(html, /data-tp-stage="1"/);
-  assert.match(html, /data-tp-stage="2"/);
-  assert.match(html, /確認担当/);
-  assert.match(html, /承認担当（1段目）/);
-  assert.match(html, /再承認担当（2段目）/);
+  /* 承認フロー／担当の割当は帳票権限管理へ集約（ここでは出さない） */
+  assert.doesNotMatch(html, /承認フロー|data-tp-stage|承認担当（1段目）/);
   /* 左リスト＋右 Step1（帳票設定-タイプ） */
   assert.match(html, /帳票設定-タイプ/);
   assert.match(html, /タイプを検索|\+ タイプ追加|type-list-title/);
   assert.match(html, /data-typeid="T1"/);
   assert.doesNotMatch(html, /typedetail-solo/);
-  /* 药丸スイッチ：グループ／ユーザーは 2 択 */
-  assert.match(html, /asg-mode-pills/);
-  assert.match(html, /data-asg-mode="confirm:group"/);
-  assert.match(html, /data-asg-mode="confirm:user"/);
-  assert.match(html, /data-tp-assignee-opt="confirm:g1"/);
-  assert.match(html, /data-tp-assignee-opt="approve:g2"/);
-  /* グループモード時はユーザー候補を出さない（切替後に出る） */
-  assert.doesNotMatch(html, /data-tp-assignee-opt="confirm:u1"/);
-  const userModeHtml = run('state.asgMode = { confirm: "user" }; TICKET_PERMS.l1.confirm = []; renderTicketDetail()');
-  assert.match(userModeHtml, /data-tp-assignee-opt="confirm:u1"/);
-  assert.doesNotMatch(userModeHtml, /data-tp-assignee-opt="confirm:g1"/);
   assert.equal(run('layoutIdOfTicketType(byId(TICKET_TYPES, "T1"))'), 'l1');
-  /* グループは所属ユーザーへ展開され、ランダム選定できる */
-  assert.deepEqual(JSON.parse(run('JSON.stringify(assigneeUserIds(["g1"]))')), JSON.parse(run('JSON.stringify(groupMemberIds("g1"))')));
-  assert.ok(run('pickRandomAssignee(["g1"], "f01:confirm")'));
-  /* 2 択：ユーザーを選ぶとグループは全部外れ、ユーザーは単選 */
-  assert.deepEqual(JSON.parse(run(`(() => {
-    TICKET_PERMS.l1.confirm = ['g1'];
-    TICKET_PERMS.l1.confirm = ['u3'];
-    return JSON.stringify(TICKET_PERMS.l1.confirm);
-  })()`)), ['u3']);
-  /* グループを選ぶとユーザー側は全部外れる */
-  assert.deepEqual(JSON.parse(run(`(() => {
-    TICKET_PERMS.l1.confirm = ['u3'];
-    TICKET_PERMS.l1.confirm = ['g1', 'g6'];
-    return JSON.stringify(TICKET_PERMS.l1.confirm);
-  })()`)), ['g1', 'g6']);
-  /* シードも各操作でグループかユーザーのどちらか一方 */
-  const seed = JSON.parse(run('JSON.stringify(TICKET_PERMS)'));
-  Object.values(seed).forEach((p) => {
-    for (const k of ['view', 'confirm', 'approve', 'reapprove']) {
-      const groups = p[k].filter((id) => /^g\d+$/.test(id));
-      const users = p[k].filter((id) => /^u\d+$/.test(id));
-      assert.ok(!(groups.length && users.length), `${k} must not mix group and user`);
-      assert.ok(users.length <= 1, `${k} user is single-select`);
-    }
-  });
-  /* 1段に切り替えると再承認が消える */
-  run(`(() => {
-    const p = TICKET_PERMS.l1;
-    p.reapprove = [];
-  })()`);
-  html = run('state.typeStep = 1; renderTicketDetail()');
-  assert.match(html, /承認担当（1段目）/);
-  assert.doesNotMatch(html, /再承認担当（2段目）/);
-  /* 承認不要にすると承認担当欄も出ない */
-  run('TICKET_PERMS.l1.approve = []; TICKET_PERMS.l1.reapprove = []');
-  html = run('renderTicketDetail()');
-  assert.match(html, /data-tp-stage="0"[^>]*class="wiz-seg-btn on"|class="wiz-seg-btn on"[^>]*data-tp-stage="0"/);
-  assert.doesNotMatch(html, /承認担当（1段目）/);
-  assert.match(html, /確認担当/);
-  /* 介護（承認不要カテゴリ） */
-  run('state.typeId = "T7"');
-  html = run('renderTicketDetail()');
-  assert.equal(run('layoutIdOfTicketType(byId(TICKET_TYPES, "T7"))'), 'l12');
-  assert.doesNotMatch(html, /承認担当（1段目）/);
 });
 
 test('security settings keep only the three modules from the design', () => {
@@ -1216,12 +1128,20 @@ test('tenant admin role bypasses ticket and upload permission tables', () => {
   /* アップロード：権限表に無い業務シーンも可 */
   assert.equal(run('canUploadBiz("b2", "u1")'), true);
   assert.equal(run('uploadableBusiness("u1").length'), run('BUSINESS.length'));
-  /* 帳票操作：担当外のタイプでも可 */
+  /* 帳票操作：管理者は担当外のタイプでも可 */
   assert.equal(run('canTicketAct("l4", "confirm", "u1")'), true);
-  assert.equal(run('canTicketAct("l4", "confirm", "u2")'), false);
   /* マイタスク照合もバイパス */
   assert.equal(run('state.currentUser = "u1"; userInGroups([])'), true);
   assert.equal(run('state.currentUser = "u2"; userInGroups([])'), false);
   const html = run('renderPermissions()');
   assert.match(html, /システム管理者/);
+});
+
+test('ticket permission table gates confirm per layout', () => {
+  const run = app();
+  /* l4 の確認担当は g4（u3/u4）。u2 は担当外なので不可、u3 は可。 */
+  assert.equal(run('canTicketAct("l4", "confirm", "u2")'), false);
+  assert.equal(run('canTicketAct("l4", "confirm", "u3")'), true);
+  /* 担当が未設定の行は全体の操作権限にフォールバック（view は従来どおり） */
+  assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });

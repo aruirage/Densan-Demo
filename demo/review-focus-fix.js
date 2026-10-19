@@ -105,6 +105,8 @@ window.isSuperUser = isSuperUser;
       return;
     }
 
+    if (t.closest('.nl-review [data-rv-revert]')) return;
+
     /* 行・外枠・ラベルのクリックでは連動させない（app.js の行ハンドラも止める／ハイライトは維持） */
     if (t.closest('.nl-review .rv-field-row')) {
       e.stopPropagation();
@@ -146,8 +148,8 @@ window.isSuperUser = isSuperUser;
     /* 確認アクション本体（app.js のフロー処理を再利用） */
     h.runFlowAction(id, 'confirm', '');
     h.state.reviewRequiredOpen = false;
-    h.state.page = 'myTasks';
-    h.state.myTaskTab = 'pending';
+    h.state.page = 'result';
+    h.state.tab = 'all';
     h.render();
   }
 
@@ -166,13 +168,15 @@ window.isSuperUser = isSuperUser;
     var t = e.target;
     if (!t || !t.closest) return;
 
-    /* 確認ボタン：必須項目の注意ダイアログを出さずに、そのまま確認を確定する。
-       app.js 側は「必須が空なら注意ダイアログを出して return」するので、
-       クリックを乗っ取り確認アクションを直接実行する。 */
+    /* 確認ボタン：以後修正できない旨を出してから確定する（即確定しない） */
     if (t.closest('#rvConfirm')) {
       e.stopPropagation();
       e.preventDefault();
-      runConfirmFromOverlay();
+      var h = hook();
+      if (h && h.state) {
+        h.state.reviewConfirmLockOpen = true;
+        h.render();
+      }
       return;
     }
     /* 万一ダイアログが出てしまった場合：そのボタン操作は閉じるだけにする */
@@ -349,23 +353,15 @@ window.isSuperUser = isSuperUser;
     var h = hook();
     if (!h || !h.state) return;
 
-    /* ① ボタンを無効化（画面メニューは app.js 側で非表示済み） */
+    /* ① 権限がないボタンは描画しない（無効化ではなく非表示） */
     BUTTON_RULES.forEach(function (r) {
       var ok = can(r.node);
       document.querySelectorAll(r.sel).forEach(function (el) {
-        if (ok) {
-          el.disabled = false;
-          el.classList.remove('perm-off');
-          if (el.dataset.permOff) { el.title = el.dataset.permOffTitle || ''; delete el.dataset.permOff; }
-        } else {
-          if (!el.dataset.permOff) {
-            el.dataset.permOff = '1';
-            el.dataset.permOffTitle = el.title || '';
-          }
-          el.disabled = true;
-          el.classList.add('perm-off');
-          el.title = '権限がありません（' + r.what + '）';
-        }
+        el.hidden = !ok;
+        if (!ok) el.setAttribute('aria-hidden', 'true');
+        else el.removeAttribute('aria-hidden');
+        el.classList.remove('perm-off');
+        el.disabled = false;
       });
     });
 
@@ -578,14 +574,6 @@ window.isSuperUser = isSuperUser;
       var inp = row.querySelector('input[data-ocr], textarea[data-ocr]');
       if (!inp || inp.dataset.ocr !== key) return;
       row.classList.remove('has-error');
-      var t = row.querySelector('.rv-field-state');
-      if (!t) {
-        t = document.createElement('span');
-        t.className = 'rv-field-state mod';
-        t.textContent = '修正済み';
-        var head = row.querySelector('.rv-field-head') || row;
-        head.appendChild(t);
-      }
     });
     document.querySelectorAll('.nl-review .doc-mark-box.err').forEach(function (box) {
       if (box.dataset.bbox === key) box.classList.remove('err');
@@ -616,7 +604,11 @@ window.isSuperUser = isSuperUser;
       if (!h || !h.state || !document.querySelector('.nl-review')) return;
       var id = h.state.reviewId;
       var dirty = (h.state.reviewDirty || {})[id] || {};
+      var confirmed = (h.state.reviewConfirmed || {})[id] || {};
+      var ack = (h.state.reviewAcknowledged || {})[id] || {};
       Object.keys(dirty).forEach(clearFor);
+      Object.keys(confirmed).forEach(clearFor);
+      Object.keys(ack).forEach(clearFor);
     });
   });
   mo.observe(document.documentElement, { childList: true, subtree: true });
@@ -708,9 +700,9 @@ window.isSuperUser = isSuperUser;
 
 /* ══════════ ユーザー権限（操作権限）の適用 ══════════
    ENT_USERS[].ops（閲覧／アップロード／確認／承認／CSV出力／帳票設定変更）
-   OCR結果修正は確認に含まれる。未設定のユーザーは全許可（フォールバック）。 */
+   確認には修正が含まれる。修正だけでは確認できない。未設定のユーザーは全許可（フォールバック）。 */
 (function userOperationPermissions() {
-  var ALL_OPS = ['view', 'upload', 'confirm', 'approve', 'reapprove', 'export'];
+  var ALL_OPS = ['view', 'upload', 'fix', 'confirm', 'approve', 'reapprove', 'export'];
 
   function hook() { return window.__demo || null; }
 
@@ -719,7 +711,7 @@ window.isSuperUser = isSuperUser;
     var out = [];
     var seen = {};
     list.forEach(function (k) {
-      var key = k === 'fix' ? 'confirm' : k;
+      var key = k === 'read' ? 'view' : k;
       if (ALL_OPS.indexOf(key) < 0 || seen[key]) return;
       seen[key] = true;
       out.push(key);
@@ -750,15 +742,14 @@ window.isSuperUser = isSuperUser;
   function has(op) {
     var ops = allowedOps();
     if (ops === null) return true;
-    var key = op === 'fix' ? 'confirm' : op;
-    return ops.indexOf(key) >= 0;
+    if (ops.indexOf(op) >= 0) return true;
+    /* 確認権限には修正が含まれる */
+    if (op === 'fix' && ops.indexOf('confirm') >= 0) return true;
+    return false;
   }
 
-  /* ボタン ↔ 操作の対応（保存＝確認権限） */
+  /* ボタン ↔ 操作の対応（確認画面の保存／確認は app.js の reviewFootFlags で出し分け） */
   var RULES = [
-    /* 帳票設定変更はシステム権限（メニュー権限の子ノード）で管理するため、ここでは扱わない */
-    { sel: '#rvConfirm', op: 'confirm', what: '確認' },
-    { sel: '#rvSave', op: 'confirm', what: '確認（OCR結果修正）' },
     /* 2 段目は「再承認」、1 段目は「承認」のどちらでも押せる */
     { sel: '#rvApprove', op: ['approve', 'reapprove'], what: '承認' },
     { sel: '#rvExport', op: 'export', what: 'CSV出力' },
@@ -776,22 +767,14 @@ window.isSuperUser = isSuperUser;
     RULES.forEach(function (r) {
       var ok = Array.isArray(r.op) ? r.op.some(has) : has(r.op);
       document.querySelectorAll(r.sel).forEach(function (el) {
-        if (ok) {
-          if (el.dataset.userOpOff) {
-            el.disabled = false;
-            el.classList.remove('user-op-off');
-            el.title = el.dataset.userOpTitle || '';
-            delete el.dataset.userOpOff;
-            delete el.dataset.userOpTitle;
-          }
-        } else {
-          if (!el.dataset.userOpOff) {
-            el.dataset.userOpOff = '1';
-            el.dataset.userOpTitle = el.title || '';
-          }
-          el.disabled = true;
-          el.classList.add('user-op-off');
-          el.title = '権限がありません（' + r.what + '）';
+        el.hidden = !ok;
+        if (!ok) el.setAttribute('aria-hidden', 'true');
+        else el.removeAttribute('aria-hidden');
+        el.classList.remove('user-op-off');
+        el.disabled = false;
+        if (el.dataset.userOpOff) {
+          delete el.dataset.userOpOff;
+          delete el.dataset.userOpTitle;
         }
       });
     });
@@ -985,10 +968,17 @@ window.isSuperUser = isSuperUser;
     }
 
     if (e.key === 'Enter' && inField) {
-      /* 確定して次へ：値を確定して次の項目へ。最後の項目なら保存相当（確認へ） */
+      /* 確定して次へ：値が同じでも目視確認済み（黄）にして次へ */
       var cur = currentIndex();
       e.preventDefault();
-      if (e.target && typeof e.target.blur === 'function') e.target.blur();
+      var tgt = e.target;
+      if (tgt && tgt.dataset && tgt.dataset.ocr) {
+        var demo = window.__demo;
+        if (demo && typeof demo.acknowledgeReviewField === 'function') {
+          demo.acknowledgeReviewField(tgt.dataset.ocr, tgt);
+        }
+      }
+      if (tgt && typeof tgt.blur === 'function') tgt.blur();
       if (cur.i >= 0 && cur.i < cur.list.length - 1) {
         var next = fields()[cur.i + 1];
         if (next) { next.focus(); try { next.setSelectionRange(next.value.length, next.value.length); } catch (_) {} }
@@ -1144,10 +1134,17 @@ window.isSuperUser = isSuperUser;
     }
 
     if (e.key === 'Enter' && inField) {
-      /* 確定して次へ：値を確定して次の項目へ。最後の項目なら保存相当（確認へ） */
+      /* 確定して次へ：値が同じでも目視確認済み（黄）にして次へ */
       var cur = currentIndex();
       e.preventDefault();
-      if (e.target && typeof e.target.blur === 'function') e.target.blur();
+      var tgt = e.target;
+      if (tgt && tgt.dataset && tgt.dataset.ocr) {
+        var demo = window.__demo;
+        if (demo && typeof demo.acknowledgeReviewField === 'function') {
+          demo.acknowledgeReviewField(tgt.dataset.ocr, tgt);
+        }
+      }
+      if (tgt && typeof tgt.blur === 'function') tgt.blur();
       if (cur.i >= 0 && cur.i < cur.list.length - 1) {
         var next = fields()[cur.i + 1];
         if (next) { next.focus(); try { next.setSelectionRange(next.value.length, next.value.length); } catch (_) {} }
