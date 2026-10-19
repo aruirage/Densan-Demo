@@ -123,13 +123,15 @@ const USERS = [
   { id: 'u7', name: '山本 彩' },
   { id: 'u8', name: '中村 亮' },
   { id: 'u9', name: '万能 管理者' },
+  { id: 'u10', name: '小林 直子' },
 ];
 
 /** デモ用：権限の違いを見せるための切替候補（GROUPS／帳票権限表のシードに合わせる） */
 const DEMO_ACTORS = [
   { id: 'u1', role: 'システム管理者', email: 'ichiro.sato@itso.co.jp', hint: '全メニュー・全帳票・全操作' },
-  { id: 'u7', role: '読取・アップロード', email: 'aya.yamamoto@itso.co.jp', hint: '閲覧とアップロードのみ（確認・出力は不可）' },
+  { id: 'u7', role: '読取・アップロード', email: 'aya.yamamoto@itso.co.jp', hint: '閲覧・アップロード・読取（再読取／一括読取）・削除（確認と出力は不可）' },
   { id: 'u8', role: '確認・修正', email: 'ryo.nakamura@itso.co.jp', hint: '閲覧・修正・確認（アップロードと設定は不可）' },
+  { id: 'u10', role: '出力', email: 'naoko.kobayashi@itso.co.jp', hint: '閲覧と出力（CSV／JSON／PDF）のみ（読取・確認・設定は不可）' },
   { id: 'u4', role: '閲覧のみ', email: 'minoru.tanaka@itso.co.jp', hint: '一覧の閲覧のみ（操作ボタンは出ない）' },
 ];
 
@@ -160,7 +162,7 @@ function currentProfile() {
  *  メニュー・帳票一覧・操作ボタンがそのユーザーの権限で描き直される。 */
 function renderDemoBar() {
   const me = state.currentUser;
-  const CAPS = [['view', '閲覧'], ['upload', 'アップロード'], ['fix', '修正'], ['confirm', '確認'], ['export', '出力'], ['settings', '設定']];
+  const CAPS = [['view', '閲覧'], ['upload', 'アップロード'], ['read', '読取'], ['fix', '修正'], ['confirm', '確認'], ['export', '出力'], ['delete', '削除'], ['settings', '設定']];
   const caps = CAPS
     .filter(([k]) => { try { return userHasOp(k, me); } catch (e) { return false; } })
     .map(([, t]) => t);
@@ -383,8 +385,10 @@ const ENT_USERS = [
   { id: 'U4', uid: 'u4', name: '田中 実', email: 'minoru.tanaka@itso.co.jp', role: '承認者', dataPerm: '自身のみ', created: '2026-10-03 11:45:02', status: '有効' },
   { id: 'U5', uid: 'u5', name: '伊藤 由美', email: 'yumi.ito@itso.co.jp', role: '承認者', dataPerm: '自身のみ', created: '2026-10-05 08:31:10', status: '有効' },
   { id: 'U6', uid: 'u6', name: '渡辺 修', email: 'osamu.watanabe@itso.co.jp', role: '確認者', dataPerm: '自身のみ', created: '2026-10-06 10:05:44', status: '有効' },
-  { id: 'U7', uid: 'u7', name: '山本 彩', email: 'aya.yamamoto@itso.co.jp', role: 'アップロード者', dataPerm: '自身のみ', created: '2026-10-07 13:22:09', status: '有効', soloPermIds: ['R5'] },
+  { id: 'U7', uid: 'u7', name: '山本 彩', email: 'aya.yamamoto@itso.co.jp', role: 'アップロード者', dataPerm: '自身のみ', created: '2026-10-07 13:22:09', status: '有効', soloPermIds: ['R5', 'R8'] },
   { id: 'U8', uid: 'u8', name: '中村 亮', email: 'ryo.nakamura@itso.co.jp', role: '確認者', dataPerm: '自身のみ', created: '2026-10-08 09:41:30', status: '有効' },
+  /* 出力専任。グループ未所属で、個人の権限（R10）だけを持つ */
+  { id: 'U10', uid: 'u10', name: '小林 直子', email: 'naoko.kobayashi@itso.co.jp', role: '出力者', dataPerm: '自身のみ', created: '2026-10-09 09:15:00', status: '有効', soloPermIds: ['R10'] },
 ];
 /** システム権限（メニュー到達）。業務の操作権限はユーザーグループの役割で付与する */
 let ROLES = [
@@ -392,6 +396,12 @@ let ROLES = [
   { id: 'R2', name: '業務管理者', code: 'operation_admin', desc: '帳票設定＋利用設定＋ユーザー管理。日常運用の管理者', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R3', name: 'OCR結果確認', code: 'confirmer', desc: '読取結果の確認・修正。マイタスクの確認作業', created: '2025-10-01 00:00:00', status: '有効' },
     { id: 'R5', name: 'アップロード', code: 'uploader', desc: 'ファイルのアップロードと読取結果の閲覧', created: '2025-10-01 00:00:00', status: '有効' },
+  /* 9 ロール設計で追加した分。メニュー権限は MENU_PERMS 側で付ける */
+  { id: 'R6', name: '閲覧', code: 'viewer', desc: '一覧の閲覧のみ（操作なし）', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R8', name: '読取', code: 'reader', desc: 'アップロード済ファイルの読取実行・再読取・削除', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R10', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の修正（確認は不可）', created: '2026-01-01 00:00:00', status: '有効' },
 ];
 /** システム管理者ロール ID（メニュー全許可＋業務権限バイパス） */
 const TENANT_ADMIN_ROLE = 'R1';
@@ -756,6 +766,9 @@ const MENU_LEAVES = (() => {
   walk(MENU_TREE);
   return out;
 })();
+/* 全ロール共通で「ホームと一覧」には到達できる。閲覧は葉にしない
+   （操作ボタンが一つも無ければ操作列ごと隠すので、閲覧＝到達で足りる）。 */
+const BIZ_MENU_BASE = ['home', 'result'];
 let MENU_PERMS = {
   /* システム管理者＝メニュー全項目（業務権限も isTenantAdmin でバイパス） */
   R1: MENU_LEAVES.slice(),
@@ -773,6 +786,15 @@ let MENU_PERMS = {
   R3: ['home', 'op-upload', 'op-read', 'result', 'op-fix', 'op-confirm', 'op-redo', 'op-download', 'op-delete'],
   R4: ['home', 'result'],
   R5: ['home', 'result', 'op-upload', 'op-read', 'op-redo'],
+  /* 9 ロール設計で追加した分。serve.py の配分パッチと同じ値にしてある */
+  R6: BIZ_MENU_BASE.slice(),
+  R7: BIZ_MENU_BASE.concat(['op-classify']),
+  /* 読取＝読取実行・再読取・削除（アップロード済ファイルの後始末まで担う） */
+  R8: BIZ_MENU_BASE.concat(['op-read', 'op-redo', 'op-delete']),
+  /* 出力＝ダウンロード／一括ダウンロード */
+  R10: BIZ_MENU_BASE.concat(['op-export']),
+  /* OCR結果修正＝修正だけ（確認は不可） */
+  R11: BIZ_MENU_BASE.concat(['op-fix']),
 };
 
 /* 万能角色：メニューもユーザー権限もすべて許可（serve.py 注入）
@@ -3284,8 +3306,8 @@ function renderTable() {
   return `
   <div class="result-scope-head" style="margin:0 0 8px;font-size:14px"><b>${esc(ctxName)}</b> <span class="muted">直属 ${counts.direct} 件 / 配下含む ${counts.subtree} 件</span></div>
   <div class="tablebar result-tablebar">
-    ${userHasOp('export') ? `<button type="button" class="btn primary sm" id="resRead" ${pickedCount ? '' : 'disabled'}>選択帳票読取</button>
-    <div class="batch-dl${pickedCount ? '' : ' is-disabled'}">
+    ${userHasOp('redo') ? `<button class="btn sm" id="batchRead" ${pickedCount ? '' : 'disabled'} title="選択した帳票をまとめて読み直します"><span class="ico i-scan" aria-hidden="true"></span>一括読取</button>` : ''}
+    ${userHasOp('export') ? `<div class="batch-dl${pickedCount ? '' : ' is-disabled'}">
       <button type="button" class="btn sm result-download" id="batchExport" ${pickedCount ? '' : 'disabled'} aria-haspopup="true" title="選択行を一括ダウンロード"><span class="ico i-download" aria-hidden="true"></span>一括ダウンロード</button>
       <div class="batch-dl-menu" role="menu">
         <button type="button" role="menuitem" data-batchdl="csv">CSVをダウンロード</button>
@@ -4593,13 +4615,14 @@ var GROUP_OPS = {
     /* 最上位。ほかのグループはすべてこの下（削除不可） */
     { id: 'groot', name: '電算', kind: '', roles: [], desc: 'すべての操作グループの最上位（削除不可）', userIds: [], root: true, permId: 'R1', parentId: null },
     { id: 'gu', name: 'アップロードグループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u2', 'u6', 'u7'], permId: 'R5', parentId: 'groot' },
-    { id: 'gc', name: 'OCR結果確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u3', 'u5', 'u8'], permId: 'R3', parentId: 'groot' },
+    { id: 'gc', name: 'OCR結果確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u5', 'u8'], permId: 'R3', parentId: 'groot' },
     { id: 'ga', name: '出力グループ', kind: approve.join('、'), roles: approve.slice(), desc: 'CSV/JSON/PDF の出力', userIds: ['u4', 'u5'], permId: 'R4', parentId: 'groot' },
     /* 新設計（9 グループ）で追加した 5 つ */
     { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u1'], permId: 'R2', parentId: 'groot' },
     { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: '一覧の閲覧のみ（操作なし）', userIds: ['u2'], permId: 'R4', parentId: 'groot' },
     { id: 'gk', name: 'AI分類結果修正グループ', kind: 'AI分類結果修正', roles: ['AI分類結果修正'], desc: 'AI 分類結果（帳票タイプ）の修正', userIds: ['u2', 'u3'], permId: 'R3', parentId: 'groot' },
-    { id: 'gr', name: '読取実行グループ', kind: '読取', roles: ['読取'], desc: 'OCR 読取の実行', userIds: ['u6'], permId: 'R5', parentId: 'groot' },
+    { id: 'gr', name: '読取実行グループ', kind: '読取', roles: ['読取'], desc: 'アップロード済ファイルの読取実行・再読取・削除', userIds: ['u6'], permId: 'R8', parentId: 'groot' },
+    { id: 'ge', name: '出力グループ', kind: '出力', roles: ['出力'], desc: 'CSV/JSON/PDF の出力', userIds: ['u10'], permId: 'R10', parentId: 'groot' },
     { id: 'gf', name: 'OCR結果修正グループ', kind: 'OCR結果修正', roles: ['OCR結果修正'], desc: 'OCR 結果の修正（確認は不可）', userIds: ['u3'], permId: 'R3', parentId: 'groot' },
     { id: 'gm', name: 'システム管理者グループ', kind: all.join('、'), roles: all.slice(), desc: 'すべての権限', userIds: ['u1', 'u9'], permId: 'R1', parentId: 'groot' }
   ];
@@ -4651,6 +4674,12 @@ var GROUP_OPS = {
       if (seen[lid]) return;
       if (!perms[lid]) perms[lid] = { view: [], confirm: [], approve: [], reapprove: [] };
       if (!perms[lid].view || !perms[lid].view.length) perms[lid].view = ['gm'];
+    });
+    /* 出力グループは全帳票タイプを閲覧できる（出力対象を選べないと出力できない）。
+       assign は view を上書きするので、割り当てが済んだあとに足す。 */
+    layoutIds.forEach(function (lid) {
+      var p = perms[lid];
+      if (p && Array.isArray(p.view) && p.view.indexOf('ge') < 0) p.view.push('ge');
     });
     /* 未設定の操作列は、その操作を持つ一番軽いバケツで埋める
        （GROUP_OPS が持っている情報だけで決める＝担当を勝手に作らない）。
@@ -8034,7 +8063,7 @@ function bindResultPanel() {
   const batchRead = $('#batchRead');
   if (batchRead) batchRead.onclick = () => {
     const targets = visibleFiles().filter((f) => state.picked[f.id] && !f._proc);
-    if (!targets.length) return;
+    if (!targets.length) { toast('読取できる帳票が選択されていません'); return; }
     state.picked = {};
     targets.forEach((f) => startReRead(f.id));
   };
@@ -10063,7 +10092,7 @@ try {
   const _extraRoles = [
     { id: 'R6', name: '閲覧', code: 'viewer', desc: '一覧の閲覧のみ（操作なし）', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
-    { id: 'R8', name: '読取', code: 'reader', desc: 'OCR 読取の実行', created: '2026-01-01 00:00:00', status: '有効' },
+    { id: 'R8', name: '読取', code: 'reader', desc: 'アップロード済ファイルの読取実行・再読取・削除', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R10', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の修正（確認は不可）', created: '2026-01-01 00:00:00', status: '有効' },
   ];
@@ -10138,7 +10167,7 @@ try {
   MENU_PERMS.R5 = _biz.concat(['op-upload']);
   MENU_PERMS.R6 = _biz.slice();
   MENU_PERMS.R7 = _biz.concat(['op-classify']);
-  MENU_PERMS.R8 = _biz.concat(['op-read', 'op-redo']);
+  MENU_PERMS.R8 = _biz.concat(['op-read', 'op-redo', 'op-delete']);
   MENU_PERMS.R10 = _biz.concat(['op-export']);
   MENU_PERMS.R11 = _biz.concat(['op-fix']);
 } catch (_e) { /* ignore */ }

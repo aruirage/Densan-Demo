@@ -414,3 +414,6 @@ thead th{ background:#eef5fd !important; }
 }
 .rv-preview-canvas{ height:auto !important; min-height:0 !important; overflow:visible !important; }
 .rv-pdf-wrap{ height:auto !important; min-height:0 !important; }
+
+/* ══ ログ設定：「ログ出力設定」バー（詳細度・保存先）は不要（客户） ══ */
+.log-cfg{ display:none !important; }

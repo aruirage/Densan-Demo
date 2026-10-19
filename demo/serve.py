@@ -191,7 +191,8 @@ var GROUP_OPS = {
     { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u1'], permId: 'R2', parentId: 'groot' },
     { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: '一覧の閲覧のみ（操作なし）', userIds: ['u2'], permId: 'R4', parentId: 'groot' },
     { id: 'gk', name: 'AI分類結果修正グループ', kind: 'AI分類結果修正', roles: ['AI分類結果修正'], desc: 'AI 分類結果（帳票タイプ）の修正', userIds: ['u2', 'u3'], permId: 'R3', parentId: 'groot' },
-    { id: 'gr', name: '読取実行グループ', kind: '読取', roles: ['読取'], desc: 'OCR 読取の実行', userIds: ['u6'], permId: 'R5', parentId: 'groot' },
+    { id: 'gr', name: '読取実行グループ', kind: '読取', roles: ['読取'], desc: 'アップロード済ファイルの読取実行・再読取・削除', userIds: ['u6'], permId: 'R8', parentId: 'groot' },
+    { id: 'ge', name: '出力グループ', kind: '出力', roles: ['出力'], desc: 'CSV/JSON/PDF の出力', userIds: ['u10'], permId: 'R10', parentId: 'groot' },
     { id: 'gf', name: 'OCR結果修正グループ', kind: 'OCR結果修正', roles: ['OCR結果修正'], desc: 'OCR 結果の修正（確認は不可）', userIds: ['u3'], permId: 'R3', parentId: 'groot' },
     { id: 'gm', name: '管理者グループ', kind: all.join('、'), roles: all.slice(), desc: 'すべての権限', userIds: ['u1', 'u9'], permId: 'R1', parentId: 'groot' }
   ];
@@ -243,6 +244,12 @@ var GROUP_OPS = {
       if (seen[lid]) return;
       if (!perms[lid]) perms[lid] = { view: [], confirm: [], approve: [], reapprove: [] };
       if (!perms[lid].view || !perms[lid].view.length) perms[lid].view = ['gm'];
+    });
+    /* 出力グループは全帳票タイプを閲覧できる（出力対象を選べないと出力できない）。
+       assign は view を上書きするので、割り当てが済んだあとに足す。 */
+    layoutIds.forEach(function (lid) {
+      var p = perms[lid];
+      if (p && Array.isArray(p.view) && p.view.indexOf('ge') < 0) p.view.push('ge');
     });
     /* 未設定の操作列は、その操作を持つ一番軽いバケツで埋める
        （GROUP_OPS が持っている情報だけで決める＝担当を勝手に作らない）。
@@ -1941,11 +1948,9 @@ function downloadResultFile(id, fmt) {""", 1)
     src = re.sub(r'(<td style="white-space:nowrap;color:var\(--text-2\)") title="', r'\1 data-tip="', src)
 
     # ⑬ 一覧の「一括ダウンロード」の左に「選択帳票読取」を追加（客户）
-    #    ※ ダウンロードのメニュー（.batch-dl 内）を乱さないよう、コンテナの外側・左に置く
-    _bd = """<div class="batch-dl${pickedCount ? '' : ' is-disabled'}">"""
-    if _bd in src and 'id="resRead"' not in src:
-        src = src.replace(_bd, """<button type="button" class="btn primary sm" id="resRead" ${pickedCount ? '' : 'disabled'}>選択帳票読取</button>
-    """ + _bd, 1)
+    #    ※ 2026-10-19 廃止：④ で外したはずの「選択帳票読取」がここで復活しており、
+    #      しかも .batch-dl（＝出力権限のある人）の中にしか出ていなかった。
+    #      読取の一括実行は app.js 側の「一括読取」（op-redo で出し分け）に統合した。
 
     # ⑫ 確認画面：Enter を押したら（値が変わっていなくても）「修正済み」にする
     _ocr_head = """  document.querySelectorAll('[data-ocr]').forEach((inp) => {

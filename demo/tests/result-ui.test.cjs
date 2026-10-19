@@ -1101,8 +1101,8 @@ test('departments are gone: groups, users and history are organised without them
 
 test('demo actor switcher lets you change currentUser from the header menu', () => {
   const run = app();
-  assert.equal(run('DEMO_ACTORS.length'), 4);
-  assert.deepEqual(JSON.parse(run('JSON.stringify(DEMO_ACTORS.map((a) => a.id))')), ['u1', 'u7', 'u8', 'u4']);
+  assert.equal(run('DEMO_ACTORS.length'), 5);
+  assert.deepEqual(JSON.parse(run('JSON.stringify(DEMO_ACTORS.map((a) => a.id))')), ['u1', 'u7', 'u8', 'u10', 'u4']);
   /* 既定はシステム管理者 u1 */
   assert.equal(run('state.currentUser'), 'u1');
   assert.equal(run('currentProfile().name'), '佐藤 一郎');
@@ -1211,6 +1211,48 @@ test('ユーザー権限: 個人の権限はグループの権限に上乗せさ
   assert.deepEqual(JSON.parse(run('JSON.stringify(rolesOfUser("u5"))')), ['R4', 'R3']);
   run('entUserByUid("u5").soloPermIds = []');
   assert.equal(run('userHasOp("confirm","u5")'), false);
+});
+
+test('読取ロール: 再読取・一括読取・アップロード画面の読取／削除が出る', () => {
+  const run = app();
+  /* u7＝アップロード（R5）＋読取（R8）。確認と出力は持たない */
+  run('state.currentUser = "u7";');
+  const cell = run('resultActionsCell({ id: "f1", status: "done", layout: "l1" })');
+  assert.match(cell, /data-act="redo"/);
+  assert.match(cell, /data-act="delete"/);
+  assert.doesNotMatch(cell, /data-act="fix"/);
+  assert.doesNotMatch(cell, /data-act="confirm"/);
+  assert.doesNotMatch(cell, /data-dlmenu=/);
+  /* 一覧のツールバーに一括読取（選択が無いときは押せない） */
+  run('state.page = "result"; state.tab = "all"; state.resultPage = 1;');
+  const table = run('renderTable()');
+  assert.match(table, /id="batchRead" disabled/);
+  assert.match(table, /id="batchDelete"/);
+  /* アップロード済ファイルの読取と削除 */
+  const up = run('state.page = "upload"; renderUpload()');
+  assert.match(up, /id="upRead"/);
+  assert.match(up, /id="upDel"/);
+  /* 読取はできるが確認はできない */
+  assert.equal(run('userHasOp("redo","u7")'), true);
+  assert.equal(run('userHasOp("read","u7")'), true);
+  assert.equal(run('userHasOp("delete","u7")'), true);
+  assert.equal(run('userHasOp("confirm","u7")'), false);
+  assert.equal(run('userHasOp("export","u7")'), false);
+});
+
+test('出力ロール: ダウンロードと一括ダウンロードだけが出る', () => {
+  const run = app();
+  run('state.currentUser = "u10";');
+  const cell = run('resultActionsCell({ id: "f1", status: "done", layout: "l1" })');
+  assert.match(cell, /data-dlmenu="f1"/);
+  assert.doesNotMatch(cell, /data-act="redo"|data-act="fix"|data-act="confirm"|data-act="delete"/);
+  run('state.page = "result"; state.tab = "all"; state.resultPage = 1;');
+  const table = run('renderTable()');
+  assert.match(table, /id="batchExport"/);
+  assert.doesNotMatch(table, /id="batchRead"/);
+  assert.equal(run('userHasOp("export","u10")'), true);
+  assert.equal(run('userHasOp("read","u10")'), false);
+  assert.equal(run('userHasOp("confirm","u10")'), false);
 });
 
 test('ユーザー編集: 権限はドロップダウンで複数選択でき、グループ継承分は別に表示する', () => {
