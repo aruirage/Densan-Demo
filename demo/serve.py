@@ -1533,6 +1533,7 @@ def apply_menu_perm_dedupe(src):
             " { id: 'usage-groups-del', label: 'グループ削除' },")
     if anchor in src:
         src = src.replace(anchor, anchor + trio, 1)
+    src = src.replace("{ id: 'permissions-query', label: 'ロール照会' },", "")  # ロール照会を削除
     return src
 
 
