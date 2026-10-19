@@ -435,6 +435,8 @@
 .wf-wide { grid-column: 1 / -1; }
 
 .watch-fields > .wf:nth-last-child(-n+2) { border-bottom: 0; }
+/* 最終行が全幅（＝1 行を占める）のときは、その 1 つ前の行の下線は残す */
+.watch-fields:has(> .wf.wf-wide:last-child) > .wf:nth-last-child(2) { border-bottom: 1px solid #f2f4f8; }
 .watch-fields > .wf.wf-wide:last-child { border-bottom: 0; }
 
 .wf-label {
@@ -445,6 +447,15 @@
 }
 
 .wf-ctl { min-width: 0; }
+
+/* 入力の下に添える補足（処理開始ファイルの説明など）
+   注：`.wf-note` は serve.py が説明文として HTML コメント化するので使わない。 */
+.wf-help {
+  margin: 6px 0 0;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
 
 .wf .fld {
   width: 100%;

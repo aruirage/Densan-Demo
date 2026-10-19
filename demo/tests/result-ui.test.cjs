@@ -1159,6 +1159,12 @@ test('自動アップロード: 1 画面 1 設定で 6 セクションを描画�
     assert.ok(html.includes(t), t);
   }
   assert.doesNotMatch(html, /テナント/);
+  /* 対象ファイルは定型から選ぶセレクト（現場が glob を書かないため） */
+  assert.match(html, /<select class="fld" data-wf="pattern">/);
+  assert.doesNotMatch(html, /data-wf="pattern"[^>]*value=/);
+  for (const v of ['*.pdf', '*.pdf,*.tif,*.tiff', '*.tif,*.tiff', '*.jpg,*.jpeg,*.png', '*.*']) {
+    assert.ok(html.includes(`value="${v}"`), v);
+  }
   /* ログ設定はログ設定ページへ移した */
   assert.doesNotMatch(html, /data-wf="logLevel"|data-wf="logPath"|ログ<\/h3>/);
   /* 監視パスは複数。行ごとに有効／無効のトグルを持つ */

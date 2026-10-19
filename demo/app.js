@@ -5194,6 +5194,14 @@ let WATCH = {
 const WATCH_AFTER = { move: '移動', del: '削除', keep: 'そのまま' };
 const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容ハッシュ（SHA-256）' };
 const WATCH_NOTIFY_ON = { fail: '失敗したときだけ', always: '毎回' };
+/** 対象ファイルは glob ではなく定型から選ぶ（現場が拡張子を書かないため） */
+const WATCH_PATTERNS = [
+  ['*.pdf', 'PDF（*.pdf）'],
+  ['*.pdf,*.tif,*.tiff', 'PDF・TIFF（*.pdf, *.tif, *.tiff）'],
+  ['*.tif,*.tiff', 'TIFF（*.tif, *.tiff）'],
+  ['*.jpg,*.jpeg,*.png', '画像（*.jpg, *.jpeg, *.png）'],
+  ['*.*', 'すべてのファイル'],
+];
 
 const watchLayoutName = (id) => (id === 'auto' ? '自動判定' : dispLayout(id));
 
@@ -5228,8 +5236,13 @@ function renderWatch() {
               <button type="button" class="btn wp-add" data-watchpathadd="1"><span class="ico i-add"></span>監視パスを追加</button>
             </div>
           </div>
-          ${row('対象ファイル', `<input class="fld" data-wf="pattern" value="${esc(x.pattern)}" placeholder="*.pdf" />`)}
-          ${row('処理開始ファイル', `<input class="fld" data-wf="startFile" value="${esc(x.startFile)}" placeholder="未指定なら即時" />`)}
+          ${row('対象ファイル', watchSelect('pattern', WATCH_PATTERNS, x.pattern))}
+          <div class="wf"><span class="wf-label">処理開始ファイル</span>
+            <div class="wf-ctl">
+              <input class="fld" data-wf="startFile" value="${esc(x.startFile)}" placeholder="未指定なら即時" />
+              <p class="wf-help">このファイルが置かれた時点で取込を開始します。転送中のファイルを掴まないための合図用ファイルです。</p>
+            </div>
+          </div>
           ${row('大文字小文字を区別', watchToggle('caseSensitive', x.caseSensitive), true)}
         </div>
       </section>
