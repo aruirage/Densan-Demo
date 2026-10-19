@@ -184,16 +184,16 @@ var GROUP_OPS = {
   var bucket = [
     /* 最上位。ほかのグループはすべてこの下（削除不可） */
     { id: 'groot', name: '電算', kind: '', roles: [], desc: 'すべての操作グループの最上位（削除不可）', userIds: [], root: true, permId: 'R1', parentId: null },
-    { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u2', 'u6', 'u7'], permId: 'R5', parentId: 'groot' },
-    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u5', 'u8'], permId: 'R3', parentId: 'groot' },
-    { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: 'CSV/JSON/PDF の出力', userIds: ['u4', 'u5'], permId: 'R4', parentId: 'groot' },
+    { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u7'], permId: 'R5', parentId: 'groot' },
+    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u8'], permId: 'R3', parentId: 'groot' },
+    { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: 'CSV/JSON/PDF の出力', userIds: ['u4'], permId: 'R4', parentId: 'groot' },
     /* 新設計（9 グループ）で追加した 5 つ */
-    { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u1'], permId: 'R2', parentId: 'groot' },
-    { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: '一覧の閲覧のみ（操作なし）', userIds: ['u2'], permId: 'R4', parentId: 'groot' },
-    { id: 'gk', name: 'AI分類結果修正グループ', kind: 'AI分類結果修正', roles: ['AI分類結果修正'], desc: 'AI 分類結果（帳票タイプ）の修正', userIds: ['u2', 'u3'], permId: 'R3', parentId: 'groot' },
+    { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u3'], permId: 'R2', parentId: 'groot' },
+    { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: '一覧の閲覧のみ（操作なし）', userIds: ['u1', 'u2', 'u4', 'u5', 'u6', 'u7', 'u8', 'u10'], permId: 'R6', parentId: 'groot' },
+    { id: 'gk', name: 'AI分類結果修正グループ', kind: 'AI分類結果修正', roles: ['AI分類結果修正'], desc: 'AI 分類結果（帳票タイプ）の修正', userIds: ['u2'], permId: 'R7', parentId: 'groot' },
     { id: 'gr', name: '読取実行グループ', kind: '読取', roles: ['読取'], desc: 'アップロード済ファイルの読取実行・再読取・削除', userIds: ['u6'], permId: 'R8', parentId: 'groot' },
     { id: 'ge', name: '出力グループ', kind: '出力', roles: ['出力'], desc: 'CSV/JSON/PDF の出力', userIds: ['u10'], permId: 'R10', parentId: 'groot' },
-    { id: 'gf', name: 'OCR結果修正グループ', kind: 'OCR結果修正', roles: ['OCR結果修正'], desc: 'OCR 結果の修正（確認は不可）', userIds: ['u3'], permId: 'R3', parentId: 'groot' },
+    { id: 'gf', name: 'OCR結果修正グループ', kind: 'OCR結果修正', roles: ['OCR結果修正'], desc: 'OCR 結果の修正（確認は不可）', userIds: ['u5'], permId: 'R11', parentId: 'groot' },
     { id: 'gm', name: '管理者グループ', kind: all.join('、'), roles: all.slice(), desc: 'すべての権限', userIds: ['u1', 'u9'], permId: 'R1', parentId: 'groot' }
   ];
   list.length = 0;
@@ -245,11 +245,12 @@ var GROUP_OPS = {
       if (!perms[lid]) perms[lid] = { view: [], confirm: [], approve: [], reapprove: [] };
       if (!perms[lid].view || !perms[lid].view.length) perms[lid].view = ['gm'];
     });
-    /* 出力グループは全帳票タイプを閲覧できる（出力対象を選べないと出力できない）。
+    /* 閲覧グループは全帳票タイプを見られる（デモの 9 ロールは閲覧を共通で持つ）。
+       閲覧の絞り込みは「ファイルツリー単位の権限」側で行う。
        assign は view を上書きするので、割り当てが済んだあとに足す。 */
     layoutIds.forEach(function (lid) {
       var p = perms[lid];
-      if (p && Array.isArray(p.view) && p.view.indexOf('ge') < 0) p.view.push('ge');
+      if (p && Array.isArray(p.view) && p.view.indexOf('gv') < 0) p.view.push('gv');
     });
     /* 未設定の操作列は、その操作を持つ一番軽いバケツで埋める
        （GROUP_OPS が持っている情報だけで決める＝担当を勝手に作らない）。
@@ -486,9 +487,9 @@ def apply_perm_table(html):
 
 
 FOLDER_VISIBILITY = """
-/* ファイル一覧の可視範囲は「業務区分（フォルダ）権限」で判定する（客户回答 ⑤）。
-   UPLOAD_PERMS[bizId] に自分の所属グループが入っていれば、その業務区分の帳票はすべて見える。
-   どの業務区分にも担当が入っていない場合は制限しない（デモが空にならないように）。 */
+/* ファイル一覧の可視範囲は「フォルダ（業務シーン／帳票タイプ）権限」で判定する。
+   帳票権限管理の「閲覧」が設定されていればそれを最優先（客户回答 ⑤）。
+   閲覧が未設定の版式だけ、業務区分のアップロード担当で見せる（デモが空にならないように）。 */
 (function folderVisibility() {
   var prev = window.__demoPerm && window.__demoPerm.canViewFile;
   var CANON = { '確認': 'gc', '承認': 'ga', 'アップロード': 'gu', '全権限': 'gm', '管理': 'gm' };
@@ -522,9 +523,14 @@ FOLDER_VISIBILITY = """
     var h = window.__demo;
     if (!h || !f) return true;
     if (window.DEMO_FULL_ADMIN === true) return true;   /* 管理者固定＝全件見える */
+    /* ① 帳票権限管理の「閲覧」が最優先。フォルダ（業務シーン／帳票タイプ）単位で
+       編集した結果がそのまま一覧の表示範囲になる。 */
+    var tp = (h.TICKET_PERMS || {})[f.layout];
+    if (tp && Array.isArray(tp.view) && tp.view.length) return prev ? prev(f) : true;
+    /* ② 閲覧が未設定の版式だけ、業務区分のアップロード担当で見せる（客户回答 ⑤） */
     var up = h.UPLOAD_PERMS || {};
     var keys = Object.keys(up);
-    if (!keys.length) return prev ? prev(f) : true;          /* フォルダ権限が未設定なら従来判定 */
+    if (!keys.length) return prev ? prev(f) : true;
     var mine = myGroups();
     var biz = bizIdOf(f.layout);
     var allowed = !!biz && (up[biz] || []).some(function (g) {
@@ -1362,17 +1368,33 @@ const permCellsOf = (l) => {
 };
 const permTargetsForCell = (c) => {
   if (c.kind === 'upload') return uploadPermsOf(c.bizId);
+  if (c.kind === 'folder') return nodePerm(c.nodeId, c.act).list;
   const idx = stageIdxOfKey(c.act);
   if (idx >= 0) return stageTargetsOf(c.layoutId, idx);
   return permsOf(c.layoutId)[c.act] || [];
 };
 const setPermTargetsForCell = (c, ids) => {
   if (c.kind === 'upload') { UPLOAD_PERMS[c.bizId] = ids; return; }
+  if (c.kind === 'folder') { setNodePerm(c.nodeId, c.act, ids); return; }
   const idx = stageIdxOfKey(c.act);
   if (idx >= 0) { setStageTargets(c.layoutId, idx, ids); return; }
   if (!TICKET_PERMS[c.layoutId]) TICKET_PERMS[c.layoutId] = { view: [], confirm: [], approve: [], reapprove: [] };
   TICKET_PERMS[c.layoutId][c.act] = ids;
 };
+/* フォルダ権限表（業務シーン → 帳票タイプ）。
+   列は「閲覧／OCR結果修正／確認」の 3 つだけ。アップロードは業務シーン単位の
+   別表、出力はロール側の権限なので、フォルダの行には出さない。 */
+const FOLDER_KEYS = ['view', 'fix', 'confirm'];
+const FOLDER_COLS = () => FOLDER_KEYS.map((k) => PERM_COL_BASE.filter((a) => a.key === k)[0]);
+const folderHeadOf = () => FOLDER_COLS().map((a) => '<th style="width:150px">' + a.label + '</th>').join('');
+const folderCellsOf = (nodeId) => FOLDER_COLS().map((a) => {
+  const p = nodePerm(nodeId, a.key);
+  const names = p.list.map(permTargetName).join('、') || '未設定';
+  const mixed = p.mixed ? '<span class="perm-mixed">混在</span>' : '';
+  return '<td class="permcell"><button type="button" class="perm-cell' + (p.mixed ? ' is-mixed' : '')
+    + '" data-fpermcell="' + nodeId + ':' + a.key + '" title="' + esc(a.hint) + '：' + esc(names) + '">'
+    + mixed + permChips(p.list) + '</button></td>';
+}).join('');
 const permActLabelOf = (key) => {
   const idx = stageIdxOfKey(key);
   if (idx >= 0) return (maxApprovalStageCount() === 1 ? '承認' : '承認' + (idx + 1));
@@ -1482,35 +1504,27 @@ def apply_stage_matrix(src):
         return src
     src = src.replace(anchor, STAGE_MATRIX_HELPERS + anchor, 1)
     # ① 表の列（見出し・セル）を動的生成に
-    src = re.sub(r"\$\{PERM_ACTS\.map\(\(a\) => `<td class=\"permcell\">[\s\S]*?join\(''\)\}",
-                 "${permCellsOf(l)}", src, count=1)
-    src = re.sub(r"\$\{PERM_ACTS\.map\(\(a\) => `<th style=\"width:190px\">\$\{a\.label\}</th>`\)\.join\(''\)\}",
-                 "${permHeadOf()}", src, count=1)
+    #    権限の単位はフォルダ（業務シーン → 帳票タイプ）なので、行のセルは
+    #    cellOf(節点ID, 操作) → folderCellsOf(節点ID) に置き換える。
+    src = re.sub(r"\$\{PERM_ACTS\.map\(\(a\) => cellOf\((\w+)\.id, a\.key\)\)\.join\(''\)\}",
+                 lambda m: "${folderCellsOf(%s.id)}" % m.group(1), src)
+    src = re.sub(r"\$\{PERM_ACTS\.map\(\(a\) => `<th style=\"width:150px\">\$\{a\.label\}</th>`\)\.join\(''\)\}",
+                 "${folderHeadOf()}", src, count=1)
+    #    ダイアログの操作切替も表と同じ列（閲覧／アップロード／OCR結果修正／確認／出力）に揃える
+    src = src.replace('${PERM_ACTS.map((a) => `<button type="button" class="asg-mode-pill',
+                      '${FOLDER_COLS().map((a) => `<button type="button" class="asg-mode-pill', 1)
     # ② セルダイアログ：現在値の取得と保存を段対応に
-    src = src.replace("const cur = isUpload ? uploadPermsOf(c.bizId) : (permsOf(c.layoutId)[c.act] || []);",
+    src = src.replace("const cur = isUpload ? uploadPermsOf(c.bizId)\n    : isFolder ? nodePerm(c.nodeId, c.act).list\n      : (permsOf(c.layoutId)[c.act] || []);",
                       "const cur = permTargetsForCell(c);", 1)
-    src = src.replace("""      if (c.kind === 'upload') {
-        UPLOAD_PERMS[c.bizId] = picked;
-        state.permCell = null; render();
-        toast(`「${dispBiz(c.bizId)}」のアップロード権限を更新しました`);
-        return;
-      }
-      if (!TICKET_PERMS[c.layoutId]) TICKET_PERMS[c.layoutId] = { view: [], confirm: [], approve: [], reapprove: [] };
-      TICKET_PERMS[c.layoutId][c.act] = picked;
-      state.permCell = null; render();
-      toast(`「${dispLayout(c.layoutId)}」の${permActLabel(c.act)}権限を更新しました`);""",
-"""      if (c.kind === 'upload') {
-        setPermTargetsForCell(c, picked);
-        state.permCell = null; render();
-        toast(`「${dispBiz(c.bizId)}」のアップロード権限を更新しました`);
-        return;
-      }
-      setPermTargetsForCell(c, picked);
-      state.permCell = null; render();
-      toast(`「${dispLayout(c.layoutId)}」の${permActLabelOf(c.act)}権限を更新しました`);""", 1)
-    # ③ クリア：段も消す
-    src = src.replace("TICKET_PERMS[id] = { view: [], confirm: [], approve: [], reapprove: [] };",
-                      "TICKET_PERMS[id] = { view: [], confirm: [], approve: [], reapprove: [], stages: [] };", 1)
+    #    フォルダ行の保存も同じ入口（setPermTargetsForCell が kind で振り分ける）
+    src = src.replace("        setNodePerm(c.nodeId, c.act, picked);", "        setPermTargetsForCell(c, picked);", 1)
+    src = src.replace("      TICKET_PERMS[c.layoutId][c.act] = picked;",
+                      "      setPermTargetsForCell(c, picked);", 1)
+    src = src.replace("toast(`「${dispLayout(c.layoutId)}」の${permActLabel(c.act)}権限を更新しました`);",
+                      "toast(`「${dispLayout(c.layoutId)}」の${permActLabelOf(c.act)}権限を更新しました`);", 1)
+    # ③ クリア：段も消す（フォルダ行のクリアは配下の版式をまとめて消す）
+    src = src.replace("TICKET_PERMS[l.id] = { view: [], fix: [], confirm: [], approve: [], reapprove: [] };",
+                      "TICKET_PERMS[l.id] = { view: [], fix: [], confirm: [], approve: [], reapprove: [], stages: [] };", 1)
     # ④ stagesOf：p.stages を優先（N 段）
     src = src.replace("""  const custom = APPROVAL_STAGES[layoutId];
   if (Array.isArray(custom) && custom.length) return custom.map((x) => (x || []).slice());
@@ -1610,6 +1624,8 @@ def apply_roles_9(src):
     src = src.replace('${fl.canSave ? `<button type="button" class="btn${saveBtnPrimary ? \' primary\' : \'\'}" id="rvSave">保存</button>` : \'\'}', '<button type="button" class="btn${saveBtnPrimary ? \' primary\' : \'\'}" id="rvSave">保存</button>', 1)
     # canSave を常時 true に（確認画面フッターの保存を必ず出す）
     src = src.replace("${fl.canSave ?", "${true ?")
+    # フォルダ単位の操作権限：ツリーの名前変更を権限で制御（op-rename）
+    src = src.replace("{ id: 'op-export', label: '出力' }", "{ id: 'op-export', label: '出力' }, { id: 'op-rename', label: 'フォルダ名変更（ツリー）' }", 1)
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
@@ -2586,22 +2602,15 @@ def apply_result_widths(src):
 
 
 def apply_perm_markup(src):
-    """帳票権限管理の表に class/幅を付けてレイアウトを安定させる。"""
+    """帳票権限管理（フォルダ権限表）の列幅・固定列を整える。"""
     if 'perm-matrix' in src:
         return src
-    src = src.replace('<table>\n    <thead><tr><th style="width:60px">番号</th><th>帳票タイプ</th>',
-                      '<table class="perm-matrix">\n    <thead><tr><th class="is-sticky" style="width:64px">番号</th><th class="is-sticky" style="width:300px;left:64px">帳票タイプ</th>', 1)
-    src = src.replace('${PERM_ACTS.map((a) => `<th style="width:190px">${a.label}</th>`).join('')}',
-                      '${PERM_ACTS.map((a) => `<th style="width:132px">${a.label}</th>`).join('')}', 1)
+    # 表そのものにクラスを付ける（.perm-matrix の CSS を効かせる）
+    src = src.replace('<table class="fp-table">', '<table class="fp-table perm-matrix">', 1)
+    src = src.replace('<th style="width:60px">番号</th><th style="width:260px">フォルダ</th>',
+                      '<th class="is-sticky" style="width:64px">番号</th><th class="is-sticky" style="width:260px;left:64px">フォルダ</th>', 1)
     src = src.replace('<th style="width:90px;text-align:right">操作</th>', '<th class="acts" style="width:90px">操作</th>', 1)
-    # 行側：番号・帳票タイプを sticky に
-    src = src.replace('<td class="roles-no">${i + 1}</td>\n      <td>${esc(dispLayout(l.id))}<div class="sub">${esc(dispBiz(cat.business))} ／ ${esc(dispCat(cat.id))}</div></td>',
-                      '<td class="roles-no no is-sticky">${i + 1}</td>\n      <td class="is-sticky"><div class="pt-name">${esc(dispLayout(l.id))}</div><div class="pt-sub">${esc(dispBiz(cat.business))} ／ ${esc(dispCat(cat.id))}</div></td>', 1)
-    src = src.replace('<td><div class="acts"><button class="act-text" data-permclear="${l.id}">クリア</button></div></td>',
-                      '<td class="acts"><button class="act-text" data-permclear="${l.id}">クリア</button></td>', 1)
-    # 見出し（小見出し）を段落から揃える。列は apply_full_perm_acts で増減するため、
-    # 括弧の中身は固定文言にせず「帳票タイプ × 操作」に寄せる（列名とズレないように）。
-    src = re.sub(r'帳票タイプ権限（[^）]*）', '帳票タイプ権限（帳票タイプ × 操作）', src, count=1)
+    # 見出しは「フォルダ権限」のまま（帳票タイプ × 操作 に読み替えない）
     return src
 
 
@@ -2805,7 +2814,12 @@ def patched_app_js(path):
 /* ── メニュー権限の配分（9 ロール設計） ─────────────────── */
 try {
   var _biz = ['home', 'result'];
-  MENU_PERMS.R2 = _biz.concat(['op-upload', 'op-read', 'settings-type', 'settings-type-add', 'settings-type-edit', 'settings-type-form-del', 'settings-scenes', 'settings-scenes-add', 'settings-scenes-edit', 'settings-scenes-del']);
+  MENU_PERMS.R2 = ['settings-type', 'settings-type-add', 'settings-type-edit', 'settings-type-form-del',
+    'settings-scenes', 'settings-scenes-add', 'settings-scenes-edit', 'settings-scenes-del',
+    'usage-dict', 'usage-users', 'usage-users-add', 'usage-users-edit', 'usage-users-toggle',
+    'usage-groups-add', 'usage-groups-edit', 'usage-groups-del',
+    'permissions-query', 'permissions-add', 'permissions-edit', 'permissions-del', 'permissions-menu',
+    'usage-security', 'usage-logs', 'usage-watch'];
   MENU_PERMS.R3 = _biz.concat(['op-confirm']);
   MENU_PERMS.R5 = _biz.concat(['op-upload']);
   MENU_PERMS.R6 = _biz.slice();
@@ -2820,7 +2834,7 @@ try {
     # 操作権限ツリーに「出力」を追加（op-export）
     if 'op-export' not in patched:
         patched = patched.replace("{ id: 'op-download', label: 'ダウンロード' }",
-                                  "{ id: 'op-download', label: 'ダウンロード' }, { id: 'op-export', label: '出力' }", 1)
+                                  "{ id: 'op-download', label: 'ダウンロード' }, { id: 'op-export', label: '出力' }, { id: 'op-rename', label: 'フォルダ名変更' }", 1)
     if m_perms and 'SUPER_ROLE_ID' not in patched:
         # MENU_PERMS の直後に差し込む（ROLES / MENU_LEAVES も定義済みの位置）
         patched = patched[:m_perms.end()] + "\n" + SUPER_ROLE + patched[m_perms.end():]
