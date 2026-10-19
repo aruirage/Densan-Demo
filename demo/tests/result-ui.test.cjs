@@ -1147,34 +1147,24 @@ test('ticket permission table gates confirm per layout', () => {
   assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });
 
-test('自動アップロード: 一覧テーブル＋展開パネルの 7 セクションで描画される', () => {
+test('自動アップロード: 1 画面 1 設定で 7 セクションを描画する', () => {
   const run = app();
-  let html = run('state.watch = { edit: null }; renderWatch()');
-  assert.match(html, /class="tablewrap watch-table"/);
-  /* 1 行＝監視フォルダ 1 つ。閉じているときは設定パネルを出さない */
-  assert.equal((html.match(/data-watchedit=/g) || []).length, run('WATCHES.length'));
-  assert.doesNotMatch(html, /class="watch-sec"/);
-
-  html = run('state.watch = { edit: "w1" }; renderWatch()');
-  assert.match(html, /class="watch-detail-row"/);
+  const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
   assert.deepEqual(heads, ['監視先', '取込先', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知', 'ログ']);
-  /* 旧 UI（左リスト・並べ替え・断片エディタ）は残っていない */
-  assert.doesNotMatch(html, /watch-page|watch-side|watch-block|watch-order|watch-seg|data-watchorder|data-watchseg/);
+  /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
+  assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit|watch-table/);
   /* 顧客要件の設定項目 */
-  for (const t of ['監視パス', '処理開始ファイル', 'テナント', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL', '詳細度']) {
+  for (const t of ['監視パス', '対象ファイル', '処理開始ファイル', 'テナント', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL', '詳細度']) {
     assert.ok(html.includes(t), t);
   }
 });
 
 test('自動アップロード: 移動先は「移動」を選んだときだけ出る', () => {
   const run = app();
-  let html = run('state.watch = { edit: "w1" }; WATCHES.find((w) => w.id === "w1").after = "move"; renderWatch()');
+  let html = run('WATCH.after = "move"; renderWatch()');
   assert.match(html, /data-wf="afterDir"/);
-  html = run('WATCHES.find((w) => w.id === "w1").after = "del"; renderWatch()');
+  html = run('WATCH.after = "del"; renderWatch()');
   assert.doesNotMatch(html, /data-wf="afterDir"/);
-  /* 開いている行だけがパネルを持つ */
-  html = run('state.watch = { edit: "w2" }; renderWatch()');
-  assert.equal((html.match(/class="watch-detail-row"/g) || []).length, 1);
-  assert.match(html, /<h2>税務 申告書 取込<\/h2>/);
+  assert.equal((html.match(/class="watch-sec"/g) || []).length, 7);
 });

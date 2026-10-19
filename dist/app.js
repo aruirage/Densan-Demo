@@ -5661,91 +5661,60 @@ function renderDictDialogs() {
    未処理テーブルに溜まり、「選択帳票読取」で初めて読取結果一覧へ入る。
    ══════════════════════════════════════════════════════════════════════════ */
 
-/** 自動アップロードの監視設定。1 設定＝1 監視フォルダ。
- *  左の一覧で選び、右のフォームで編集する（入力は即時反映、保存で更新日時を更新）。 */
-let WATCHES = [
-  {
-    id: 'w1', on: true, name: '住民異動届 取込',
-    path: '\\\\filesv01\\住民課\\住民異動届', pattern: '*.pdf', startFile: '処理開始.txt', caseSensitive: false,
-    tenant: 'tenant02', layout: 'l1',
-    after: 'move', afterDir: '\\\\filesv01\\処理済\\住民異動届',
-    dupGuard: true, dupMethod: 'meta',
-    retry: 3, retryGap: 5,
-    notify: true, notifyOn: 'fail', notifyMail: 'admin@itso.co.jp', notifyUrl: '',
-    logLevel: '標準', logPath: '\\\\filesv01\\ログ\\自動アップロード',
-    updatedAt: '2026-10-16 09:12:30',
-  },
-  {
-    id: 'w2', on: true, name: '税務 申告書 取込',
-    path: '\\\\filesv01\\税務課\\申告書', pattern: '*.pdf', startFile: '', caseSensitive: false,
-    tenant: 'tenant02', layout: 'l4',
-    after: 'keep', afterDir: '',
-    dupGuard: true, dupMethod: 'hash',
-    retry: 2, retryGap: 10,
-    notify: false, notifyOn: 'fail', notifyMail: '', notifyUrl: '',
-    logLevel: '簡略', logPath: '\\\\filesv01\\ログ\\自動アップロード',
-    updatedAt: '2026-10-15 18:40:02',
-  },
-  {
-    id: 'w3', on: false, name: '保育所 入所申込 取込',
-    path: '\\\\filesv01\\子育て支援課\\入所申込', pattern: '*.pdf', startFile: '', caseSensitive: true,
-    tenant: 'tenant03', layout: 'auto',
-    after: 'move', afterDir: '\\\\filesv01\\処理済\\保育所',
-    dupGuard: true, dupMethod: 'meta',
-    retry: 3, retryGap: 5,
-    notify: true, notifyOn: 'always', notifyMail: 'child@itso.co.jp', notifyUrl: '',
-    logLevel: '詳細', logPath: '\\\\filesv01\\ログ\\自動アップロード',
-    updatedAt: '2026-10-14 11:05:44',
-  },
-];
+/** 自動アップロードの設定（テナントに 1 つ）。監視フォルダは 1 つだけ。
+ *  入力は即時反映、保存で更新日時を更新する。 */
+let WATCH = {
+  on: true,
+  path: '\\\\filesv01\\住民課\\住民異動届', pattern: '*.pdf', startFile: '処理開始.txt', caseSensitive: false,
+  tenant: 'tenant02', layout: 'auto',
+  after: 'move', afterDir: '\\\\filesv01\\処理済\\住民異動届',
+  dupGuard: true, dupMethod: 'meta',
+  retry: 3, retryGap: 5,
+  notify: true, notifyOn: 'fail', notifyMail: 'admin@itso.co.jp', notifyUrl: '',
+  logLevel: '標準', logPath: '\\\\filesv01\\ログ\\自動アップロード',
+  updatedAt: '2026-10-16 09:12:30',
+};
 
 const WATCH_AFTER = { move: '移動', del: '削除', keep: 'そのまま' };
 const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容ハッシュ（SHA-256）' };
 const WATCH_NOTIFY_ON = { fail: '失敗したときだけ', always: '毎回' };
 const WATCH_LOG_LEVELS = ['簡略', '標準', '詳細'];
 
-const watchState = () => (state.watch = state.watch || { edit: null });
 const watchTenantName = (id) => (byId(TENANTS, id) || {}).name || id || '—';
 const watchLayoutName = (id) => (id === 'auto' ? '自動判定' : dispLayout(id));
 
-/** 監視設定 1 件ぶんの編集フォーム（右ペイン） */
-function renderWatchForm(x) {
-  const sel = (key, opts, cur) => `<select class="fld" data-wf="${key}">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
-  const toggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-checked="${on}"><span class="tgl-txt">${on ? 'する' : 'しない'}</span><span class="tgl-knob"></span></button>`;
-  const row = (label, inner, wide) => `<div class="wf${wide ? ' wf-wide' : ''}"><span class="wf-label">${label}</span><div class="wf-ctl">${inner}</div></div>`;
+/* フォーム部品（この画面だけで使う） */
+const watchSelect = (key, opts, cur) => `<select class="fld" data-wf="${key}">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-checked="${on}"><span class="tgl-txt">${on ? 'する' : 'しない'}</span><span class="tgl-knob"></span></button>`;
+const watchRow = (label, inner, wide) => `<div class="wf${wide ? ' wf-wide' : ''}"><span class="wf-label">${label}</span><div class="wf-ctl">${inner}</div></div>`;
+
+/** 自動アップロード設定（1 画面 1 設定）。顧客要件の 6 項目をそのまま並べる。 */
+function renderWatch() {
+  const x = WATCH;
+  const row = watchRow;
   const tenantOpts = TENANTS.map((t) => [t.id, `${t.name}（${t.note}）`]);
   const layoutOpts = [['auto', '自動判定（業務シーンから推定）']].concat(LAYOUT.map((l) => [l.id, dispLayout(l.id)]));
 
-  return `<div class="watch-main-head">
-      <div class="watch-head-text">
-        <h2>${esc(x.name || '（名称未設定）')}</h2>
-        <span class="muted">最終更新 ${esc(x.updatedAt || '—')}</span>
-      </div>
-      <span class="spacer"></span>
-      <span class="watch-head-lab">有効</span>
-      ${toggle('on', x.on)}
-      <button class="btn" data-watchdel="${x.id}">削除</button>
-      <button class="btn primary" data-watchsave="${x.id}">保存</button>
-    </div>
-    <div class="watch-body">
-      <div class="watch-col">
+  return `${cfgHeader('自動アップロード', `<span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>`)}
+  <p class="cfg-hint">指定フォルダにファイルが置かれると自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。${x.updatedAt ? `<span class="muted">最終更新 ${esc(x.updatedAt)}</span>` : ''}</p>
+  <div class="watch-body">
+    <div class="watch-col">
 
       <section class="watch-sec">
         <h3 class="watch-sec-head">監視先</h3>
         <div class="watch-fields">
-          ${row('名称', `<input class="fld" data-wf="name" value="${esc(x.name)}" placeholder="例：住民異動届 取込" />`)}
-          ${row('対象ファイル', `<input class="fld" data-wf="pattern" value="${esc(x.pattern)}" placeholder="*.pdf" />`)}
           ${row('監視パス', `<input class="fld mono" data-wf="path" value="${esc(x.path)}" placeholder="\\\\filesv01\\..." />`, true)}
+          ${row('対象ファイル', `<input class="fld" data-wf="pattern" value="${esc(x.pattern)}" placeholder="*.pdf" />`)}
           ${row('処理開始ファイル', `<input class="fld" data-wf="startFile" value="${esc(x.startFile)}" placeholder="未指定なら即時" />`)}
-          ${row('大文字小文字を区別', toggle('caseSensitive', x.caseSensitive))}
+          ${row('大文字小文字を区別', watchToggle('caseSensitive', x.caseSensitive), true)}
         </div>
       </section>
 
       <section class="watch-sec">
         <h3 class="watch-sec-head">取込先</h3>
         <div class="watch-fields">
-          ${row('テナント', sel('tenant', tenantOpts, x.tenant))}
-          ${row('帳票タイプ', sel('layout', layoutOpts, x.layout))}
+          ${row('テナント', watchSelect('tenant', tenantOpts, x.tenant))}
+          ${row('帳票タイプ', watchSelect('layout', layoutOpts, x.layout))}
         </div>
       </section>
 
@@ -5761,14 +5730,14 @@ function renderWatchForm(x) {
         </div>
       </section>
 
-      </div>
-      <div class="watch-col">
+    </div>
+    <div class="watch-col">
 
       <section class="watch-sec">
         <h3 class="watch-sec-head">二重取込防止</h3>
         <div class="watch-fields">
-          ${row('同一ファイルを除外', toggle('dupGuard', x.dupGuard))}
-          ${row('判定方法', sel('dupMethod', Object.keys(WATCH_DUP).map((k) => [k, WATCH_DUP[k]]), x.dupMethod))}
+          ${row('同一ファイルを除外', watchToggle('dupGuard', x.dupGuard))}
+          ${row('判定方法', watchSelect('dupMethod', Object.keys(WATCH_DUP).map((k) => [k, WATCH_DUP[k]]), x.dupMethod))}
         </div>
       </section>
 
@@ -5783,8 +5752,8 @@ function renderWatchForm(x) {
       <section class="watch-sec">
         <h3 class="watch-sec-head">エラー通知</h3>
         <div class="watch-fields">
-          ${row('通知する', toggle('notify', x.notify))}
-          ${row('通知条件', sel('notifyOn', Object.keys(WATCH_NOTIFY_ON).map((k) => [k, WATCH_NOTIFY_ON[k]]), x.notifyOn))}
+          ${row('通知する', watchToggle('notify', x.notify))}
+          ${row('通知条件', watchSelect('notifyOn', Object.keys(WATCH_NOTIFY_ON).map((k) => [k, WATCH_NOTIFY_ON[k]]), x.notifyOn))}
           ${row('宛先メール', `<input class="fld" data-wf="notifyMail" value="${esc(x.notifyMail)}" placeholder="admin@example.jp" />`)}
           ${row('Webhook URL', `<input class="fld" data-wf="notifyUrl" value="${esc(x.notifyUrl)}" placeholder="任意" />`)}
         </div>
@@ -5793,50 +5762,12 @@ function renderWatchForm(x) {
       <section class="watch-sec">
         <h3 class="watch-sec-head">ログ</h3>
         <div class="watch-fields">
-          ${row('詳細度', sel('logLevel', WATCH_LOG_LEVELS.map((v) => [v, v]), x.logLevel))}
+          ${row('詳細度', watchSelect('logLevel', WATCH_LOG_LEVELS.map((v) => [v, v]), x.logLevel))}
           ${row('保存先', `<input class="fld mono" data-wf="logPath" value="${esc(x.logPath)}" />`, true)}
         </div>
       </section>
 
-      </div>
-    </div>`;
-}
-
-function renderWatch() {
-  const w = watchState();
-  if (w.edit && !byId(WATCHES, w.edit)) w.edit = null;
-
-  /* 1 行＝監視フォルダ 1 つ。編集は行の下に開く（画面遷移しない）。 */
-  const row = (x) => {
-    const open = w.edit === x.id;
-    return `<tr class="${open ? 'is-open' : ''}">
-      <td class="watch-on-cell"><button type="button" class="tgl${x.on ? '' : ' off'}" data-watchon="${x.id}" role="switch" aria-checked="${x.on}" aria-label="有効"><span class="tgl-knob"></span></button></td>
-      <td class="watch-name-cell">${esc(x.name || '（名称未設定）')}</td>
-      <td class="watch-path-cell mono">${esc(x.path || '—')}</td>
-      <td>${esc(watchTenantName(x.tenant))}</td>
-      <td class="watch-layout-cell">${esc(watchLayoutName(x.layout))}</td>
-      <td>${esc(WATCH_AFTER[x.after] || '—')}</td>
-      <td class="watch-upd-cell">${esc(x.updatedAt || '—')}</td>
-      <td class="watch-acts-cell"><button class="act-text" data-watchedit="${x.id}">${open ? '閉じる' : '編集'}</button></td>
-    </tr>${open ? `<tr class="watch-detail-row"><td colspan="8">${renderWatchForm(x)}</td></tr>` : ''}`;
-  };
-
-  return `${cfgHeader('自動アップロード', `<button class="btn primary" data-watchadd="1"><span class="ico i-add"></span>監視設定を追加</button>`)}
-  <p class="cfg-hint">指定フォルダにファイルが置かれると自動で取り込みます。1 行＝監視フォルダ 1 つ。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。</p>
-  <div class="tablewrap watch-table">
-    <table>
-      <thead><tr>
-        <th style="width:64px;text-align:center">有効</th>
-        <th style="width:200px">名称</th>
-        <th>監視パス</th>
-        <th style="width:120px">テナント</th>
-        <th style="width:240px">帳票タイプ</th>
-        <th style="width:80px">処理後</th>
-        <th style="width:140px">最終更新</th>
-        <th style="width:80px;text-align:right">操作</th>
-      </tr></thead>
-      <tbody>${WATCHES.length ? WATCHES.map(row).join('') : '<tr><td colspan="8" class="watch-empty-cell">監視設定がありません。「監視設定を追加」から作成してください。</td></tr>'}</tbody>
-    </table>
+    </div>
   </div>`;
 }
 
@@ -8653,72 +8584,30 @@ function bindCfgPages() {
   }
 
   /* ── 自動アップロード（監視設定） ──────────────────────────────────── */
-  if (state.watch) {
-    const curW = byId(WATCHES, state.watch.edit);
-    document.querySelectorAll('[data-watchedit]').forEach((b) => {
+  if (state.page === 'watch') {
+    document.querySelectorAll('[data-watchsave]').forEach((b) => {
       b.onclick = () => {
-        const id = b.dataset.watchedit;
-        state.watch.edit = (state.watch.edit === id) ? null : id;
+        if (!String(WATCH.path || '').trim()) { toast('監視パスを入力してください'); return; }
+        WATCH.updatedAt = nowStamp(); render(); toast('設定を保存しました');
+      };
+    });
+    document.querySelectorAll('[data-wf]').forEach((el) => {
+      const k = el.dataset.wf;
+      const put = () => { WATCH[k] = (el.type === 'number') ? Number(el.value) : el.value; };
+      el.oninput = put;
+      el.onchange = () => { put(); render(); };
+    });
+    document.querySelectorAll('[data-wf-toggle]').forEach((b) => {
+      b.onclick = () => {
+        const k = b.dataset.wfToggle;
+        WATCH[k] = !WATCH[k];
+        if (k === 'on') WATCH.updatedAt = nowStamp();
         render();
       };
     });
-    document.querySelectorAll('[data-watchon]').forEach((b) => {
-      b.onclick = () => {
-        const x = byId(WATCHES, b.dataset.watchon); if (!x) return;
-        x.on = !x.on; x.updatedAt = nowStamp(); render();
-      };
+    document.querySelectorAll('[data-wf-radio]').forEach((r) => {
+      r.onchange = () => { WATCH[r.dataset.wfRadio] = r.value; render(); };
     });
-    const addW = document.querySelector('[data-watchadd]');
-    if (addW) addW.onclick = () => {
-      const id = `w${Date.now()}`;
-      WATCHES.push({
-        id, on: true, name: '新しい監視設定', path: '', pattern: '*.pdf', startFile: '', caseSensitive: false,
-        tenant: (TENANTS[0] || {}).id || '', layout: 'auto',
-        after: 'move', afterDir: '',
-        dupGuard: true, dupMethod: 'meta',
-        retry: 3, retryGap: 5,
-        notify: false, notifyOn: 'fail', notifyMail: '', notifyUrl: '',
-        logLevel: '標準', logPath: '\\\\filesv01\\ログ\\自動アップロード',
-        updatedAt: nowStamp(),
-      });
-      state.watch.edit = id; render();
-    };
-    document.querySelectorAll('[data-watchdel]').forEach((b) => {
-      b.onclick = () => {
-        const x = byId(WATCHES, b.dataset.watchdel); if (!x) return;
-        if (!window.confirm(`「${x.name}」を削除しますか？`)) return;
-        WATCHES = WATCHES.filter((y) => y.id !== x.id);
-        state.watch.edit = null;
-        render(); toast('監視設定を削除しました');
-      };
-    });
-    document.querySelectorAll('[data-watchsave]').forEach((b) => {
-      b.onclick = () => {
-        const x = byId(WATCHES, b.dataset.watchsave); if (!x) return;
-        if (!String(x.name || '').trim()) { toast('名称を入力してください'); return; }
-        if (!String(x.path || '').trim()) { toast('監視パスを入力してください'); return; }
-        x.updatedAt = nowStamp(); render(); toast('監視設定を保存しました');
-      };
-    });
-    if (curW) {
-      document.querySelectorAll('[data-wf]').forEach((el) => {
-        const k = el.dataset.wf;
-        const put = () => { curW[k] = (el.type === 'number') ? Number(el.value) : el.value; };
-        el.oninput = put;
-        el.onchange = () => { put(); render(); };
-      });
-      document.querySelectorAll('[data-wf-toggle]').forEach((b) => {
-        b.onclick = () => {
-          const k = b.dataset.wfToggle;
-          curW[k] = !curW[k];
-          if (k === 'on') curW.updatedAt = nowStamp();
-          render();
-        };
-      });
-      document.querySelectorAll('[data-wf-radio]').forEach((r) => {
-        r.onchange = () => { curW[r.dataset.wfRadio] = r.value; render(); };
-      });
-    }
   }
 
   /* アクセス設定：タブ切替 */

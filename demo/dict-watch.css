@@ -332,132 +332,25 @@
 .dict-bulk-preview { max-height: 240px; border: 1px solid var(--line); border-radius: 2px; }
 
 /* ── 自動アップロード ─────────────────────────────────────────────── */
-/* 1 行＝監視フォルダ 1 つ。行の「編集」で下に設定パネルが開く。
-   設定パネルは 2 段組み（監視先・取込先・処理後 ／ 二重取込・再実行・通知・ログ）。 */
-
-/* この画面はページごと縦スクロールさせる（.maincol の overflow:hidden を解除） */
+/* 1 画面 1 設定（監視フォルダは 1 つ）。顧客要件の 6 項目を
+   2 段組みのセクションとしてそのまま並べる。 */
 #app[data-page="watch"] .maincol { overflow-y: auto; }
 
-.watch-table {
-  border: 1px solid var(--line);
-  background: #fff;
-}
-
-.watch-table table { min-width: 1020px; width: 100%; }
-.watch-table thead th { white-space: nowrap; background: #eef5fd; }
-.watch-table tbody td { vertical-align: middle; }
-
-.watch-table tbody tr.is-open > td { background: #f4f9fe; }
-
-.watch-on-cell { text-align: center; }
-
-/* 一覧内のトグルは文字ラベルを持たないので小さく */
-.watch-on-cell .tgl {
-  width: 34px;
-  height: 20px;
-  padding: 0;
-  vertical-align: middle;
-}
-
-.watch-on-cell .tgl .tgl-knob {
-  top: 3px;
-  right: 3px;
-  width: 14px;
-  height: 14px;
-}
-
-.watch-on-cell .tgl.off .tgl-knob { right: auto; left: 3px; }
-
-.watch-name-cell {
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-.watch-path-cell {
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-3);
-}
-
-.watch-layout-cell {
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-}
-
-.watch-upd-cell {
-  font-size: 11.5px;
-  color: var(--text-2);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.watch-acts-cell { text-align: right; white-space: nowrap; }
-
-.watch-empty-cell {
-  padding: 40px 16px !important;
-  text-align: center;
-  color: var(--text-3);
-}
-
-/* 展開した設定パネル ───────────────────────────────────────────── */
-.watch-detail-row > td {
-  padding: 0 !important;
-  border-top: 1px solid var(--line);
-  background: #f7fafd;
-}
-
-.watch-main-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
-  border-bottom: 1px solid var(--line);
-  background: #fff;
-}
-
-.watch-head-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.watch-head-text h2 {
-  margin: 0;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.35;
-}
-
-.watch-head-text .muted {
-  font-size: 11px;
-  color: var(--text-3);
-  font-variant-numeric: tabular-nums;
-}
-
-.watch-head-lab {
-  font-size: 11.5px;
-  color: var(--text-3);
-}
-
-.watch-main-head .tgl {
+#app[data-page="watch"] .cfg-head .tgl {
   width: 70px;
   height: 26px;
 }
 
-/* 2 段組み：左＝監視先・取込先・処理後 ／ 右＝二重取込・再実行・通知・ログ */
+.watch-head-lab {
+  margin-right: 2px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
 .watch-body {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 14px 16px;
 }
 
 .watch-col {
@@ -533,8 +426,8 @@
 }
 
 /* OFF 時の白文字が読めるよう、灰色を少し濃くする */
-.watch-table .tgl.off,
-.wf .tgl.off { background: #98a1b0; }
+.wf .tgl.off,
+#app[data-page="watch"] .cfg-head .tgl.off { background: #98a1b0; }
 
 /* ラジオ（処理後のファイル） */
 .watch-radios {
