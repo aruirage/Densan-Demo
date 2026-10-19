@@ -167,6 +167,16 @@ var GROUP_OPS = {
 (function applyGroupModel() {
   var list = (typeof GROUPS !== 'undefined' && GROUPS) || null;
   if (!list) return;
+  /* 旧グループ（g1..g9）はこの直後で消えるので、先に新バケツへの読み替え表を作る。
+     帳票権限表（TICKET_PERMS）は旧 ID を持ったままなので、これが無いと
+     セルに「g1」のような内部 ID がそのまま出る。 */
+  var OLD2NEW = {};
+  list.forEach(function (g) {
+    if (!g || !g.id) return;
+    OLD2NEW[g.id] = (g.kind === '承認' || g.kind === '再承認') ? 'ga'
+                  : g.kind === '確認' ? 'gc'
+                  : g.kind === 'アップロード' ? 'gu' : 'gm';
+  });
   var upload = ['閲覧', 'アップロード'];
   var confirm = ['閲覧', '確認'];
   var approve = ['閲覧', '確認', '承認'];
@@ -200,6 +210,15 @@ var GROUP_OPS = {
     gu: ['l1', 'l4', 'l7']
   };
   if (perms) {
+    /* 担当 ID を新バケツへ読み替える（g1 → gc など）。重複は落とす。 */
+    Object.keys(perms).forEach(function (lid) {
+      var p = perms[lid] || {};
+      ['view', 'fix', 'confirm', 'approve', 'reapprove'].forEach(function (k) {
+        if (!Array.isArray(p[k])) return;
+        p[k] = p[k].map(function (id) { return OLD2NEW[id] || id; })
+                   .filter(function (id, i, a) { return a.indexOf(id) === i; });
+      });
+    });
     var seen = {};
     Object.keys(assign).forEach(function (gid) {
       assign[gid].forEach(function (lid) {
@@ -213,6 +232,25 @@ var GROUP_OPS = {
       if (seen[lid]) return;
       if (!perms[lid]) perms[lid] = { view: [], confirm: [], approve: [], reapprove: [] };
       if (!perms[lid].view || !perms[lid].view.length) perms[lid].view = ['gm'];
+    });
+    /* 未設定の操作列は、その操作を持つ一番軽いバケツで埋める
+       （GROUP_OPS が持っている情報だけで決める＝担当を勝手に作らない）。
+       upload→読取／fix→確認／export→管理者。 */
+    var ACT_ORDER = ['gu', 'gc', 'ga', 'gm'];
+    var bucketFor = function (act) {
+      for (var i = 0; i < ACT_ORDER.length; i += 1) {
+        var ops = GROUP_OPS[ACT_ORDER[i]] || [];
+        if (ops.indexOf(act) >= 0) return ACT_ORDER[i];
+      }
+      return null;
+    };
+    Object.keys(perms).forEach(function (lid) {
+      var p = perms[lid];
+      ['upload', 'fix', 'export', 'settings'].forEach(function (act) {
+        if (Array.isArray(p[act]) && p[act].length) return;
+        var b = bucketFor(act);
+        if (b) p[act] = [b];
+      });
     });
   }
   /* グループから操作権限を導出（複数所属は和集合） */
@@ -381,7 +419,7 @@ def apply_group_kind_input(src):
 
 PERM_TABLE_CSS = """
 /* ══ 帳票権限管理・ユーザー管理の見た目を規整（serve.py 注入） ══ */
-.perm-matrix { table-layout: fixed; min-width: 1520px; }
+.perm-matrix { table-layout: fixed; min-width: 1180px; }
 .perm-matrix th, .perm-matrix td { padding: 8px 10px !important; vertical-align: middle; }
 .perm-matrix thead th { background: #eef5fd; color: #4a637c; font-weight: 600; white-space: nowrap; }
 .perm-matrix th.is-sticky, .perm-matrix td.is-sticky {
@@ -709,12 +747,7 @@ RESULT_FREEZE_CSS = """
 /* 横スクロール（全列を潰さずに表示） */
 .result-content > .tablewrap, .result-panel .tablewrap { overflow-x: auto !important; }
 .result-table th, .result-table td { overflow: hidden; text-overflow: ellipsis; }
-/* 見出しと値の整列を揃える（確認者／承認者／作成日時／更新日時 の見出しも左寄せ）
-   styles.css の th 中央寄せ（:not 連鎖で詳細度が高い）を上書きする */
-.result-table thead th:nth-child(7),
-.result-table thead th:nth-child(8),
-.result-table thead th:nth-child(9),
-.result-table thead th:nth-child(10) { text-align: left !important; }
+/* 見出しは全列そろって中央寄せ（値の左寄せ・右寄せはそのまま） */
 .result-table td:nth-child(2), .result-table td:nth-child(3),
 .result-table td:nth-child(6) { white-space: nowrap; }
 
@@ -724,7 +757,7 @@ RESULT_FREEZE_CSS = """
   position: sticky !important; right: 0; z-index: 3;
   background: #fff; box-shadow: -8px 0 10px -8px rgba(31, 47, 61, .18);
 }
-.result-table thead th:last-child { z-index: 4; background: #eef5fd; text-align: right !important; padding-right: 16px; }
+.result-table thead th:last-child { z-index: 4; background: #eef5fd; text-align: center !important; padding-right: 16px; }
 .result-table tbody tr:hover td.result-actions-cell { background: #f7faff; }
 .result-table tbody tr.is-picked td.result-actions-cell { background: #f2f7fd; }
 .result-table .result-actions-cell { padding-left: 6px; padding-right: 6px; }
@@ -1303,16 +1336,9 @@ const permCellHtml = (layoutId, key, label, hint, cur) =>
   + permChips(cur) + '</button></td>';
 const permCellsOf = (l) => {
   const p = permsOf(l.id);
-  const n = approvalStageCountOf(l.id);
-  const maxN = maxApprovalStageCount();
+  /* 承認は全廃したので段ごとのセルは描かない。
+     ヘッダ（PERM_COL_BASE ＋ PERM_COL_TAIL の 5 列）と数を合わせる。 */
   let html = PERM_COL_BASE.map((a) => permCellHtml(l.id, a.key, a.label, a.hint, (a.key === 'fix' ? (p.fix || []) : (p[a.key] || [])))).join('');
-  for (let k = 1; k <= maxN; k++) {
-    if (k > n) { html += '<td class="permcell is-na"><span class="muted">—</span></td>'; continue; }
-    const cur = stageTargetsOf(l.id, k - 1);
-    /* 段数は配ってあるのに担当が空 → 未設定の警告マーカー */
-    if (!cur.length) html += '<td class="permcell is-unset"><span class="unset-mark" title="承認' + k + ' の担当が未設定です">未設定</span></td>';
-    else html += permCellHtml(l.id, 'approve' + k, (maxN === 1 ? '承認' : '承認' + k), (k + ' 段目の承認'), cur);
-  }
   html += PERM_COL_TAIL.map((a) => permCellHtml(l.id, a.key, a.label, a.hint, p[a.key] || [])).join('');
   return html;
 };
@@ -2095,6 +2121,11 @@ def apply_read_op_finalize(src):
     # 重複ロール「万能（全権限）」を出さない（最終段で確実に当てる）
     src = src.replace("var SUPER_ROLE_ID = 'R9';", "var SUPER_ROLE_ID = 'R1';")
     src = src.replace("name: '万能（全権限）'", "name: 'システム管理者（全権限）'")
+    # グループ名を新設計（承認なし）に合わせる
+    src = src.replace("name: '承認グループ'", "name: '出力グループ'")
+    src = src.replace("name: '読取グループ'", "name: 'アップロードグループ'")
+    src = src.replace("name: '確認グループ'", "name: 'OCR結果確認グループ'")
+    src = src.replace("name: '管理者グループ'", "name: 'システム管理者グループ'")
     """最終調整：読取は独立した操作権限なので、旧ラベル寄せ（読取→閲覧）を外す。
 
     GROUP_NODE_ALIAS は apply_group_nodes が注入するため、パイプラインの最後で当てる。
@@ -2544,8 +2575,9 @@ def apply_perm_markup(src):
                       '<td class="roles-no no is-sticky">${i + 1}</td>\n      <td class="is-sticky"><div class="pt-name">${esc(dispLayout(l.id))}</div><div class="pt-sub">${esc(dispBiz(cat.business))} ／ ${esc(dispCat(cat.id))}</div></td>', 1)
     src = src.replace('<td><div class="acts"><button class="act-text" data-permclear="${l.id}">クリア</button></div></td>',
                       '<td class="acts"><button class="act-text" data-permclear="${l.id}">クリア</button></td>', 1)
-    # 見出し（小見出し）を段落から揃える
-    src = src.replace('帳票タイプ権限（閲覧／確認／承認／再承認）', '帳票タイプ権限（帳票タイプ × 操作）')
+    # 見出し（小見出し）を段落から揃える。列は apply_full_perm_acts で増減するため、
+    # 括弧の中身は固定文言にせず「帳票タイプ × 操作」に寄せる（列名とズレないように）。
+    src = re.sub(r'帳票タイプ権限（[^）]*）', '帳票タイプ権限（帳票タイプ × 操作）', src, count=1)
     return src
 
 
