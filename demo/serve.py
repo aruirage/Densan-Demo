@@ -1600,6 +1600,7 @@ def apply_roles_9(src):
     src = src.replace("var SUPER_ROLE_ID = 'R9';", "var SUPER_ROLE_ID = 'R1';")
     src = src.replace('<button class="btn primary" id="rvLockOk">確認完了</button>',
                       '<button class="btn" id="rvLockSave" onclick="(function(){var s=document.getElementById(\'rvSave\');if(s)s.click();var c=document.getElementById(\'rvLockCancel\');if(c)c.click();})()">保存</button>\n        <button class="btn primary" id="rvLockOk">確認完了</button>')
+    src = src.replace('${fl.canSave ? `<button type="button" class="btn${saveBtnPrimary ? \' primary\' : \'\'}" id="rvSave">保存</button>` : \'\'}', '<button type="button" class="btn${saveBtnPrimary ? \' primary\' : \'\'}" id="rvSave">保存</button>', 1)
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
