@@ -96,3 +96,22 @@
 - **`ENT_USERS` の照合は `uid`**（`id` は `'U1'`、`state.currentUser` は `'u1'`）。`u.id === uid` と書くと必ず false になる。
 - **`review-focus-fix.js` の `killActorSwitcher()` がデモ用 UI を DOM から削除する**：`.userpick` 配下の `.usermenu-switch` / `[data-demo-actor]` / `.demo-badge` は MutationObserver で描画直後に `remove()` される。ヘッダーに何か足しても消えるので、可視化したいときはコンソール出力など DOM 以外の手段にする。
 - **デモのモードはコンソールに出る**：`admin-mode.js` が `[demo] 権限モード：…` を `console.info`。既定＝全権限、`?perm=1`＝制限。
+- **`render()` は `app.innerHTML = ...` の後に `bind()` を呼ぶ**。`bind()` の途中で例外が出ると**HTML は描画されるがイベントが一切付かない**（タブ・メニュー・検索が無反応）。「状態が消えた」「押しても反応しない」系の症状はまずここを疑う。`bind()` の先頭で未定義関数を呼んでいた実例あり（2026-10-17）。
+- **`bind()` 内の任意の後処理は `typeof fn === 'function'` でガードする**。並行セッションが呼び出しだけ足して定義を忘れる事故が起きる。
+- **出力まわり**：`exportSnapshot`（前回出力時の項目値 JSON）と `exportDelta(id)` で差分を出し、`commitExport()` が差分ゼロなら出力しない。一覧のバッジは `exportDiffBadge()`。
+- **確認ボタン**：`#rvConfirm` → `state.reviewConfirmLockOpen` → `renderReviewConfirmLockDialog()`（以後修正不可の警告）。
+- **大型仕様（2026-10-17 の 11 ページ仕様）は別セッションと同時進行中**。相手は read-modify-write で app.js 全体を 30〜60 秒ごとに書き換える。Edit したら**必ず `node -e` で文字列の存在を確認**し、消えていたら入れ直す。ファイル内の出現数が往復するのが症状。
+- **`agent-browser open` は同一 URL だと古い app.js を掴むことがある**（no-store でも）。`open "http://127.0.0.1:8905/index.html?t=$(date +%s)"` で必ずキャッシュバスト。症状は「足したはずの関数が `typeof` で undefined」。
+- **辞書登録**：`DICTS` / `DICT_ENTRIES` / `DICT_SEEDS`、`renderDictionary()` + `renderDictDialogs()`。**自動アップロード**：`WATCH_ORDER` / `WATCHES` / `RESULT_SEGS`、`renderWatch()` + `renderWatchDialog()`。CSS は `demo/dict-watch.css`。
+- **`applyHash()` の `page` ホワイトリストは render() の route 配列とは別物**。新ページを足したら両方に追加する（片方だけだと `#page=xxx` が result に落ちる）。
+- **状態は 5 つだけ（2026-10-17 ユーザー確定）**：読取中／読取完了／読取失敗／確認済み／出力済。`TAB_STATUS`＝`STATUS_ORDER`＝この 5 つで、**読取待ち・分類中は一覧に出さない**（アップロード画面だけの一時状態。点过读取的才收进来，进来就是 読取中）。承認／差戻／確認中は廃止済みなので、種データ `FILES` にも残さない（`waiting`/`classifying`→`reading`、`checking`/`returned`→`done`、`approved`→`confirmed`／出力日時ありは `exported`）。
+- **読取結果一覧の操作葉は 再読取 → 修正 → 確認 → ダウンロード → 削除 の 5 つ**。`MENU_TREE` では `op-upload` を `result` の子に置かず、`upload`（新規アップロード）の子に置く＝アップロードボタンはアップロード画面に描く。`MENU_PERMS` に親ノード id（`'upload'`）を書かない、必ず葉 id を書く。
+- **業務ボタンが 1 つも無いユーザーは「画面は開けるが操作列を描かない」**。`renderTable()` の `showOps` が false のとき `<col>`／`<th>操作</th>`／`<td class="result-actions-cell">` を丸ごと出さない（空列を残さない）。行の操作セルは `resultActionsCell(f)` に切り出し済み。状態で disabled：再読取/修正/確認＝読取完了・読取失敗のみ（確認済み以降は修正不可）、DL＝読取中は不可。
+- **`?perm=1` の判定は `(?:^|[?&#])perm=1(?:&|#|$)`**。`location.search + location.hash` を連結して見るため、`?t=…&perm=1#page=…` の形では末尾が `#` になる。`(?:&|$)` だけだと制限モードに入らない。
+- **ユーザー管理（`#page=users`）は `.users-page`（2 カラム）を使う。`.roles-page` を流用しない**：`.roles-page` は `flex-direction:column` なので、inline で `display:flex` を書いても縦積みになる。左 `.users-side`（280px）＝操作グループのツリー（`.ug-tree` / `.ug-node` / `.ug-row`）、右 `.users-main`＝直属ユーザー表。ツリーの子は**親行の外**（`.ug-node` の兄弟）に展開する。親 `.ug-row` の中に入れると flex で同じ行に並ぶ。
+- **帳票タイプのデータ権限は「組織 → ユーザー」の 2 段**（2026-10-17 ユーザー指示）。`TICKET_TYPES[].groupIds / userIds` と `LAYOUT[].groupIds / userIds` の両方に持たせる（前者＝設定画面、後者＝一覧の絞り込み）。UI は `wizMulti()` のチップ表示（`.ms.ms-chips` / `.mschip` / `data-wms*`）で、組織を選ぶとユーザー候補がその組織のメンバーに絞られる。**組織だけ選べば全メンバーが対象、ユーザーも選べばその人だけ**。判定は `canSeeLayout()`：組織未設定＝全員可、管理者は常に可。承認フロー（承認不要／1段／2段）と確認担当・承認担当は撤去済み。
+- **新規アップロードの葉は「アップロード」「読み取り実行」の 2 つ**（2026-10-17 追加）。`op-upload`＝ファイル選択、`op-read`＝選択帳票読取ボタン。`userHasOp('read')` が無ければ `#upRead` を描かない。`#upDel`（一括削除）は `userHasOp('delete')`。
+- **⚠️ 実際に配信されるデータは `serve.py` の注入が上書きする**（2026-10-19 判明）。`serve.py` は `patched_app_js()` で配信時に app.js を書き換える。とくに **`GROUP_MODEL` は `GROUPS` を丸ごと差し替える**（読取／確認／承認／管理者の 4 バケツ）。したがって **`app.js` の `GROUPS` を編集しても画面には出ない**。グループ構成を変えるときは `serve.py` の `GROUP_MODEL`（と必要なら `app.js`）の両方を直す。
+- **`serve.py` は起動時にしか読まれない**。編集したら `kill <pid>` → `run_in_background` で再起動。反映確認は `curl -s --noproxy '*' http://127.0.0.1:8787/app.js | wc -c`（パッチ後は 46 万字前後。raw は 43 万字前後）。`python3 serve.py --build /tmp/x` でパッチ適用後の実ファイルを確認できる。
+- **`app.js` を構造変更したら `serve.py` の正規表現パッチが壊れていないか必ず確認する**。実例：`apply_permission_patch()` が `const canView = …` の宣言だけを消していたため、`visibleFiles()` から `canSeeFile()` へ切り出すと `canView is not defined` で**一覧が真っ白**になった（2026-10-19）。
+- **テストは 2 本立て**：`tests/result-ui.test.cjs`＝生 `app.js`（ロジック）、`tests/served-bundle.test.cjs`＝`serve.py --build` の成果物（配信される実物）。後者は「生ソースは緑なのに画面が壊れている」を防ぐためのもの。実行は `node --test tests/*.test.cjs`（`tests/` を渡すと 1 件も走らない）。
