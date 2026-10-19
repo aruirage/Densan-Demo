@@ -2953,7 +2953,7 @@ def build_static(outdir):
         f.write(FOLDER_VISIBILITY.encode('utf-8'))
 
     # ④ 静的ファイル（CSS・overlay・assets）
-    for name in ('styles.css', 'prompt-bar-fix.css', 'export-dialog.css', 'type-assignee.css',
+    for name in ('styles.css', 'prompt-bar-fix.css', 'export-dialog.css', 'export-cfg-fix.css', 'type-assignee.css',
                  'permissions-groups.css', 'brand-densan.css', 'dict-watch.css', 'review-focus-fix.js'):
         src = os.path.join(DIR, name)
         if os.path.isfile(src):

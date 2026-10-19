@@ -1383,3 +1383,67 @@ test('出力設定は帳票タイプごとに独立している', () => {
   run('exportCfgOf(TICKET_TYPES[0]).record = "perRow"');
   assert.equal(run('exportCfgOf(TICKET_TYPES[1]).record'), 'perTicket');
 });
+
+test('エクスポートダイアログ: 管理者は出力形式（横向/竖向/結合）と列設定を編集できる', () => {
+  const run = app();
+  run('var window={DEMO_FULL_ADMIN:true}; state.exportOpen=true; state.picked={}; state.picked[FILES_DATA[0].id]=true; visibleFiles=function(){ return FILES_DATA; };');
+  const html = run('renderExportDialog()');
+  /* 出力形式：3 つのラジオ（横向／竖向／結合） */
+  assert.equal((html.match(/data-exprecord="/g) || []).length, 3);
+  assert.ok(html.includes('出力形式'));
+  assert.ok(html.includes('横向（1 帳票 = 1 行）'));
+  assert.ok(html.includes('竖向（項目名／項目値）'));
+  assert.ok(html.includes('結合（一般＋テーブル Left Join）'));
+  /* 列設定：出力項目（一般 8 件）のトグル行＋初期化ボタン */
+  assert.ok(html.includes('列設定（出力項目・列順）'));
+  assert.ok(html.includes('id="expColReset"'));
+  assert.ok((html.match(/data-colact="on"/g) || []).length >= 8);
+  /* 管理者は disabled にならない */
+  assert.doesNotMatch(html, /data-exprecord="perTicket"[^>]*disabled/);
+});
+
+test('エクスポートダイアログ: 管理者以外は出力形式・列設定は変更不可', () => {
+  const run = app();
+  run('state.currentUser="u7"; state.exportOpen=true; state.picked={}; state.picked[FILES_DATA[0].id]=true; visibleFiles=function(){ return FILES_DATA; };');
+  const html = run('renderExportDialog()');
+  /* 出力形式は選択肢だけ表示・無効、編集不可の注記 */
+  assert.ok(html.includes('出力形式の変更は管理者のみ可能です'));
+  assert.match(html, /data-exprecord="perTicket"[^>]*disabled/);
+  /* 列設定ブロックは管理者以外には出ない（設定変更は管理者のみ：機能確認表 No.15） */
+  assert.doesNotMatch(html, /列設定（出力項目・列順）/);
+  assert.doesNotMatch(html, /id="expColReset"/);
+});
+
+test('CSV 出力: 横向/竖向/結合の 3 レイアウトが要件 R7 に従う', () => {
+  const run = app();
+  run('state.exportCfg={fileNameFromInput:false,encoding:"UTF-8"};');
+  const fid = run('FILES_DATA[0].id');
+  const csv = (rec) => JSON.parse(run('(function(){var t=TICKET_TYPES.find(x=>layoutIdOfTicketType(x)===FILES_DATA[0].layout); exportCfgOf(t).record=' + JSON.stringify(rec) + '; var r=buildExportCsv([' + JSON.stringify(fid) + ']); return JSON.stringify({head:r.text.split("\\r\\n")[0], rows:r.text.split("\\r\\n").length-1});})()'));
+  /* 横向：1 帳票 1 行、ヘッダ＝一般項目 */
+  const per = csv('perTicket');
+  assert.ok(per.head.includes('計画書区分'));
+  assert.equal(per.rows, 1);
+  /* 竖向：項目名／項目値、一般 8 項目分の行 */
+  const v = csv('perRow');
+  assert.ok(v.head.includes('項目,値'));
+  assert.equal(v.rows, 8);
+  /* 結合：一般項目 ＋ テーブル列（商品明細/税率内訳/備考）が Left Join、テーブル行ごと展開（モック 2 行） */
+  const c = csv('combine');
+  assert.ok(c.head.includes('商品明細テーブル / No.'));
+  assert.ok(c.head.includes('税率内訳テーブル / 税率'));
+  assert.equal(c.rows, 2);
+});
+
+test('CSV 出力: 列の表示/非表示・列順がヘッダに反映される', () => {
+  const run = app();
+  run('state.exportCfg={fileNameFromInput:false,encoding:"UTF-8"};');
+  const fid = run('FILES_DATA[0].id');
+  /* 一般項目を先頭 1 件だけ ON にする */
+  run('(function(){var t=TICKET_TYPES.find(x=>layoutIdOfTicketType(x)===FILES_DATA[0].layout); var c=exportCfgOf(t).cols; c.forEach((x,i)=>{x.on=(i===0);}); exportCfgOf(t).record="perTicket";})()');
+  const head = run('(function(){var r=buildExportCsv([' + JSON.stringify(fid) + ']); return r.text.split("\\r\\n")[0];})()');
+  assert.equal(head, '計画書区分');
+  /* 列順を入れ替え（提出日 を先頭に）して全件 ON */
+  run('(function(){var t=TICKET_TYPES.find(x=>layoutIdOfTicketType(x)===FILES_DATA[0].layout); var c=exportCfgOf(t).cols; var x=c.splice(1,1)[0]; c.unshift(x); c.forEach((y)=>{y.on=true;});})()');
+  const head2 = run('(function(){var r=buildExportCsv([' + JSON.stringify(fid) + ']); return r.text.split("\\r\\n")[0];})()');
+  assert.ok(head2.startsWith('提出日,'));
+});

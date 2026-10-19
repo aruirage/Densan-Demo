@@ -3865,6 +3865,11 @@ function seedExportSnapshots() {
   }
   /** 同一帳票タイプの複数ファイルを 1 つの CSV にまとめる。
    *   ヘッダ＝設定された列名・列順。入力名と同じが ON なら先頭に「入力ファイル名」列を追加。 */
+  /* CSV 出力の 3 レイアウト（機能確認表 No.15／要件 R7）：
+   *   perTicket（横向）：1 帳票 1 行、列＝抽出項目
+   *   perRow   （竖向）：項目名／項目値（1 項目 1 行）
+   *   combine  （結合）：一般項目 ＋ テーブル項目を Left Join（1 帳票 1 行、テーブル行ごと展開）
+   *   列名・列順は exportCfgOf(t).cols（帳票タイプごと）から。値はモック（OCR_FIELDS.b6）。 */
   function buildExportCsv(ids) {
     const C = state.exportCfg || {};
     const enc = C.encoding || 'UTF-8';
@@ -3872,6 +3877,7 @@ function seedExportSnapshots() {
     if (!files.length) return null;
     const t = ticketTypeOfFile(files[0]);
     const tcfg = t ? exportCfgOf(t) : {};
+    const layout = tcfg.record || 'perTicket';
     const delim = tcfg.delimiter === 'タブ' ? '\t' : (tcfg.delimiter === 'セミコロン' ? ';' : ',');
     const newline = tcfg.newline === 'LF' ? '\n' : '\r\n';
     const withHeader = tcfg.header !== false;
@@ -3883,6 +3889,40 @@ function seedExportSnapshots() {
     const cellsFor = (f) => (cols ? cols.map((c, i) => exportCellValue(f.id, i)) : OCR_FIELDS.b6.map((x, i) => exportCellValue(f.id, i)))
       .map((v) => formatDateValue(v, dateFmt))
       .map((v) => (v === '' ? emptyMode : v));
+    /* 結合出力：一般項目 ＋ 全テーブルの列を Left Join（モック：テーブル行は sample 値を 2 行生成） */
+    if (layout === 'combine') {
+      const tables = ensureTypeTables() || [];
+      const tbMeta = [];
+      tables.forEach((tb) => (tb.cols || []).forEach((c) => tbMeta.push({ tb: tb.name, c })));
+      const tbLabels = tbMeta.map((m) => `${m.tb} / ${m.c.name}`);
+      const headerCells = (withFileCol ? ['入力ファイル名'] : []).concat(labels).concat(tbLabels);
+      const rows = [];
+      files.forEach((f) => {
+        const gen = cellsFor(f);
+        for (let r = 0; r < 2; r++) {
+          const tbc = tbMeta.map((m) => String(m.c.sample != null ? m.c.sample : ''));
+          rows.push((withFileCol ? [dispFileName(f.id)] : []).concat(gen).concat(tbc));
+        }
+      });
+      const all = withHeader ? [headerCells].concat(rows) : rows;
+      const text = all.map((r) => r.map((cell) => csvEscape(cell, delim)).join(delim)).join(newline);
+      return { text, enc, delim };
+    }
+    /* 竖向出力：項目名／項目値（1 項目 1 行） */
+    if (layout === 'perRow') {
+      const headerCells = (withFileCol ? ['入力ファイル名', '項目', '値'] : ['項目', '値']);
+      const rows = [];
+      files.forEach((f) => {
+        const gen = cellsFor(f);
+        labels.forEach((lab, i) => {
+          rows.push(withFileCol ? [dispFileName(f.id), lab, gen[i]] : [lab, gen[i]]);
+        });
+      });
+      const all = withHeader ? [headerCells].concat(rows) : rows;
+      const text = all.map((r) => r.map((cell) => csvEscape(cell, delim)).join(delim)).join(newline);
+      return { text, enc, delim };
+    }
+    /* 横向出力（既定）：1 帳票 1 行 */
     const headerCells = (withFileCol ? ['入力ファイル名'] : []).concat(labels);
     const rows = files.map((f) => (withFileCol ? [dispFileName(f.id)] : []).concat(cellsFor(f)));
     const all = withHeader ? [headerCells].concat(rows) : rows;
@@ -4161,8 +4201,11 @@ function renderExportDialog() {
   const mixedTypes = pickedLayouts.length > 1;
   const exportType = TICKET_TYPES.find((x) => layoutIdOfTicketType(x) === pickedLayouts[0]);
   const exportCfg = exportType ? exportCfgOf(exportType) : null;
+  const admin = isTenantAdmin(state.currentUser);
+  const expCols = exportCfg && exportCfg.cols && exportCfg.cols.length ? exportCfg.cols : (exportCfg ? defaultExportCols() : []);
+  const expRecord = exportCfg ? (exportCfg.record || 'perTicket') : 'perTicket';
   const summary = exportCfg
-    ? `${(exportCfg.formats.join(' / ') || '—').toUpperCase()} ／ ${exportCfg.record === 'perRow' ? '明細行ごと' : '1 帳票 = 1 行'} ／ 出力項目 ${exportCfg.cols.filter((c) => c.on).length} 件`
+    ? `${(exportCfg.formats.join(' / ') || '—').toUpperCase()} ／ ${expRecord === 'perRow' ? '竖向' : expRecord === 'combine' ? '結合' : '横向'} ／ 出力項目 ${expCols.filter((c) => c.on).length} 件`
     : '';
   const sw = (key, on, label) => `
     <label class="switch exp-switch">
@@ -4181,13 +4224,24 @@ function renderExportDialog() {
 
   return `
   <div class="modal-back" id="expBack">
-    <div class="modal exp-modal" style="width:min(400px,100%)">
+    <div class="modal exp-modal" style="width:min(440px,100%)">
       <div class="modal-head"><b>エクスポート設定</b><span class="spacer"></span><button class="icon-btn" id="expClose"><span class="ico i-close"></span></button></div>
       <div class="modal-canvas exp-canvas">
         ${summary ? `<div class="exp-src-line"><span class="exp-src-k">帳票タイプの出力設定</span><b>${esc(summary)}</b></div>` : ''}
         <label class="exp-stack-field">
           <span class="exp-field-label"><i class="req">*</i>変換方式</span>
           <select class="fld exp-control" data-expcfg="encoding">${encodings.map((o) => `<option ${enc === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
+        </label>
+        <label class="exp-stack-field">
+          <span class="exp-field-label">出力形式</span>
+          <div class="exp-records">
+            ${['perTicket', 'perRow', 'combine'].map((rec) => `
+              <label class="exp-record${expRecord === rec ? ' on' : ''}">
+                <input type="radio" name="expRecord" data-exprecord="${rec}" ${expRecord === rec ? 'checked' : ''} ${admin ? '' : 'disabled'} />
+                <span>${rec === 'perTicket' ? '横向（1 帳票 = 1 行）' : rec === 'perRow' ? '竖向（項目名／項目値）' : '結合（一般＋テーブル Left Join）'}</span>
+              </label>`).join('')}
+          </div>
+          ${admin ? '' : '<div class="exp-note">出力形式の変更は管理者のみ可能です</div>'}
         </label>
         <div class="exp-switches">
           ${mixedTypes
@@ -4199,6 +4253,23 @@ function renderExportDialog() {
         </div>
           ${sw('requiredOnly', !!C.requiredOnly, '必須項目のみ')}
       </div>
+      ${(() => {
+        if (!admin || !expCols.length) return '';
+        const rows = expCols.map((c, i) => `
+          <div class="exp-col-row" data-colid="${esc(c.id)}">
+            <label class="switch sm exp-col-on"><input type="checkbox" data-colact="on" data-colid="${esc(c.id)}" ${c.on ? 'checked' : ''} /><span></span></label>
+            <input class="fld exp-col-label" data-colact="label" data-colid="${esc(c.id)}" value="${esc(c.label)}" />
+            <span class="exp-col-move">
+              <button type="button" class="exp-col-btn" data-colact="up" data-colid="${esc(c.id)}" ${i === 0 ? 'disabled' : ''} aria-label="上へ">▲</button>
+              <button type="button" class="exp-col-btn" data-colact="down" data-colid="${esc(c.id)}" ${i === expCols.length - 1 ? 'disabled' : ''} aria-label="下へ">▼</button>
+            </span>
+          </div>`).join('');
+        return `
+      <div class="exp-cols-wrap">
+        <div class="exp-cols-head"><span class="exp-cols-title">列設定（出力項目・列順）</span><button type="button" class="btn sm" id="expColReset">初期化</button></div>
+        <div class="exp-cols">${rows}</div>
+      </div>`;
+      })()}
       </div>
       <div class="modal-foot exp-foot">
         <span class="spacer"></span>
@@ -7926,6 +7997,39 @@ function bindFlowDialogs() {
         render();
       };
     });
+    /* 出力形式（横向／竖向／結合）と列設定（表示・列名・順番・初期化）のバインド。
+       選択中帳票タイプの exportCfg を直接書き換える（管理者のみ）。 */
+    const expPicked = (typeof visibleFiles === 'function' ? visibleFiles() : [])
+      .filter((f) => state.picked && state.picked[f.id]);
+    const expType = TICKET_TYPES.find((x) => layoutIdOfTicketType(x) === (expPicked[0] && expPicked[0].layout));
+    const isAdmin = isTenantAdmin(state.currentUser);
+    document.querySelectorAll('[data-exprecord]').forEach((el) => {
+      el.onchange = () => {
+        if (!isAdmin || !expType || !el.checked) return;
+        exportCfgOf(expType).record = el.dataset.exprecord;
+        render();
+      };
+    });
+    const applyCol = (cfg, colId, act, val) => {
+      const cols = cfg.cols || [];
+      const i = cols.findIndex((c) => c.id === colId);
+      if (i < 0) return;
+      if (act === 'on') cols[i].on = val;
+      else if (act === 'label') cols[i].label = val;
+      else if (act === 'up' && i > 0) { const t = cols[i - 1]; cols[i - 1] = cols[i]; cols[i] = t; }
+      else if (act === 'down' && i < cols.length - 1) { const t = cols[i + 1]; cols[i + 1] = cols[i]; cols[i] = t; }
+    };
+    document.querySelectorAll('[data-colact]').forEach((el) => {
+      const act = el.dataset.colact;
+      const colId = el.dataset.colid;
+      if (act === 'on' || act === 'up' || act === 'down') {
+        el.onclick = (e) => { e.preventDefault(); if (!isAdmin || !expType) return; applyCol(exportCfgOf(expType), colId, act, el.checked); render(); };
+      } else if (act === 'label') {
+        el.oninput = () => { if (!isAdmin || !expType) return; applyCol(exportCfgOf(expType), colId, 'label', el.value); };
+      }
+    });
+    const resetBtn = $('#expColReset');
+    if (resetBtn) resetBtn.onclick = () => { if (!isAdmin || !expType) return; exportCfgOf(expType).cols = defaultExportCols(); render(); toast('列設定を初期化しました'); };
     /* 出力ファイル名：プレビュー欄で直接入力する。
        1 文字ごとに全体を再描画するとフォーカスが飛ぶので、ここだけは state を直接更新する
        （表示しているのは input 自身なので、再描画しなくても見た目は追随する）。 */
