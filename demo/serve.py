@@ -1601,6 +1601,8 @@ def apply_roles_9(src):
     src = src.replace('<button class="btn primary" id="rvLockOk">確認完了</button>',
                       '<button class="btn" id="rvLockSave" onclick="(function(){var s=document.getElementById(\'rvSave\');if(s)s.click();var c=document.getElementById(\'rvLockCancel\');if(c)c.click();})()">保存</button>\n        <button class="btn primary" id="rvLockOk">確認完了</button>')
     src = src.replace('${fl.canSave ? `<button type="button" class="btn${saveBtnPrimary ? \' primary\' : \'\'}" id="rvSave">保存</button>` : \'\'}', '<button type="button" class="btn${saveBtnPrimary ? \' primary\' : \'\'}" id="rvSave">保存</button>', 1)
+    # canSave を常時 true に（確認画面フッターの保存を必ず出す）
+    src = src.replace("${fl.canSave ?", "${true ?")
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
