@@ -332,101 +332,325 @@
 .dict-bulk-preview { max-height: 240px; border: 1px solid var(--line); border-radius: 2px; }
 
 /* ── 自動アップロード ─────────────────────────────────────────────── */
-.watch-block {
-  margin-bottom: 18px;
-  padding: 14px 16px;
+/* 左：監視設定の一覧（フォルダ 1 件＝1 設定）／右：選択中 1 件の設定フォーム。
+   フォームは「監視先・取込先・処理後・二重取込・再実行・通知・ログ」の
+   7 セクションを 2 列グリッドで並べる。 */
+.watch-page {
+  display: flex;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
   border: 1px solid var(--line);
   border-radius: 2px;
   background: #fff;
 }
 
-.watch-block-head {
+/* 左ペイン ─────────────────────────────────────────────────────── */
+.watch-side {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 10px;
+  flex-direction: column;
+  width: 268px;
+  flex: 0 0 268px;
+  border-right: 1px solid var(--line);
+  background: #fbfcfe;
 }
 
-.watch-block-head h2 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.watch-block-head .muted { font-size: 11.5px; color: var(--text-3); }
-
-.watch-order {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  max-width: 520px;
-}
-
-.watch-order-item {
+.watch-side-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  margin-bottom: 6px;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  background: #fff;
-  font-size: 12.5px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 700;
   color: var(--text);
-  cursor: grab;
+  background: #f4f8fd;
 }
 
-.watch-order-item.over { border-color: var(--accent-2); background: var(--accent-bg); }
-.watch-order-item:active { cursor: grabbing; }
-
-.wo-no {
-  flex: 0 0 22px;
+.watch-side-head .muted {
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--text-3);
   font-variant-numeric: tabular-nums;
 }
 
-.wo-grip { flex: 0 0 auto; color: var(--text-3); letter-spacing: -1px; }
-.wo-name { flex: 1 1 auto; min-width: 0; }
+.watch-side-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
 
-.watch-table table { min-width: 0; width: 100%; }
-.watch-table .acts { justify-content: flex-start; gap: 10px; }
+.watch-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  background: transparent;
+}
 
+.watch-item.on {
+  border-left-color: var(--accent);
+  background: #fff;
+}
+
+.watch-item:hover { background: #fff; }
+
+/* 一覧内のトグルは小さめ（文字ラベルを持たない） */
+.watch-item .tgl {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 20px;
+  padding: 0;
+  margin-top: 2px;
+}
+
+.watch-item .tgl .tgl-knob {
+  top: 3px;
+  right: 3px;
+  width: 14px;
+  height: 14px;
+}
+
+.watch-item .tgl.off .tgl-knob { right: auto; left: 3px; }
+
+.watch-item-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.watch-item-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch-item.on .watch-item-title { color: var(--accent); }
+
+.watch-item-path {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch-item-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch-side-empty {
+  padding: 28px 14px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-3);
+}
+
+/* 右ペイン ─────────────────────────────────────────────────────── */
+.watch-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.watch-main-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #f7fafd;
+}
+
+.watch-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.watch-head-text h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch-head-text .muted {
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.watch-head-lab {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.watch-main-head .tgl {
+  width: 70px;
+  height: 26px;
+}
+
+/* 左段：監視先・取込先・処理後 ／ 右段：二重取込・再実行・通知・ログ */
+.watch-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.watch-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* セクション ───────────────────────────────────────────────────── */
+.watch-sec {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.watch-sec-head {
+  margin: 0;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #eef5fd;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--accent);
+}
+
+.watch-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+}
+
+/* 1 項目＝ラベル（上）＋入力（下） */
+.wf {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 9px 12px 11px;
+  border-bottom: 1px solid #f2f4f8;
+}
+
+.wf-wide { grid-column: 1 / -1; }
+
+.watch-fields > .wf:nth-last-child(-n+2) { border-bottom: 0; }
+.watch-fields > .wf.wf-wide:last-child { border-bottom: 0; }
+
+.wf-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+.wf-ctl { min-width: 0; }
+
+.wf .fld {
+  width: 100%;
+  height: 32px;
+  box-sizing: border-box;
+  font-size: 12.5px;
+}
+
+.wf .fld.mono { font-size: 11.5px; }
+
+/* 「する／しない」の文字がはみ出さないよう少し広げる */
+.wf .tgl {
+  width: 70px;
+  height: 26px;
+}
+
+/* OFF 時の白文字が読めるよう、灰色を少し濃くする */
+.watch-page .tgl.off { background: #98a1b0; }
+
+/* ラジオ（処理後のファイル） */
+.watch-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding-top: 3px;
+}
+
+.watch-radios label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.watch-radios input { accent-color: var(--accent); margin: 0; }
+
+/* 数値＋単位 */
 .watch-inline {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.watch-inline .fld { width: auto; }
-.watch-inline .w-70 { width: 70px; }
-.watch-inline .w-110 { width: 110px; }
+.watch-inline .fld { width: 84px; flex: 0 0 84px; }
+.watch-inline .muted { font-size: 11.5px; color: var(--text-3); }
 
-.watch-segs {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 620px;
+.watch-empty {
+  padding: 60px 24px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--text-3);
 }
 
-.watch-seg {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+@media (max-width: 1180px) {
+  .watch-body { flex-wrap: wrap; }
+  .watch-col { flex-basis: 100%; }
 }
 
-.watch-seg .fld { flex: 1 1 auto; }
-
-.watch-preview {
-  margin: 10px 0 0;
-  font-size: 12px;
-  color: var(--text-2);
-}
-
-.watch-preview code {
-  padding: 2px 6px;
-  border-radius: 2px;
-  background: #f3f5f9;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11.5px;
+@media (max-width: 900px) {
+  .watch-side { width: 220px; flex-basis: 220px; }
+  .watch-fields { grid-template-columns: minmax(0, 1fr); }
+  .wf-wide { grid-column: auto; }
 }

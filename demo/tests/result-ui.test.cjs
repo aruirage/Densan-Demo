@@ -1145,3 +1145,30 @@ test('ticket permission table gates confirm per layout', () => {
   /* 担当が未設定の行は全体の操作権限にフォールバック（view は従来どおり） */
   assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });
+
+test('自動アップロード: 左一覧＋右フォームの 7 セクションで描画される', () => {
+  const run = app();
+  const html = run('state.watch = { sel: "w1" }; renderWatch()');
+  assert.match(html, /class="watch-page"/);
+  assert.match(html, /class="watch-side"/);
+  assert.equal((html.match(/<div class="watch-item[^"]*">/g) || []).length, run('WATCHES.length'));
+  const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
+  assert.deepEqual(heads, ['監視先', '取込先', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知', 'ログ']);
+  /* 旧 UI（並べ替え・断片エディタ）は残っていない */
+  assert.doesNotMatch(html, /watch-block|watch-order|watch-seg|data-watchorder|data-watchseg/);
+  /* 顧客要件の設定項目 */
+  for (const t of ['監視パス', '処理開始ファイル', 'テナント', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL', '詳細度']) {
+    assert.ok(html.includes(t), t);
+  }
+});
+
+test('自動アップロード: 移動先は「移動」を選んだときだけ出る', () => {
+  const run = app();
+  let html = run('state.watch = { sel: "w1" }; WATCHES.find((w) => w.id === "w1").after = "move"; renderWatch()');
+  assert.match(html, /data-wf="afterDir"/);
+  html = run('WATCHES.find((w) => w.id === "w1").after = "del"; renderWatch()');
+  assert.doesNotMatch(html, /data-wf="afterDir"/);
+  /* 選択中の設定だけがフォームに出る */
+  html = run('state.watch = { sel: "w2" }; renderWatch()');
+  assert.match(html, /<h2>税務 申告書 取込<\/h2>/);
+});

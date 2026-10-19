@@ -2924,7 +2924,7 @@ def build_static(outdir):
 
     # ④ 静的ファイル（CSS・overlay・assets）
     for name in ('styles.css', 'prompt-bar-fix.css', 'export-dialog.css', 'type-assignee.css',
-                 'permissions-groups.css', 'brand-densan.css', 'review-focus-fix.js'):
+                 'permissions-groups.css', 'brand-densan.css', 'dict-watch.css', 'review-focus-fix.js'):
         src = os.path.join(DIR, name)
         if os.path.isfile(src):
             shutil.copy2(src, os.path.join(out, name))
