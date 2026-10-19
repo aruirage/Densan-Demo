@@ -1626,6 +1626,7 @@ def apply_roles_9(src):
     src = src.replace("${fl.canSave ?", "${true ?")
     # フォルダ単位の操作権限：ツリーの名前変更を権限で制御（op-rename）
     src = src.replace("{ id: 'op-export', label: '出力' }", "{ id: 'op-export', label: '出力' }, { id: 'op-rename', label: 'フォルダ名変更（ツリー）' }", 1)
+    src = src.replace("user: 'xiaoying'", "user: '佐藤 一郎'")
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
