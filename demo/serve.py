@@ -2790,6 +2790,27 @@ def patched_app_js(path):
         patched = re.sub(r"(window\.__demo = \{)", r"\1\n  GROUPS, ROLE_MEMBERS, USER_OPS, LAYOUT, CATEGORY, BUSINESS, UPLOAD_PERMS, ROLES, catStagesOf, setCatStages, approvalStageCountOf, maxApprovalStageCount, stageTargetsOf, setStageTargets,", patched, count=1)
     # 万能角色は ROLES / MENU_PERMS の定義直後に差し込む（前方参照で TDZ を踏まないよう）
     m_perms = re.search(r"((?:var|let|const) MENU_PERMS = \{[\s\S]*?\n\};)", patched)
+    # メニュー権限の配分（9 ロール）：設計どおりに上書き
+    _menufix = """
+/* ── メニュー権限の配分（9 ロール設計） ─────────────────── */
+try {
+  var _biz = ['home', 'result'];
+  MENU_PERMS.R2 = _biz.concat(['op-upload', 'op-read', 'settings-type', 'settings-type-add', 'settings-type-edit', 'settings-type-form-del', 'settings-scenes', 'settings-scenes-add', 'settings-scenes-edit', 'settings-scenes-del']);
+  MENU_PERMS.R3 = _biz.concat(['op-confirm']);
+  MENU_PERMS.R5 = _biz.concat(['op-upload']);
+  MENU_PERMS.R6 = _biz.slice();
+  MENU_PERMS.R7 = _biz.concat(['op-classify']);
+  MENU_PERMS.R8 = _biz.concat(['op-read', 'op-redo']);
+  MENU_PERMS.R10 = _biz.concat(['op-export']);
+  MENU_PERMS.R11 = _biz.concat(['op-fix']);
+} catch (_e) { /* ignore */ }
+"""
+    if 'メニュー権限の配分（9 ロール設計）' not in patched:
+        patched = patched + _menufix
+    # 操作権限ツリーに「出力」を追加（op-export）
+    if 'op-export' not in patched:
+        patched = patched.replace("{ id: 'op-download', label: 'ダウンロード' }",
+                                  "{ id: 'op-download', label: 'ダウンロード' }, { id: 'op-export', label: '出力' }", 1)
     if m_perms and 'SUPER_ROLE_ID' not in patched:
         # MENU_PERMS の直後に差し込む（ROLES / MENU_LEAVES も定義済みの位置）
         patched = patched[:m_perms.end()] + "\n" + SUPER_ROLE + patched[m_perms.end():]
