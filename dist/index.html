@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="./type-assignee.css" />
 <!-- 権限設定／ユーザー管理のユーザーグループ関連（styles.css の後に読み込む） -->
 <link rel="stylesheet" href="./permissions-groups.css" />
+<!-- 辞書登録／自動アップロードのレイアウト -->
+<link rel="stylesheet" href="./dict-watch.css" />
 <link rel="stylesheet" href="./brand-densan.css" />
 <style>
 /* 承認フロー／担当の設定は「帳票権限管理」に集約（帳票タイプ設定では非表示） */
@@ -19,7 +21,7 @@
 </style>
 <style>
 /* ══ 帳票権限管理・ユーザー管理の見た目を規整（serve.py 注入） ══ */
-.perm-matrix { table-layout: fixed; min-width: 1520px; }
+.perm-matrix { table-layout: fixed; min-width: 1180px; }
 .perm-matrix th, .perm-matrix td { padding: 8px 10px !important; vertical-align: middle; }
 .perm-matrix thead th { background: #eef5fd; color: #4a637c; font-weight: 600; white-space: nowrap; }
 .perm-matrix th.is-sticky, .perm-matrix td.is-sticky {
@@ -61,7 +63,7 @@
 <style>/* RESULT_FREEZE */
 /* ══ ファイル一覧：末尾の「操作・処理」列だけ横スクロールでも固定する ══ */
 .result-table { table-layout: fixed !important; min-width: 1720px !important; width: 100% !important; }
-.result-table col { width: auto !important; }
+.result-table col { width: auto; }
 /* 列幅（チェック / ファイル名 / 帳票タイプ / サイズ / ステータス / 作成者 / 確認者 / 承認者 / 作成日時 / 更新日時 / 操作・処理） */
 .result-table th:nth-child(1),  .result-table td:nth-child(1)  { width: 40px; }
 .result-table th:nth-child(2),  .result-table td:nth-child(2)  { width: 240px; }
@@ -71,18 +73,15 @@
 .result-table th:nth-child(6),  .result-table td:nth-child(6)  { width: 130px; }
 .result-table th:nth-child(7),  .result-table td:nth-child(7)  { width: 130px; }
 .result-table th:nth-child(8),  .result-table td:nth-child(8)  { width: 130px; }
-.result-table th:nth-child(9),  .result-table td:nth-child(9)  { width: 150px; }
+.result-table th:nth-child(9),  .result-table td:nth-child(9)  { width: 200px; }
 .result-table th:nth-child(10), .result-table td:nth-child(10) { width: 150px; }
-.result-table th:nth-child(11), .result-table td:nth-child(11) { width: 150px; }
+.result-table th:nth-child(11), .result-table td:nth-child(11) { width: 196px; }
+.result-table thead th.result-actions-cell,
+.result-table td.result-actions-cell { width: 196px !important; min-width: 196px !important; overflow: visible !important; }
 /* 横スクロール（全列を潰さずに表示） */
 .result-content > .tablewrap, .result-panel .tablewrap { overflow-x: auto !important; }
 .result-table th, .result-table td { overflow: hidden; text-overflow: ellipsis; }
-/* 見出しと値の整列を揃える（確認者／承認者／作成日時／更新日時 の見出しも左寄せ）
-   styles.css の th 中央寄せ（:not 連鎖で詳細度が高い）を上書きする */
-.result-table thead th:nth-child(7),
-.result-table thead th:nth-child(8),
-.result-table thead th:nth-child(9),
-.result-table thead th:nth-child(10) { text-align: left !important; }
+/* 見出しは全列そろって中央寄せ（値の左寄せ・右寄せはそのまま） */
 .result-table td:nth-child(2), .result-table td:nth-child(3),
 .result-table td:nth-child(6) { white-space: nowrap; }
 
@@ -92,7 +91,7 @@
   position: sticky !important; right: 0; z-index: 3;
   background: #fff; box-shadow: -8px 0 10px -8px rgba(31, 47, 61, .18);
 }
-.result-table thead th:last-child { z-index: 4; background: #eef5fd; text-align: right !important; padding-right: 16px; }
+.result-table thead th:last-child { z-index: 4; background: #eef5fd; text-align: center !important; padding-right: 16px; }
 .result-table tbody tr:hover td.result-actions-cell { background: #f7faff; }
 .result-table tbody tr.is-picked td.result-actions-cell { background: #f2f7fd; }
 .result-table .result-actions-cell { padding-left: 6px; padding-right: 6px; }

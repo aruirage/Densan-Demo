@@ -289,3 +289,128 @@
 
 /* ══ 表示次元の切替を廃止（3 層ツリー固定：業務シーン ＞ 帳票タイプ ＞ ファイル） ══ */
 #treeView, .tree-view-pills{ display:none !important; }
+
+/* ══ 一覧の列名を省略せず全部表示（客户：列名显示完整） ══ */
+.result-table thead th{
+  white-space:nowrap;
+  overflow:visible;
+  text-overflow:clip;
+}
+.result-table col{ min-width:0; }
+
+/* ══ 状態バッジの色（客户 d） ══ */
+.st.info{ color:#1668dc; }
+.st.info .dot, .st.info .spin{ background:#1668dc; }
+.st.info .spin{ border-color:rgba(22,104,220,.28); border-top-color:#1668dc; background:transparent; }
+.st.wait{ color:#8a94a6; }
+.st.ok{ color:#12a150; }
+.st.ok .dot{ background:#12a150; }
+.st.ng{ color:#e5484d; }
+
+/* ══ 全テーブルの見出し色をファイル一覧（#eef5fd）に統一（客户：home と揃える） ══ */
+thead th{ background:#eef5fd !important; }
+
+/* ══ 絞り込み欄の背景をホーム（ページ背景）と統一（客户：白にしない） ══ */
+.filters.result-filters{
+  background:var(--bg, #f3f6fa) !important;
+  border:1px solid var(--line, #e5e9f0);
+  border-radius:8px;
+}
+
+/* チェック列：見出しでも枠が見えるように */
+.result-table th.col-pick .cb,
+.result-table td.col-pick .cb{
+  display:inline-block;
+  appearance:auto;
+  -webkit-appearance:checkbox;
+}
+
+/* ══ 絞り込み欄のレイアウト：3 行で横幅を均等に使う（空きを減らす） ══ */
+.result-filter-row.result-search-row,
+.result-filter-row#resultAdvanced{
+  display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:10px 18px !important; align-items:center !important;
+}
+.result-filter-row.result-date-row{
+  display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:10px 18px !important; align-items:center !important;
+}
+.result-filter-row .field{ display:flex !important; align-items:center !important; min-width:0 !important; gap:8px; }
+.result-filter-row .field > .lbl{ flex:0 0 auto; white-space:nowrap; }
+.result-filter-row .field select,
+.result-filter-row .field input.fld,
+.result-filter-row .field .result-date-range{ flex:1 1 auto; min-width:0; width:100%; }
+
+/* 一括ダウンロードのメニューが「選択帳票読取」の下に出ていたのを修正（.batch-dl を基準に配置） */
+.result-tablebar .batch-dl{ position:relative; }
+.result-tablebar .batch-dl-menu{ left:50%; }
+
+/* ══ 一覧の 3 ボタン：配色を整理＋読み取りボタンでダウンロードメニューが出ないように ══ */
+/* メニューは「一括ダウンロード」を hover / フォーカスした時だけ出す */
+.result-tablebar .batch-dl-menu{ display:none !important; }
+.result-tablebar .batch-dl:hover .batch-dl-menu,
+.result-tablebar .batch-dl:focus-within .batch-dl-menu,
+.result-tablebar .batch-dl.is-open .batch-dl-menu{ display:block !important; }
+
+/* 3 ボタンの見た目 */
+.result-tablebar #resRead{
+  background:#1f7fd0 !important; border:1px solid #1f7fd0 !important; color:#fff !important;
+}
+.result-tablebar #resRead:hover:not(:disabled){ background:#1a6cb3 !important; border-color:#1a6cb3 !important; }
+.result-tablebar #resRead:disabled{ background:#e6eef7 !important; border-color:#dbe6f2 !important; color:#9fb3c8 !important; }
+.result-tablebar .batch-dl .btn.result-download{
+  background:#fff !important; border:1px solid #8fc0e8 !important; color:#1f7fd0 !important;
+}
+.result-tablebar .batch-dl .btn.result-download:hover:not(:disabled){ background:#f2f8fe !important; }
+.result-tablebar .btn.danger-ghost, .result-tablebar #batchDelete{
+  background:#fff !important; border:1px solid #efb9c0 !important; color:#d5495c !important;
+}
+.result-tablebar .btn.danger-ghost:hover:not(:disabled), .result-tablebar #batchDelete:hover:not(:disabled){ background:#fdf3f4 !important; }
+
+/* 参考デザインに合わせる：#1 塗り（primary）／#2 枠線（primary）／#3 枠線（red） */
+.result-tablebar #resRead{
+  background:var(--el-color-primary,#3fb6c6) !important;
+  border:1px solid var(--el-color-primary,#3fb6c6) !important;
+  color:#fff !important;
+}
+.result-tablebar .batch-dl .btn.result-download{
+  background:#fff !important;
+  border:1px solid var(--el-color-primary,#3fb6c6) !important;
+  color:var(--el-color-primary,#2f9fb0) !important;
+}
+.result-tablebar .btn.danger-ghost{
+  background:#fff !important;
+  border:1px solid #e8b7b4 !important;
+  color:var(--red,#d5305a) !important;
+}
+
+/* ══ 確認画面：プレビューを縦スクロールできるように（客户指摘） ══ */
+.rv-preview-stage{ overflow-y:auto !important; min-height:0 !important; }
+.rv-preview-canvas{ min-height:0 !important; overflow-y:auto !important; }
+.rv-pane.nl-preview-pane{ overflow:hidden !important; }
+
+/* ══ 確認画面：プレビューを「幅に合わせて」表示し、縦スクロールできるように ══ */
+.rv-pdf-wrap, .rv-pdf-wrap img, .rv-preview-canvas img{
+  max-height:none !important;
+  height:auto !important;
+}
+.rv-pdf-wrap img, .rv-preview-canvas img{ width:100% !important; }
+.rv-preview-stage, .rv-preview-canvas{ overflow-y:auto !important; }
+
+/* ══ 確認画面：プレビュー（mock sheet）を幅に合わせて縦スクロール可能に ══ */
+.rv-preview-canvas .sheet,
+.rv-preview-canvas .sheet-zoom{
+  width:100% !important;
+  height:auto !important;
+  max-height:none !important;
+}
+.rv-preview-canvas{ overflow-y:auto !important; }
+.rv-preview-canvas .sheet-zoom{ transform:none !important; }
+
+/* 確認画面：プレビュー領域（stage）を縦スクロールの主体にする */
+.rv-preview-stage{
+  overflow-y:auto !important;
+  max-height:calc(100vh - 210px) !important;
+}
+.rv-preview-canvas{ height:auto !important; min-height:0 !important; overflow:visible !important; }
+.rv-pdf-wrap{ height:auto !important; min-height:0 !important; }

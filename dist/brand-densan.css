@@ -158,26 +158,13 @@ input.fld {
   border-color: #cfe0f5;
 }
 
-/* 見出し・表ヘッダも一段濃くして締める */
-.result-table thead th,
-.mytask-table th,
-.access-table th,
-
-/* ══ 読取結果一覧テーブル：ヘッダーも行も一緒にスクロールさせる ══
-   既定では thead th / 先頭列 / 操作列が position:sticky で固定され、
-   横スクロール時にヘッダーや先頭列だけが残って「行と別に動く」ように見える。
-   ユーザー要望「同行滚动」に合わせて固定を解除する。 */
-.result-table thead th {
-  position: static;
-}
+/* ══ 読取結果一覧：先頭の選択列のみ sticky 解除（操作列は styles.css で右固定） ══ */
 .result-table th:first-child,
 .result-table td:first-child {
-  position: static;
-  box-shadow: none;
-}
-.result-table .result-actions-cell {
-  position: static;
-  box-shadow: none;
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  box-shadow: none !important;
 }
 
 /* ══ 確認画面：修正済みの項目は赤（エラー）表示を解除する ══
@@ -186,7 +173,7 @@ input.fld {
    修正済みの行は赤を消して「修正済み」の見た目に寄せる。 */
 .rv-field-row.has-error.is-corrected .rv-field-input {
   border-color: var(--line-d);
-  background: #fff;
+  background: #fff8e8;
 }
 .rv-field-row.has-error.is-corrected .rv-field-input:focus {
   border-color: var(--accent);
@@ -214,4 +201,11 @@ button.perm-off:not(.navitem):not(.tabitem),
 .navmenu-item[hidden],
 .tabitem[hidden] {
   display: none !important;
+}
+
+/* 列名はすべて中央揃え。
+   styles.css の .result-table .col-name / .col-hist が text-align:left を
+   ヘッダにも当ててしまうため、[class] 付きで優先度を上げて打ち消す。 */
+.result-table thead th[class] {
+  text-align: center;
 }
