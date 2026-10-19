@@ -1705,6 +1705,10 @@ def apply_minimal_flow2(src):
     src = re.sub(r"\s*\{\s*(?:id|page):\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
     # ② アップロード済ファイルの一覧カードを非表示（投入専用）
     src = src.replace("</style>", ".upload-list-card{display:none !important;}\n</style>", 1)
+    # ③ ファイル一覧のタブに「読取待ち」を戻す（＝読取対象が分かるように）
+    src = re.sub(r"const TAB_STATUS\s*=\s*\[[^\]]*\]",
+                 "const TAB_STATUS = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported']",
+                 src, count=1)
     return src
 
 
