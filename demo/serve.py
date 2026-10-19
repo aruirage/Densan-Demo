@@ -171,10 +171,12 @@ var GROUP_OPS = {
   var approve = ['閲覧', '確認', '承認'];
   var all = ['閲覧', 'アップロード', '確認', '承認', '出力'];
   var bucket = [
-    { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u2', 'u6', 'u7'] },
-    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u3', 'u5', 'u8'] },
-    { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: '承認（1 段目・2 段目）', userIds: ['u4', 'u5'] },
-    { id: 'gm', name: '管理者グループ', kind: all.join('、'), roles: all.slice(), desc: 'すべての権限', userIds: ['u1', 'u9'] }
+    /* 最上位。ほかのグループはすべてこの下（削除不可） */
+    { id: 'groot', name: '電算', kind: '', roles: [], desc: 'すべての操作グループの最上位（削除不可）', userIds: [], root: true, permId: 'R1', parentId: null },
+    { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u2', 'u6', 'u7'], parentId: 'groot' },
+    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u3', 'u5', 'u8'], parentId: 'groot' },
+    { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: '承認（1 段目・2 段目）', userIds: ['u4', 'u5'], parentId: 'groot' },
+    { id: 'gm', name: '管理者グループ', kind: all.join('、'), roles: all.slice(), desc: 'すべての権限', userIds: ['u1', 'u9'], parentId: 'groot' }
   ];
   list.length = 0;
   bucket.forEach(function (g) { list.push(g); });
@@ -1521,6 +1523,19 @@ def apply_user_ops_derive_fix(src):
     return src
 
 
+def apply_menu_perm_dedupe(src):
+    """グループ追加/編集/削除 を全削除 → 1 組だけ「ユーザー削除」の直後に再挿入（重複解消）。"""
+    pat = r"\s*\{ id: 'usage-groups-(?:add|edit|del)', label: 'グループ(?:追加|編集|削除)' \},?"
+    src = re.sub(pat, "", src)
+    anchor = "{ id: 'usage-users-del', label: 'ユーザー削除' },"
+    trio = (" { id: 'usage-groups-add', label: 'グループ追加' },"
+            " { id: 'usage-groups-edit', label: 'グループ編集' },"
+            " { id: 'usage-groups-del', label: 'グループ削除' },")
+    if anchor in src:
+        src = src.replace(anchor, anchor + trio, 1)
+    return src
+
+
 def apply_menu_perm_fix(src):
     """権限設定のメニュー権限ツリー補正：グループ項目の重複削除＋ユーザー削除を追加。"""
     triple = ("{ id: 'usage-groups-add', label: 'グループ追加' }, "
@@ -1530,6 +1545,7 @@ def apply_menu_perm_fix(src):
         src = src.replace(triple + triple, triple, 1)
     src = src.replace("{ id: 'usage-users-toggle', label: 'ユーザー無効化' },", "{ id: 'usage-users-toggle', label: 'ユーザー無効化' }, { id: 'usage-users-del', label: 'ユーザー削除' },", 1)
     src = src.replace("{ id: 'op-read', label: '読み取り実行' },", "{ id: 'op-read', label: '読み取り実行' }, { id: 'op-classify', label: 'AI分類結果修正' },", 1)
+    src = src.replace("{ id: 'usage-users', label: 'ユーザー管理', children: [\n        { id: 'usage-users-add', label: 'ユーザー追加' },\n        { id: 'usage-users-edit', label: 'ユーザー編集' },\n        { id: 'usage-users-toggle', label: 'ユーザー無効化' }, { id: 'usage-users-del', label: 'ユーザー削除' },\n        { id: 'usage-groups-add', label: 'グループ追加' },\n        { id: 'usage-groups-edit', label: 'グループ編集' },\n        { id: 'usage-groups-del', label: 'グループ削除' },\n        { id: 'usage-groups-add', label: 'グループ追加' },\n        { id: 'usage-groups-edit', label: 'グループ編集' },\n        { id: 'usage-groups-del', label: 'グループ削除' },\n      ]", "{ id: 'usage-users', label: 'ユーザー管理', children: [\n        { id: 'usage-users-add', label: 'ユーザー追加' },\n        { id: 'usage-users-edit', label: 'ユーザー編集' },\n        { id: 'usage-users-toggle', label: 'ユーザー無効化' }, { id: 'usage-users-del', label: 'ユーザー削除' },\n        { id: 'usage-groups-add', label: 'グループ追加' },\n        { id: 'usage-groups-edit', label: 'グループ編集' },\n        { id: 'usage-groups-del', label: 'グループ削除' },\n        { id: 'usage-groups-add', label: 'グループ追加' },\n        { id: 'usage-groups-edit', label: 'グループ編集' },\n        { id: 'usage-groups-del', label: 'グループ削除' },\n      ]", 1)
     return src
 
 
@@ -2318,6 +2334,9 @@ def apply_default_admin_user(src):
 
 def apply_menu_tree_groups(src):
     """メニュー権限ツリーの「ユーザー管理」を細分化し、グループ設定を子ノードに足す。"""
+    # app.js 側に既に入っている場合は何もしない（二重挿入でグループ項目が重複する）
+    if "usage-groups-add" in src:
+        return src
     old = ("{ id: 'usage-users-toggle', label: 'ユーザー無効化' },")
     new = ("{ id: 'usage-users-toggle', label: 'ユーザー無効化' },\n"
            "        { id: 'usage-groups-add', label: 'グループ追加' },\n"
@@ -2623,6 +2642,8 @@ def apply_permission_patch(src):
     # 旧形式の手編集が残っていても二重にならないよう正規化する
     src = re.sub(r"\n *const canView = \(typeof window[^\n]*\n *\? window\.__demoPerm\.canViewFile\n *: null;", "", src)
     src = src.replace(" && (!canView || canView(f))", "")
+    # 一覧の絞り込みを canSeeFile() に切り出したので、裸の (!canView || canView(f)) も置き換える
+    src = src.replace("(!canView || canView(f))", "canViewFile(f)")
     if 'var canViewFile' not in src:
         # canViewFile の定義を「function visibleFiles() {」の直前に差し込む（使用箇所より前）
         src = src.replace('function visibleFiles() {', PERM_HELPER + 'function visibleFiles() {', 1)
@@ -2711,6 +2732,7 @@ def patched_app_js(path):
     patched, _no_appr = apply_no_approval(patched)
     patched = apply_status_opts_fix(patched)
     patched = apply_menu_perm_fix(patched)
+    patched = apply_menu_perm_dedupe(patched)
     patched = apply_roles_9(patched)
     patched = apply_role_rename3(patched)
     patched = apply_rename_creator_to_reader(patched)
