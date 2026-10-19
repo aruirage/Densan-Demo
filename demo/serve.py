@@ -184,19 +184,24 @@ var GROUP_OPS = {
   var bucket = [
     /* 最上位。ほかのグループはすべてこの下（削除不可） */
     { id: 'groot', name: '電算', kind: '', roles: [], desc: 'すべての操作グループの最上位（削除不可）', userIds: [], root: true, permId: 'R1', parentId: null },
-    { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u2', 'u6', 'u7'], parentId: 'groot' },
-    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u3', 'u5', 'u8'], parentId: 'groot' },
-    { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: '承認（1 段目・2 段目）', userIds: ['u4', 'u5'], parentId: 'groot' },
+    { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u2', 'u6', 'u7'], permId: 'R5', parentId: 'groot' },
+    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u3', 'u5', 'u8'], permId: 'R3', parentId: 'groot' },
+    { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: '承認（1 段目・2 段目）', userIds: ['u4', 'u5'], permId: 'R4', parentId: 'groot' },
     /* 新設計（9 グループ）で追加した 5 つ */
-    { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u1'], parentId: 'groot' },
-    { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: '一覧の閲覧のみ（操作なし）', userIds: ['u2'], parentId: 'groot' },
-    { id: 'gk', name: 'AI分類結果修正グループ', kind: 'AI分類結果修正', roles: ['AI分類結果修正'], desc: 'AI 分類結果（帳票タイプ）の修正', userIds: ['u2', 'u3'], parentId: 'groot' },
-    { id: 'gr', name: '読取実行グループ', kind: '読取', roles: ['読取'], desc: 'OCR 読取の実行', userIds: ['u6'], parentId: 'groot' },
-    { id: 'gf', name: 'OCR結果修正グループ', kind: 'OCR結果修正', roles: ['OCR結果修正'], desc: 'OCR 結果の修正（確認は不可）', userIds: ['u3'], parentId: 'groot' },
-    { id: 'gm', name: '管理者グループ', kind: all.join('、'), roles: all.slice(), desc: 'すべての権限', userIds: ['u1', 'u9'], parentId: 'groot' }
+    { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u1'], permId: 'R2', parentId: 'groot' },
+    { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: '一覧の閲覧のみ（操作なし）', userIds: ['u2'], permId: 'R4', parentId: 'groot' },
+    { id: 'gk', name: 'AI分類結果修正グループ', kind: 'AI分類結果修正', roles: ['AI分類結果修正'], desc: 'AI 分類結果（帳票タイプ）の修正', userIds: ['u2', 'u3'], permId: 'R3', parentId: 'groot' },
+    { id: 'gr', name: '読取実行グループ', kind: '読取', roles: ['読取'], desc: 'OCR 読取の実行', userIds: ['u6'], permId: 'R5', parentId: 'groot' },
+    { id: 'gf', name: 'OCR結果修正グループ', kind: 'OCR結果修正', roles: ['OCR結果修正'], desc: 'OCR 結果の修正（確認は不可）', userIds: ['u3'], permId: 'R3', parentId: 'groot' },
+    { id: 'gm', name: '管理者グループ', kind: all.join('、'), roles: all.slice(), desc: 'すべての権限', userIds: ['u1', 'u9'], permId: 'R1', parentId: 'groot' }
   ];
   list.length = 0;
   bucket.forEach(function (g) { list.push(g); });
+  /* カテゴリの可視グループは旧 ID（g1..g9）のままなので、ここで空にして
+     「未設定＝全員閲覧可」に寄せる。閲覧の絞り込みは帳票タイプ単位（TICKET_PERMS）で行う。 */
+  if (typeof CATEGORY !== 'undefined' && CATEGORY) {
+    CATEGORY.forEach(function (c) { c.groupIds = []; });
+  }
   /* アップロード権限もバケツ ID で持つ（業務区分ごとの担当） */
   var up = (typeof UPLOAD_PERMS !== 'undefined' && UPLOAD_PERMS) || null;
   if (up) {
@@ -1588,6 +1593,8 @@ def apply_roles_9(src):
     src = src.replace("name: '確認者'", "name: 'OCR結果確認'")
     src = src.replace("name: '承認者'", "name: 'OCR結果修正'")
     src = src.replace("name: 'アップロード者'", "name: 'アップロード'")
+    # 初期表示を「新規アップロード」にする（客户）
+    src = re.sub(r"page: 'home',(\s+)//", r"page: 'upload',\1//", src, count=1)
     # 「万能（全権限）」の重複ロールを出さない（スーパーロールを R1=システム管理者 に寄せる）
     src = src.replace("var SUPER_ROLE_ID = 'R9';", "var SUPER_ROLE_ID = 'R1';")
     seed = """
@@ -2635,40 +2642,13 @@ def apply_user_group_checks(src):
 
 # デモは「管理者＝全権限」で固定する（役割切替・権限制限は行わない）
 FULL_ADMIN_MODE = """
-/* デモは常に管理者（全権限）で動作する（serve.py 注入） */
-(function forceFullAdmin() {
-  window.DEMO_FULL_ADMIN = true;
-  /* app.js 側の到達判定も無効化（関数宣言は後から上書きできる） */
-  try { window.canReachPage = function () { return true; }; } catch (e) {}
-  try { window.canReachMenu = function () { return true; }; } catch (e) {}
-  /* 権限レイヤーが参照する管理者判定も常に true に */
-  (function patchTenantAdmin(tries) {
-    var h = window.__demo;
-    if (h && h.isTenantAdmin) { h.isTenantAdmin = function () { return true; }; return; }
-    if (tries > 0) setTimeout(function () { patchTenantAdmin(tries - 1); }, 120);
-  })(20);
-  /* 権限レイヤー：すべて許可 */
-  window.__demoPerm = window.__demoPerm || {};
-  window.__demoPerm.visibleLayouts = function () { return null; };
-  window.__demoPerm.canViewFile = function () { return true; };
-  window.__demoPerm.countVisible = function () {
-    var h = window.__demo;
-    return h && h.FILES_DATA ? h.FILES_DATA.length : 0;
-  };
-  window.isSuperUser = function () { return true; };
-  window.__demoUserOps = window.__demoUserOps || {};
-  window.__demoUserOps.allowed = function () { return null; };
-  window.__demoUserOps.has = function () { return true; };
-  window.__demoUserOps.apply = function () {};
-  window.__demoPerm.menu = window.__demoPerm.menu || {};
-  window.__demoPerm.menu.allowed = function () { return null; };
-  window.__demoPerm.menu.can = function () { return true; };
-  window.__demoPerm.menu.canReach = function () { return true; };
-  window.__demoPerm.menu.canWorkflow = function () { return true; };
-  window.__demoPerm.menu.apply = function () {};
-  window.opsFromGroups = function () {
-    return ['view', 'upload', 'fix', 'confirm', 'approve', 'export', 'settings'];
-  };
+/* デモの権限モード（serve.py 注入）。
+   既定は「ログインユーザーの権限どおり」。ヘッダー下の切替バーでユーザーを変えると、
+   メニュー・帳票一覧・操作ボタンがそのユーザーの権限で描き直される。
+   制限を外して全機能を見たいときだけ URL に ?full=1 を付ける。 */
+(function permissionMode() {
+  var src = location.search + location.hash;
+  window.DEMO_FULL_ADMIN = /(?:^|[?&#])full=1(?:&|#|$)/.test(src);
 })();
 """
 
@@ -2770,9 +2750,9 @@ def patched_app_js(path):
     patched = apply_menu_trim(patched)
     patched = apply_group_kind_input(patched)
     patched = apply_full_perm_acts(patched)
-    patched = apply_admin_nav(patched)
+    # 権限でメニューを出し分けるので、ナビの到達判定は無効化しない（旧: apply_admin_nav）
     patched = apply_user_group_checks(patched)
-    patched = hide_actor_switch(patched)
+    # 権限切替はデモの見せ場なので外さない（旧: hide_actor_switch）
     patched = apply_export_format_block(patched)
     patched = apply_list_cleanup(patched)
     patched, _no_appr = apply_no_approval(patched)
