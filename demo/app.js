@@ -5211,7 +5211,8 @@ let WATCH = {
   after: 'move', afterDir: '\\\\filesv01\\処理済\\住民異動届',
   dupGuard: true, dupMethod: 'meta',
   retry: 3, retryGap: 5,
-  notify: true, notifyOn: 'fail', notifyMail: 'admin@itso.co.jp', notifyUrl: '',
+  notify: true, notifyOn: 'fail', notifyMailOn: true, notifyWebOn: false,
+  notifyMail: 'admin@itso.co.jp', notifyUrl: '',
   updatedAt: '2026-10-16 09:12:30',
 };
 
@@ -5313,8 +5314,12 @@ function renderWatch() {
         <div class="watch-fields">
           ${row('通知する', watchToggle('notify', x.notify))}
           ${row('通知条件', watchSelect('notifyOn', Object.keys(WATCH_NOTIFY_ON).map((k) => [k, WATCH_NOTIFY_ON[k]]), x.notifyOn), true)}
-          ${row('宛先メール', `<input class="fld" data-wf="notifyMail" value="${esc(x.notifyMail)}" placeholder="admin@example.jp" />`)}
-          ${row('Webhook URL', `<input class="fld" data-wf="notifyUrl" value="${esc(x.notifyUrl)}" placeholder="任意" />`)}
+          ${row('通知方法', `<div class="watch-checks">
+            <label><input type="checkbox" class="cb" data-wf-check="notifyMailOn" ${x.notifyMailOn ? 'checked' : ''} />メール</label>
+            <label><input type="checkbox" class="cb" data-wf-check="notifyWebOn" ${x.notifyWebOn ? 'checked' : ''} />Webhook</label>
+          </div>`, true)}
+          ${x.notifyMailOn ? row('宛先メール', `<input class="fld" data-wf="notifyMail" value="${esc(x.notifyMail)}" placeholder="admin@example.jp" />`, true) : ''}
+          ${x.notifyWebOn ? row('Webhook URL', `<input class="fld mono" data-wf="notifyUrl" value="${esc(x.notifyUrl)}" placeholder="https://example.jp/hook" />`, true) : ''}
         </div>
       </section>
 
@@ -7025,6 +7030,12 @@ function renderUpload() {
 
 function render() {
   const app = $('#app');
+  /* innerHTML を丸ごと差し替えるので、同じ画面を描き直すときはスクロール位置を戻す。
+     これが無いとトグルを押すたびに一番上へ飛ぶ。 */
+  const prevDomPage = app.dataset.page || '';
+  const prevMainEl = app.querySelector('.maincol');
+  const prevMainTop = prevMainEl ? prevMainEl.scrollTop : 0;
+  const prevWinY = window.scrollY || 0;
   let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
   /* メニュー権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
   if (route !== 'review' && !canReachPage(route)) {
@@ -7127,6 +7138,12 @@ function render() {
   ${renderSaveHistoryDialog()}
   ${renderExportDialog()}
   <div class="toast" id="toast"></div>`;
+  /* 同じ画面のままの再描画なら、退避したスクロール位置へ戻す */
+  if (route === prevDomPage) {
+    const mainEl = app.querySelector('.maincol');
+    if (mainEl && prevMainTop) mainEl.scrollTop = prevMainTop;
+    if (prevWinY) window.scrollTo(0, prevWinY);
+  }
   bind();
 }
 
@@ -8128,6 +8145,11 @@ function bindCfgPages() {
     document.querySelectorAll('[data-watchsave]').forEach((b) => {
       b.onclick = () => {
         if (!WATCH.paths.some((p) => String(p.path || '').trim())) { toast('監視パスを入力してください'); return; }
+        if (WATCH.notify) {
+          if (!WATCH.notifyMailOn && !WATCH.notifyWebOn) { toast('通知方法を選択してください'); return; }
+          if (WATCH.notifyMailOn && !String(WATCH.notifyMail || '').trim()) { toast('宛先メールを入力してください'); return; }
+          if (WATCH.notifyWebOn && !String(WATCH.notifyUrl || '').trim()) { toast('Webhook URL を入力してください'); return; }
+        }
         WATCH.updatedAt = nowStamp(); render(); toast('設定を保存しました');
       };
     });
@@ -8160,6 +8182,10 @@ function bindCfgPages() {
       const put = () => { WATCH[k] = (el.type === 'number') ? Number(el.value) : el.value; };
       el.oninput = put;
       el.onchange = () => { put(); render(); };
+    });
+    /* 通知方法（メール／Webhook）はチェックで出し分け */
+    document.querySelectorAll('[data-wf-check]').forEach((cb) => {
+      cb.onchange = () => { WATCH[cb.dataset.wfCheck] = cb.checked; render(); };
     });
     document.querySelectorAll('[data-wf-toggle]').forEach((b) => {
       b.onclick = () => {

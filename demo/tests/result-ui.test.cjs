@@ -1155,7 +1155,7 @@ test('自動アップロード: 1 画面 1 設定で 6 セクションを描画�
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit|watch-table/);
   /* 顧客要件の設定項目（テナント切替・ログ設定は持たない） */
-  for (const t of ['監視パス', '対象ファイル', '業務シーン', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL']) {
+  for (const t of ['監視パス', '対象ファイル', '業務シーン', '取込成功時', '同一ファイルを除外', '再実行回数', '通知方法', '宛先メール']) {
     assert.ok(html.includes(t), t);
   }
   /* 処理開始ファイルは要件外なので撤去 */
@@ -1223,4 +1223,19 @@ test('ユーザー編集: 権限はチップで編集でき、グループ継承
   assert.match(html, /data-userperm="R4"/);
   assert.match(html, /所属グループから継承/);
   assert.match(html, /和集合/);
+});
+
+test('エラー通知: 通知方法を選んだときだけ宛先の入力欄が出る', () => {
+  const run = app();
+  let html = run('WATCH.notifyMailOn = true; WATCH.notifyWebOn = false; renderWatch()');
+  assert.match(html, /data-wf="notifyMail"/);
+  assert.doesNotMatch(html, /data-wf="notifyUrl"/);
+  html = run('WATCH.notifyMailOn = false; WATCH.notifyWebOn = true; renderWatch()');
+  assert.doesNotMatch(html, /data-wf="notifyMail"/);
+  assert.match(html, /data-wf="notifyUrl"/);
+  /* 両方選べる */
+  html = run('WATCH.notifyMailOn = true; WATCH.notifyWebOn = true; renderWatch()');
+  assert.match(html, /data-wf="notifyMail"/);
+  assert.match(html, /data-wf="notifyUrl"/);
+  assert.equal((html.match(/data-wf-check=/g) || []).length, 2);
 });

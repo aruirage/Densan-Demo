@@ -476,15 +476,17 @@
 .wf .tgl.off,
 #app[data-page="watch"] .cfg-head .tgl.off { background: #98a1b0; }
 
-/* ラジオ（処理後のファイル） */
-.watch-radios {
+/* ラジオ（処理後のファイル）／チェック（通知方法） */
+.watch-radios,
+.watch-checks {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 18px;
   padding-top: 3px;
 }
 
-.watch-radios label {
+.watch-radios label,
+.watch-checks label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -493,7 +495,8 @@
   cursor: pointer;
 }
 
-.watch-radios input { accent-color: var(--accent); margin: 0; }
+.watch-radios input,
+.watch-checks input { accent-color: var(--accent); margin: 0; }
 
 /* 数値＋単位 */
 .watch-inline {
