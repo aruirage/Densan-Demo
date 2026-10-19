@@ -1555,6 +1555,8 @@ def apply_roles_9(src):
     src = src.replace("name: '確認者'", "name: 'OCR結果確認'")
     src = src.replace("name: '承認者'", "name: 'OCR結果修正'")
     src = src.replace("name: 'アップロード者'", "name: 'アップロード'")
+    # 「万能（全権限）」の重複ロールを出さない（スーパーロールを R1=システム管理者 に寄せる）
+    src = src.replace("var SUPER_ROLE_ID = 'R9';", "var SUPER_ROLE_ID = 'R1';")
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
