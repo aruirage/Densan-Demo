@@ -411,12 +411,20 @@ function syncOpFixConfirm(ids) {
   return set;
 }
 
+/** グループが持つ権限 ID（複数可。旧データは permId だけなのでそれを 1 件として扱う） */
+function permIdsOfGroup(g) {
+  if (!g) return [];
+  if (g.permIds && g.permIds.length) return g.permIds;
+  return g.permId ? [g.permId] : [];
+}
+
 /** 在组里用组的 permId；个人に付けた権限は上乗せ（実効権限＝和集合） */
 function groupLeafSet(uid) {
   const ids = [];
   groupsOfUser(uid).forEach((g) => {
-    const rid = g.permId || (g.permIds && g.permIds[0]);
-    (MENU_PERMS[rid] || []).forEach((id) => ids.push(id));
+    permIdsOfGroup(g).forEach((rid) => {
+      (MENU_PERMS[rid] || []).forEach((id) => ids.push(id));
+    });
   });
   /* 個人に付けた役割も足す（グループ所属の有無に関わらず常に和集合） */
   const eu = entUserByUid(uid);
@@ -430,7 +438,7 @@ function groupLeafSet(uid) {
 function rolesOfUser(uid) {
   const out = [];
   const add = (rid) => { if (rid && !out.includes(rid)) out.push(rid); };
-  groupsOfUser(uid).forEach((g) => add(g.permId || (g.permIds && g.permIds[0])));
+  groupsOfUser(uid).forEach((g) => permIdsOfGroup(g).forEach(add));
   const eu = entUserByUid(uid);
   ((eu && eu.soloPermIds) || []).forEach(add);
   return out;
@@ -4212,17 +4220,12 @@ function renderUserAddDialog() {
         <div class="user-add-field is-top">
           <span class="user-add-label"><i class="req">*</i>権限</span>
           <div class="user-perms">
-            <div class="user-perm-chips">
-              ${ROLES.map((r) => {
-                const on = (d.soloPermIds || []).includes(r.id);
-                return `<label class="perm-chip${on ? ' on' : ''}" title="${esc(r.desc || '')}"><input type="checkbox" class="cb" data-userperm="${r.id}" ${on ? 'checked' : ''} /><span>${esc(r.name)}</span></label>`;
-              }).join('')}
-            </div>
+            ${groupFormMulti('uaPerm', '権限を選択してください', ROLES.map((r) => [r.id, r.name]), d.soloPermIds || [])}
             ${(() => {
               const gs = d.uid ? groupsOfUser(d.uid) : [];
               /* 兼務で同じ役割のグループに複数入っていても 1 回だけ出す */
               const ids = [];
-              gs.forEach((g) => { const rid = g.permId || (g.permIds && g.permIds[0]); if (rid && !ids.includes(rid)) ids.push(rid); });
+              gs.forEach((g) => permIdsOfGroup(g).forEach((rid) => { if (!ids.includes(rid)) ids.push(rid); }));
               const names = ids.map((rid) => (byId(ROLES, rid) || {}).name).filter(Boolean);
               if (!names.length) return '<p class="user-perm-note">グループ未所属。ここで選んだ権限だけが有効になります。</p>';
               return `<p class="user-perm-note">所属グループから継承：<b>${esc(names.join('、'))}</b>　実効権限はグループと個人の和集合です。</p>`;
@@ -4777,8 +4780,8 @@ function groupFormDialog() {
     u.name,
     groupsOfUser(u.id).filter((g) => g.id !== f.id).map((g) => g.name).join('、') || '他のグループなし',
   ]);
-  /* 権限は 1 つだけ。既存データが複数持っていても先頭を使う */
-  const permMs = groupFormSingle('gfPerm', '権限を選択してください', permOpts, f.permId || (f.permIds || [])[0] || '');
+  /* 権限は複数持てる（操作グループの役割を複数付与できる） */
+  const permMs = groupFormMulti('gfPerm', '権限を選択してください', permOpts, f.permIds || (f.permId ? [f.permId] : []));
   const userMs = groupFormMulti('gfUsers', 'ユーザーを選択（複数可）', userOpts, f.userIds || []);
   const tags = CATEGORY.filter((c) => (c.groupIds || []).includes(f.id)).map((c) => c.name);
   const tagHtml = tags.length ? tags.map((n) => `<span class="pill">${esc(n)}</span>`).join('') : '<span class="muted">—</span>';
@@ -5206,7 +5209,7 @@ let WATCH = {
     { id: 'p2', path: '\\\\filesv02\\住民課\\転入転出', on: true },
     { id: 'p3', path: '\\\\filesv03\\住民課\\世帯異動', on: false },
   ],
-  pattern: '*.pdf', caseSensitive: false,
+  pattern: '*.pdf',
   biz: 'b1',
   after: 'move', afterDir: '\\\\filesv01\\処理済\\住民異動届',
   dupGuard: true, dupMethod: 'meta',
@@ -5262,7 +5265,6 @@ function renderWatch() {
             </div>
           </div>
           ${row('対象ファイル', watchSelect('pattern', WATCH_PATTERNS, x.pattern), true)}
-          ${row('大文字小文字を区別', watchToggle('caseSensitive', x.caseSensitive), true)}
         </div>
       </section>
 
@@ -8342,12 +8344,20 @@ function bindCfgPages() {
     const cancel = $('#userAddCancel'); if (cancel) cancel.onclick = closeDlg;
     const nm = $('#userAddName'); if (nm) nm.oninput = () => { USER_ADD_DRAFT.name = nm.value; };
     const em = $('#userAddEmail'); if (em) em.oninput = () => { USER_ADD_DRAFT.email = em.value; };
-    /* 個人の権限：チップを押すたびに付け外し（グループ継承分は別表示なので触らない） */
-    document.querySelectorAll('[data-userperm]').forEach((cb) => {
+    /* 個人の権限：ドロップダウンで複数選択（グループ継承分は別表示なので触らない） */
+    document.querySelectorAll('[data-gfopt="uaPerm"]').forEach((cb) => {
       cb.onchange = () => {
-        const id = cb.dataset.userperm;
         const cur = USER_ADD_DRAFT.soloPermIds || [];
-        USER_ADD_DRAFT.soloPermIds = cb.checked ? [...cur, id] : cur.filter((x) => x !== id);
+        USER_ADD_DRAFT.soloPermIds = cb.checked
+          ? (cur.includes(cb.value) ? cur : cur.concat([cb.value]))
+          : cur.filter((x) => x !== cb.value);
+        render();
+      };
+    });
+    document.querySelectorAll('[data-gfclear="uaPerm"]').forEach((b) => {
+      b.onclick = (e) => {
+        e.stopPropagation();
+        USER_ADD_DRAFT.soloPermIds = [];
         render();
       };
     });

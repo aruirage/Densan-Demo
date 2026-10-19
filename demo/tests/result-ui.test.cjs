@@ -1213,16 +1213,37 @@ test('ユーザー権限: 個人の権限はグループの権限に上乗せさ
   assert.equal(run('userHasOp("confirm","u5")'), false);
 });
 
-test('ユーザー編集: 権限はチップで編集でき、グループ継承分は別に表示する', () => {
+test('ユーザー編集: 権限はドロップダウンで複数選択でき、グループ継承分は別に表示する', () => {
   const run = app();
   run('USER_ADD_DRAFT = { mode:"edit", id:"U5", uid:"u5", name:"伊藤 由美", email:"yumi.ito@itso.co.jp", soloPermIds:["R3"], status:"有効" };');
   const html = run('renderUserAddDialog()');
-  /* 個人の権限はチェックボックスで編集（旧：読み取り専用のテキスト／単一セレクト） */
+  /* 個人の権限は複数選択のドロップダウン（旧：読み取り専用のテキスト／単一セレクト／チップ） */
   assert.doesNotMatch(html, /id="userAddRole"/);
-  assert.match(html, /data-userperm="R3"[^>]*checked/);
-  assert.match(html, /data-userperm="R4"/);
+  assert.doesNotMatch(html, /data-userperm/);
+  assert.match(html, /data-msbtn="uaPerm"/);
+  assert.match(html, /data-gfopt="uaPerm"/);
+  assert.match(html, /value="R3"[^>]*checked/);
   assert.match(html, /所属グループから継承/);
   assert.match(html, /和集合/);
+});
+
+test('グループ編集: 権限は複数選択できる', () => {
+  const run = app();
+  run('state.groupForm = { mode:"edit", id:"g6", name:"保育・児童窓口", permIds:["R3","R4"], userIds:["u6"] };');
+  const html = run('groupFormDialog()');
+  assert.match(html, /data-gfopt="gfPerm"/);
+  assert.match(html, /value="R3"[^>]*checked/);
+  assert.match(html, /value="R4"[^>]*checked/);
+  /* 単一選択のラジオは使わない */
+  assert.doesNotMatch(html, /data-gfsopt="gfPerm"/);
+});
+
+test('グループの権限が複数のとき、所属ユーザーの実効権限は和集合になる', () => {
+  const run = app();
+  run('GROUPS.find((g) => g.id === "g6").permIds = ["R4","R3"]');
+  assert.deepEqual(JSON.parse(run('JSON.stringify(rolesOfUser("u6"))')), ['R4', 'R3']);
+  /* R3 の確認が効く（R4 だけでは確認できない） */
+  assert.equal(run('userHasOp("confirm","u6")'), true);
 });
 
 test('エラー通知: 通知方法を選んだときだけ宛先の入力欄が出る', () => {
