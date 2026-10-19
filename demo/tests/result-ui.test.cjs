@@ -1155,7 +1155,7 @@ test('自動アップロード: 1 画面 1 設定で 6 セクションを描画�
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit|watch-table/);
   /* 顧客要件の設定項目（テナント切替・ログ設定は持たない） */
-  for (const t of ['監視パス', '対象ファイル', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL']) {
+  for (const t of ['監視パス', '対象ファイル', '業務シーン', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL']) {
     assert.ok(html.includes(t), t);
   }
   /* 処理開始ファイルは要件外なので撤去 */
@@ -1173,10 +1173,10 @@ test('自動アップロード: 1 画面 1 設定で 6 セクションを描画�
   assert.equal((html.match(/class="wp-row/g) || []).length, run('WATCH.paths.length'));
   assert.equal((html.match(/data-watchpathon=/g) || []).length, run('WATCH.paths.length'));
   assert.match(html, /data-watchpathadd/);
-  /* 取込先は業務シーンで絞る（帳票タイプが増えると自動判定が効かなくなるため） */
+  /* 取込先は業務シーンだけ（帳票タイプは自動判定に任せる） */
   assert.match(html, /<select class="fld" data-wf="biz">/);
-  const layoutSel = html.match(/data-wf="layout"[\s\S]*?<\/select>/)[0];
-  assert.equal((layoutSel.match(/<option/g) || []).length, run('layoutsOfBiz(WATCH.biz).length') + 1);
+  assert.doesNotMatch(html, /data-wf="layout"/);
+  assert.equal(run('BUSINESS.length'), 6);
 });
 
 test('自動アップロード: 移動先は「移動」を選んだときだけ出る', () => {

@@ -5746,7 +5746,7 @@ let WATCH = {
     { id: 'p3', path: '\\\\filesv03\\住民課\\世帯異動', on: false },
   ],
   pattern: '*.pdf', caseSensitive: false,
-  biz: 'b1', layout: 'auto',
+  biz: 'b1',
   after: 'move', afterDir: '\\\\filesv01\\処理済\\住民異動届',
   dupGuard: true, dupMethod: 'meta',
   retry: 3, retryGap: 5,
@@ -5766,13 +5766,6 @@ const WATCH_PATTERNS = [
   ['*.*', 'すべてのファイル'],
 ];
 
-const watchLayoutName = (id) => (id === 'auto' ? '自動判定' : dispLayout(id));
-/** 業務シーンに属する帳票タイプ（LAYOUT は category 経由で business を持つ） */
-const layoutsOfBiz = (bizId) => LAYOUT.filter((l) => {
-  const c = byId(CATEGORY, l.category);
-  return !!c && c.business === bizId;
-});
-
 /* フォーム部品（この画面だけで使う） */
 const watchSelect = (key, opts, cur) => `<select class="fld" data-wf="${key}">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
 const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-checked="${on}"><span class="tgl-txt">${on ? 'する' : 'しない'}</span><span class="tgl-knob"></span></button>`;
@@ -5782,10 +5775,8 @@ const watchRow = (label, inner, wide) => `<div class="wf"><span class="wf-label"
 function renderWatch() {
   const x = WATCH;
   const row = watchRow;
-  /* 自動判定の候補は業務シーンで絞る（帳票タイプが増えると判定精度が落ちるため）。 */
+  /* 帳票タイプは業務シーンで絞って自動判定させる（選択肢を増やすと精度が落ちるため） */
   const bizOpts = BUSINESS.map((b) => [b.id, dispBiz(b.id)]);
-  const layoutOpts = [['auto', '自動判定（業務シーンから推定）']]
-    .concat(layoutsOfBiz(x.biz).map((l) => [l.id, dispLayout(l.id)]));
 
   return `${cfgHeader('自動アップロード', `<span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>`)}
   <p class="cfg-hint">指定フォルダにファイルが置かれると自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。${x.updatedAt ? `<span class="muted">最終更新 ${esc(x.updatedAt)}</span>` : ''}</p>
@@ -5816,11 +5807,10 @@ function renderWatch() {
       <section class="watch-sec">
         <h3 class="watch-sec-head">取込先</h3>
         <div class="watch-fields">
-          ${row('業務シーン', watchSelect('biz', bizOpts, x.biz), true)}
-          <div class="wf"><span class="wf-label">帳票タイプ</span>
+          <div class="wf"><span class="wf-label">業務シーン</span>
             <div class="wf-ctl wide">
-              ${watchSelect('layout', layoutOpts, x.layout)}
-              <p class="wf-help">自動判定の候補は、選んだ業務シーンの帳票タイプだけに絞られます。</p>
+              ${watchSelect('biz', bizOpts, x.biz)}
+              <p class="wf-help">選んだ業務シーンに含まれる帳票だけを対象に、帳票の種類を自動判定します。</p>
             </div>
           </div>
         </div>
@@ -8712,15 +8702,7 @@ function bindCfgPages() {
       const k = el.dataset.wf;
       const put = () => { WATCH[k] = (el.type === 'number') ? Number(el.value) : el.value; };
       el.oninput = put;
-      el.onchange = () => {
-        put();
-        /* 業務シーンを変えたら、その範囲に無い帳票タイプは自動判定へ戻す */
-        if (k === 'biz' && WATCH.layout !== 'auto'
-          && !layoutsOfBiz(WATCH.biz).some((l) => l.id === WATCH.layout)) {
-          WATCH.layout = 'auto';
-        }
-        render();
-      };
+      el.onchange = () => { put(); render(); };
     });
     document.querySelectorAll('[data-wf-toggle]').forEach((b) => {
       b.onclick = () => {
