@@ -594,7 +594,7 @@ var MOCK_EXTRA_APPLIED = true;
   var count = 55;
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   for (var k = 0; k < count; k++) {
-    var n = startId + k * 5;                     /* n % 5 === 0 → tenant02（既定テナント） */
+    var n = startId + k * 5;                     /* n % 5 === 0 → tenant2（既定テナント） */
     var id = 'f' + n;
     var lay = L[k % L.length];
     var nm = prefix[k % prefix.length] + '_' + lay.name + suffix[(k + 1) % suffix.length] + '.pdf';

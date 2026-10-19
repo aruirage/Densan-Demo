@@ -1,0 +1,26 @@
+/* 帳票タイプ設定：左プレビューを縮め（画像領域を狭く）、各 Step の表がセル幅を
+   超えて隣の入力に被さる問題を防ぐ。styles.css の全列 table-layout:fixed を
+   前提に、未指定だった列に明示幅を足し、入力の最小幅を抑える。 */
+
+/* 1) 左の画像アップロード／プレビュー領域を右のフィールドより狭くする */
+.typedetail .wiz-body{grid-template-columns:minmax(0,0.6fr) minmax(0,1fr);gap:18px}
+.typedetail .wiz-body .wiz-sheet{max-width:380px}
+.typedetail .wiz-body .wiz-preview{padding:12px}
+
+/* 2) Step2 AI読取設定の項目表：列幅を固定し、入力の最小幅を縮めてセル内に収める */
+.typedetail .tp2-table{table-layout:fixed}
+.typedetail .tp2-table th:nth-child(1),.typedetail .tp2-table td:nth-child(1){width:34px}
+.typedetail .tp2-table th:nth-child(2),.typedetail .tp2-table td:nth-child(2){width:auto;min-width:90px}
+.typedetail .tp2-table th:nth-child(3),.typedetail .tp2-table td:nth-child(3){width:auto;min-width:110px}
+.typedetail .tp2-table th:nth-child(4),.typedetail .tp2-table td:nth-child(4){width:auto;min-width:90px}
+.typedetail .tp2-table th:nth-child(5),.typedetail .tp2-table td:nth-child(5){width:54px}
+.typedetail .tp2-table th:nth-child(6),.typedetail .tp2-table td:nth-child(6){width:70px}
+.typedetail .tp2-in{min-width:60px}
+
+/* 3) Step3 処理ルール設定：「処理ルール」と「自信度」が被さらないよう列幅を明示 */
+.typedetail .rule-table{table-layout:fixed}
+.typedetail .rule-table th:nth-child(1),.typedetail .rule-table td:nth-child(1){width:40px}
+.typedetail .rule-table th:nth-child(2),.typedetail .rule-table td:nth-child(2){width:auto;min-width:90px}
+.typedetail .rule-table th:nth-child(3),.typedetail .rule-table td:nth-child(3){width:160px}
+.typedetail .rule-table th:nth-child(4),.typedetail .rule-table td:nth-child(4){width:120px}
+.typedetail .rule-select{min-width:120px;max-width:160px}

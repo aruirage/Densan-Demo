@@ -579,17 +579,7 @@
 .watch-table tr.off td { background: #fafbfd; }
 .watch-table tr.off .fld { background: #f6f7fa; color: var(--text-3); }
 
-/* 業務シーンの見出し行（カテゴリのグルーピング。選択させる項目ではない） */
-.wr-group td {
-  padding: 5px 10px;
-  border-bottom: 1px solid #e3eefb;
-  background: #eef5fd;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: var(--accent);
-}
-
+/* 帳票タイプ名（業務シーンの見出し行は作らない） */
 .wr-cat { color: var(--text-2); }
 
 /* 表の中のトグルは小さめ（wp-row と同じ寸法） */

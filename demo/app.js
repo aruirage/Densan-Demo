@@ -93,7 +93,7 @@ const DEMO_ACTORS = [
   { id: 'u1', role: 'システム管理者', email: 'ichiro.sato@itso.co.jp', hint: '全メニュー・全帳票・全操作' },
   { id: 'u3', role: '業務管理者', email: 'kenta.yamada@itso.co.jp', hint: '「設定」の 2 メニュー（帳票設定・利用設定）だけ。一覧・アップロード・読取は不可' },
   { id: 'u8', role: 'OCR結果確認', email: 'ryo.nakamura@itso.co.jp', hint: '閲覧・修正・確認（アップロードと設定は不可）' },
-  { id: 'u7', role: 'アップロード', email: 'aya.yamamoto@itso.co.jp', hint: '閲覧とアップロード（読取・確認・出力は不可）' },
+  { id: 'u7', role: 'アップロード', email: 'aya.yamamoto@itso.co.jp', hint: 'アップロードのみ（閲覧・読取・確認・出力・削除は不可）' },
   { id: 'u6', role: '読取', email: 'osamu.watanabe@itso.co.jp', hint: '閲覧・読取（再読取／一括読取）・削除（確認と出力は不可）' },
   { id: 'u5', role: 'OCR結果修正', email: 'yumi.ito@itso.co.jp', hint: '閲覧と修正のみ（確認・出力は不可）' },
   { id: 'u2', role: 'AI分類結果修正', email: 'hanako.suzuki@itso.co.jp', hint: '閲覧と AI 分類結果の修正のみ' },
@@ -354,7 +354,7 @@ const ENT_USERS = [
   { id: 'U4', uid: 'u4', name: '田中 実', email: 'minoru.tanaka@itso.co.jp', role: '承認者', dataPerm: '自身のみ', created: '2026-10-03 11:45:02', status: '有効' },
   { id: 'U5', uid: 'u5', name: '伊藤 由美', email: 'yumi.ito@itso.co.jp', role: '承認者', dataPerm: '自身のみ', created: '2026-10-05 08:31:10', status: '有効' },
   { id: 'U6', uid: 'u6', name: '渡辺 修', email: 'osamu.watanabe@itso.co.jp', role: '確認者', dataPerm: '自身のみ', created: '2026-10-06 10:05:44', status: '有効' },
-  { id: 'U7', uid: 'u7', name: '山本 彩', email: 'aya.yamamoto@itso.co.jp', role: 'アップロード者', dataPerm: '自身のみ', created: '2026-10-07 13:22:09', status: '有効', soloPermIds: ['R5', 'R8'] },
+  { id: 'U7', uid: 'u7', name: '山本 彩', email: 'aya.yamamoto@itso.co.jp', role: 'アップロード者', dataPerm: '自身のみ', created: '2026-10-07 13:22:09', status: '有効', soloPermIds: ['R5'] },
   { id: 'U8', uid: 'u8', name: '中村 亮', email: 'ryo.nakamura@itso.co.jp', role: '確認者', dataPerm: '自身のみ', created: '2026-10-08 09:41:30', status: '有効' },
   /* 出力専任。グループ未所属で、個人の権限（R10）だけを持つ */
   { id: 'U10', uid: 'u10', name: '小林 直子', email: 'naoko.kobayashi@itso.co.jp', role: '出力者', dataPerm: '自身のみ', created: '2026-10-09 09:15:00', status: '有効', soloPermIds: ['R10'] },
@@ -784,7 +784,7 @@ let MENU_PERMS = {
   ],
   R3: ['home', 'op-upload', 'op-read', 'result', 'op-fix', 'op-confirm', 'op-redo', 'op-download', 'op-delete'],
   R4: ['home', 'result'],
-  R5: ['home', 'result', 'op-upload', 'op-read', 'op-redo'],
+  R5: ["upload", "op-upload"],
   /* 9 ロール設計で追加した分。serve.py の配分パッチと同じ値にしてある */
   R6: BIZ_MENU_BASE.slice(),
   R7: BIZ_MENU_BASE.concat(['op-classify']),
@@ -1021,9 +1021,9 @@ const HOME_TO = (() => {
 
 /* ── マルチテナント（客户回答：データ分離・GPU共有。デモではテナントで表示データを切替） ── */
 const TENANTS = [
-  { id: 'tenant01', name: '青葉市', note: '本番' },
-  { id: 'tenant02', name: '緑ヶ丘町', note: '本番' },
-  { id: 'tenant03', name: '白川村', note: '検証' },
+  { id: 'tenant1', name: '青葉市', note: '本番' },
+  { id: 'tenant2', name: '緑ヶ丘町', note: '本番' },
+  { id: 'tenant3', name: '白川村', note: '検証' },
 ];
 
 /* ── 承認フロー設定（帳票タイプ単位。ここは「承認を使うか」だけを持つ） ──
@@ -1384,7 +1384,7 @@ function renderTopNav() {
 
 const state = {
   page: 'home',                   // ルート：'home' | 'upload' | 'result'（左メニューで切替）
-  tenant: 'tenant02',             // マルチテナント：選択中テナント（データは分離して表示）
+  tenant: 'tenant2',             // マルチテナント：選択中テナント（データは分離して表示）
   tenantOpen: false,
   tabs: ['home', 'upload', 'result'], // 開いているタブ。×で閉じられる
   resultPage: 1,                  // 読取結果一覧のページ番号
@@ -1693,18 +1693,18 @@ function toast(msg) {
 const TENANT_PIN = {
   /* 既定テナント（緑ヶ丘町）に足りないステータスを補う
      ※ 分類中／読取待ちは結果一覧に出ないためピン不要（アップロード画面のみの状態） */
-  f13: 'tenant02',   // 読取中
-  f36: 'tenant02',   // 確認中
-  f41: 'tenant02',   // 確認済み
-  f45: 'tenant02',   // 出力済み
+  f13: 'tenant2',   // 読取中
+  f36: 'tenant2',   // 確認中
+  f41: 'tenant2',   // 確認済み
+  f45: 'tenant2',   // 出力済み
   /* 検証テナント（白川村）にも 10 ステータスを揃える */
-  f37: 'tenant03',   // 読取失敗
-  f40: 'tenant03',   // 確認済み
-  f43: 'tenant03',   // 承認済み
-  f44: 'tenant03',   // 差戻中
-  /* 青葉市（tenant01）に足りないステータスを補う */
-  f39: 'tenant01',   // 読取失敗
-  f12: 'tenant01',   // 読取完了
+  f37: 'tenant3',   // 読取失敗
+  f40: 'tenant3',   // 確認済み
+  f43: 'tenant3',   // 承認済み
+  f44: 'tenant3',   // 差戻中
+  /* 青葉市（tenant1）に足りないステータスを補う */
+  f39: 'tenant1',   // 読取失敗
+  f12: 'tenant1',   // 読取完了
 };
 
 function tenantOfFile(f) {
@@ -1716,8 +1716,8 @@ function tenantOfFile(f) {
   /* 割り当ては「白川村 → 緑ヶ丘町 → 青葉市」の順に判定（重複しない） */
   const ends36 = /[36]$/.test(String(n));                                  // 白川村（検証テナント）
   const explicit2 = ['f15', 'f18', 'f19'].includes(id);                   // 緑ヶ丘町に置く代表ファイル（承認済み・差戻中を揃える）
-  if (state.tenant === 'tenant03') return ends36;
-  if (state.tenant === 'tenant02') return !ends36 && (n % 5 === 0 || explicit2);
+  if (state.tenant === 'tenant3') return ends36;
+  if (state.tenant === 'tenant2') return !ends36 && (n % 5 === 0 || explicit2);
   return !ends36 && !(n % 5 === 0) && !explicit2;                        // 青葉市（既定）
 }
 const inTenant = (f) => tenantOfFile(f);
@@ -2087,9 +2087,7 @@ function renderTree() {
       const fullName = nodeLabel(n);
       /* フォルダ（業務シーン・帳票タイプ）＝権限の単位。名称変更と権限設定を置く */
       const ops = (n.type === 'biz' || n.type === 'cat')
-        ? [canReachPage('permissions')
-          ? `<button class="redo" title="このフォルダの権限" data-treeprem="${n.id}"><span class="ico i-lock"></span></button>` : '',
-          `<button class="redo" title="表示名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
+        ? [`<button class="redo" title="表示名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
         : [];
       /* 長い名前は省略表示。hover で全文（ファイルは data-tip、フォルダは title） */
       const labelTip = n.type === 'file'
@@ -3788,17 +3786,20 @@ function commitExport(id, fmt) {
     toast('前回出力以降の差分がないため、同一データの重複出力をスキップしました');
     return false;
   }
-  const fields = OCR_FIELDS.b6.filter((x) => delta.changed.includes(x.key));
-  const rows = [['項目', '値']].concat(fields.map((x) => [x.label, delta.now[x.key] || '']));
-  const text = fmt === 'json'
-    ? JSON.stringify({ document_id: id, file_name: dispFileName(id), since_last_export: !delta.first, fields: rows.slice(1).map(([k, v]) => ({ label: k, value: v })) }, null, 2)
-    : rows.map((r) => r.join(',')).join('\r\n');
-  const blob = new Blob(['\ufeff' + text], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  const ext = fmt === 'pdf' ? 'txt' : fmt;
-  a.download = `${dispFileName(id).replace(/\.[^.]+$/, '')}${delta.first ? '' : '_差分'}.${ext}`;
-  document.body.appendChild(a); a.click(); a.remove();
+  const base = dispFileName(id).replace(/\.[^.]+$/, '');
+  const suffix = delta.first ? '' : '_差分';
+  if (fmt === 'json') {
+    const fields = OCR_FIELDS.b6.filter((x) => delta.changed.includes(x.key));
+    const rows = [['項目', '値']].concat(fields.map((x) => [x.label, delta.now[x.key] || '']));
+    const text = JSON.stringify({ document_id: id, file_name: dispFileName(id), since_last_export: !delta.first, fields: rows.slice(1).map(([k, v]) => ({ label: k, value: v })) }, null, 2);
+    downloadText(base + suffix + '.json', text, 'application/json');
+  } else if (fmt === 'pdf') {
+    const text = JSON.stringify({ document_id: id, file_name: dispFileName(id), fields: OCR_FIELDS.b6.map((x) => ({ key: x.key, label: x.label, value: (state.reviewDirty[id] || {})[x.key] !== undefined ? (state.reviewDirty[id])[x.key] : (x.value || '') })) }, null, 2);
+    downloadText(base + suffix + '.txt', text, 'text/plain;charset=utf-8');
+  } else {
+    const built = buildExportCsv([id]);
+    csvDownload(base + suffix + '.csv', built.text, built.enc);
+  }
   if (f) {
     f.exportSnapshot = JSON.stringify(delta.now);
     f.status = 'exported';
@@ -3818,9 +3819,117 @@ function seedExportSnapshots() {
     f.exportSnapshot = JSON.stringify(map);
   });
 }
-seedExportSnapshots();
+  seedExportSnapshots();
 
-/** 読取結果を指定形式でダウンロードする。前回出力と同一なら出さない。 */
+  /* ── エクスポート実行：設定（帳票タイプの列名・列順 ＋ ダイアログの変換方式／まとめ／入力名）を反映 ──
+   *  客户要求（機能確認表 No.15）の出力仕様を実際のダウンロードに適用する。
+   *   CSV は「ヘッダ横並び・1 行 1 レコード」、まとめて出力時は複数ファイルを 1 ファイルに統合し、
+   *   入力名と同じが ON なら先頭に「入力ファイル名」列を付与する。 */
+  function ticketTypeOfFile(f) {
+    if (!f) return null;
+    return TICKET_TYPES.find((t) => layoutIdOfTicketType(t) === f.layout) || null;
+  }
+  function exportColsOf(f) {
+    const t = ticketTypeOfFile(f);
+    if (!t) return null;
+    const cfg = exportCfgOf(t);
+    let cols = (cfg.cols || []).filter((c) => c.on);
+    if (state.exportCfg && state.exportCfg.requiredOnly) cols = cols.filter((c) => c.required);
+    return cols.length ? cols : null;
+  }
+  /* デモの抽出値は OCR_FIELDS.b6 に格納されている。帳票タイプの列（tf 系／c 系）と直接結びつかないため、
+   *  列順に応じて b6 の値をインデックスで割り当てる（モック）。本番は列→抽出項目のマッピングで差し替え。 */
+  function exportCellValue(id, idx) {
+    const dirty = state.reviewDirty[id] || {};
+    const b6 = OCR_FIELDS.b6;
+    const fld = b6[idx % b6.length];
+    const v = dirty[fld.key] !== undefined ? dirty[fld.key] : (fld.value || '');
+    return String(v == null ? '' : v);
+  }
+  function formatDateValue(v, fmt) {
+    if (!fmt || fmt === 'YYYY-MM-DD') return v;
+    const m = String(v).match(/^(令和|昭和|平成)(\d+)年(\d+)月(\d+)日$/);
+    if (!m) return v;
+    const base = { 令和: 2018, 昭和: 1925, 平成: 1988 }[m[1]];
+    const y = base + Number(m[2]);
+    const mm = m[3].padStart(2, '0'); const dd = m[4].padStart(2, '0');
+    if (fmt === 'YYYY/MM/DD') return y + '/' + mm + '/' + dd;
+    return v;
+  }
+  function csvEscape(v, delim) {
+    const s = String(v == null ? '' : v);
+    if (s.indexOf('"') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0 || (delim && s.indexOf(delim) >= 0)) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+  /** 同一帳票タイプの複数ファイルを 1 つの CSV にまとめる。
+   *   ヘッダ＝設定された列名・列順。入力名と同じが ON なら先頭に「入力ファイル名」列を追加。 */
+  function buildExportCsv(ids) {
+    const C = state.exportCfg || {};
+    const enc = C.encoding || 'UTF-8';
+    const files = ids.map((id) => byId(FILES_DATA, id)).filter(Boolean);
+    if (!files.length) return null;
+    const t = ticketTypeOfFile(files[0]);
+    const tcfg = t ? exportCfgOf(t) : {};
+    const delim = tcfg.delimiter === 'タブ' ? '\t' : (tcfg.delimiter === 'セミコロン' ? ';' : ',');
+    const newline = tcfg.newline === 'LF' ? '\n' : '\r\n';
+    const withHeader = tcfg.header !== false;
+    const withFileCol = !!C.fileNameFromInput;
+    const emptyMode = tcfg.empty === 'NULL' ? 'NULL' : '';
+    const dateFmt = tcfg.dateFormat || 'YYYY-MM-DD';
+    const cols = exportColsOf(files[0]);
+    const labels = cols ? cols.map((c) => c.label) : OCR_FIELDS.b6.map((x) => x.label);
+    const cellsFor = (f) => (cols ? cols.map((c, i) => exportCellValue(f.id, i)) : OCR_FIELDS.b6.map((x, i) => exportCellValue(f.id, i)))
+      .map((v) => formatDateValue(v, dateFmt))
+      .map((v) => (v === '' ? emptyMode : v));
+    const headerCells = (withFileCol ? ['入力ファイル名'] : []).concat(labels);
+    const rows = files.map((f) => (withFileCol ? [dispFileName(f.id)] : []).concat(cellsFor(f)));
+    const all = withHeader ? [headerCells].concat(rows) : rows;
+    const text = all.map((r) => r.map((cell) => csvEscape(cell, delim)).join(delim)).join(newline);
+    return { text, enc, delim };
+  }
+  function downloadText(filename, text, mime) {
+    const blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  /* 変換方式に従って CSV を出力。UTF-8 は BOM あり／なしを切替。
+   *   Shift_JIS はデモでは UTF-8 バイト＋ shift_jis ラベル（現状維持；本番は encoding-japanese 等で CP932 化）。 */
+  function csvDownload(filename, text, encoding) {
+    const enc = encoding || 'UTF-8';
+    let bytes, mime;
+    if (enc === 'Shift_JIS') {
+      bytes = new TextEncoder().encode(text);
+      mime = 'text/csv;charset=shift_jis';
+    } else {
+      const hasBom = enc === 'UTF-8';
+      const s = hasBom ? '\ufeff' + text : text;
+      bytes = new TextEncoder().encode(s);
+      mime = 'text/csv;charset=utf-8';
+    }
+    const blob = new Blob([bytes], { type: mime });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  function exportMergedFileName(files) {
+    const C = state.exportCfg || {};
+    if (C.fileNameFromInput && files[0]) {
+      const base = dispFileName(files[0].id).replace(/\.[^.]+$/, '');
+      return base + '_結合' + (files.length > 1 ? files.length : '');
+    }
+    if (C.fileName) return C.fileName;
+    const base = (files[0] && files[0].name || '出力データ').replace(/\.[^.]+$/, '');
+    return base + '_結合';
+  }
+
+  /** 読取結果を指定形式でダウンロードする。前回出力と同一なら出さない。 */
 function downloadResultFile(id, fmt) {
   commitExport(id, fmt);
 }
@@ -4311,9 +4420,18 @@ function renderUserAddDialog() {
         <div class="user-add-field">
           <span class="user-add-label">帳票类别</span>
           <div>${(() => {
+            /* 権限の単位はフォルダ（業務シーン → 帳票タイプ）。閲覧に入っている
+               グループから、その人が見られる帳票タイプを逆算して出す。 */
             const gs = d.uid ? groupsOfUser(d.uid) : [];
-            const names = CATEGORY.filter((c) => (c.groupIds || []).some((id) => gs.some((g) => g.id === id))).map((c) => c.name);
-            return names.length ? names.map((n) => `<span class="pill">${esc(n)}</span>`).join('') : '<span class="muted">—</span>';
+            const gids = gs.map((g) => g.id);
+            const all = gs.some((g) => g.root);
+            const names = all
+              ? CATEGORY.map((c) => c.name)
+              : CATEGORY.filter((c) => nodeLayouts(c.id).some((l) => (permsOf(l.id).view || []).some((t) => gids.includes(t) || (byId(GROUPS, t) || {}).root))).map((c) => c.name);
+            if (!names.length) return '<span class="muted">—</span>';
+            const shown = names.slice(0, 3).map((n) => `<span class="pill">${esc(n)}</span>`).join('');
+            const rest = names.length > 3 ? `<span class="pill more" title="${esc(names.join('、'))}">+${names.length - 3}</span>` : '';
+            return shown + rest;
           })()}</div>
         </div>
         <div class="user-add-field">
@@ -5281,9 +5399,9 @@ function renderDictDialogs() {
 let WATCH = {
   on: true,
   roots: [
-    { id: 'r1', tenant: 'tenant01', path: '\\\\filesv01\\取込', doneDir: '\\\\filesv01\\処理済', on: true },
-    { id: 'r2', tenant: 'tenant02', path: '\\\\filesv02\\取込', doneDir: '\\\\filesv02\\処理済', on: true },
-    { id: 'r3', tenant: 'tenant03', path: '\\\\filesv03\\取込', doneDir: '\\\\filesv03\\処理済', on: false },
+    { id: 'r1', tenant: 'tenant1', path: '\\\\filesv01\\取込', doneDir: '\\\\filesv01\\処理済', on: true },
+    { id: 'r2', tenant: 'tenant2', path: '\\\\filesv02\\取込', doneDir: '\\\\filesv02\\処理済', on: true },
+    { id: 'r3', tenant: 'tenant3', path: '\\\\filesv03\\取込', doneDir: '\\\\filesv03\\処理済', on: false },
   ],
   /* カテゴリ 1 行。フォルダ名はルート直下の名前（全テナント共通） */
   rules: [],
@@ -5341,10 +5459,16 @@ function renderWatch() {
         <td class="c"><button type="button" class="wp-del" data-wrootdel="${r.id}" aria-label="このルートを削除"${x.roots.length > 1 ? '' : ' disabled'}>×</button></td>
       </tr>`).join('');
 
-  const ruleRows = BUSINESS.map((b) => {
-    const rows = CATEGORY.filter((c) => c.business === b.id).map((c) => {
-      const r = watchRuleOf(c.id);
-      return `<tr class="wr-rule${r.on ? '' : ' off'}">
+  /* 帳票設定に登録されている帳票タイプをそのまま並べる（業務シーンの階層は作らない）。
+     並び順だけ業務シーンの順に揃える。 */
+  const orderedCats = CATEGORY.slice().sort((a, b) => {
+    const ba = (byId(BUSINESS, a.business) || {}).order || 0;
+    const bb = (byId(BUSINESS, b.business) || {}).order || 0;
+    return ba - bb || (a.order || 0) - (b.order || 0);
+  });
+  const ruleRows = orderedCats.map((c) => {
+    const r = watchRuleOf(c.id);
+    return `<tr class="wr-rule${r.on ? '' : ' off'}">
         <td class="wr-cat">${esc(c.name)}</td>
         <td><input class="fld mono" data-wrule-folder="${c.id}" value="${esc(r.folder)}" placeholder="フォルダ名" aria-label="フォルダ名" /></td>
         <td><input class="fld mono" data-wrule-pattern="${c.id}" value="${esc(r.pattern)}" list="watchPatternList" aria-label="ファイル名パターン" /></td>
@@ -5352,9 +5476,6 @@ function renderWatch() {
         <td class="c"><input type="checkbox" class="cb" data-wrule-case="${c.id}" ${r.caseSensitive ? 'checked' : ''} aria-label="大文字小文字を区別" /></td>
         <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wruleon="${c.id}" role="switch" aria-checked="${r.on}" aria-label="この帳票タイプを自動で取り込む"><span class="tgl-knob"></span></button></td>
       </tr>`;
-    }).join('');
-    if (!rows) return '';
-    return `<tr class="wr-group"><td colspan="6">${esc(dispBiz(b.id))}</td></tr>${rows}`;
   }).join('');
 
   /* 実際に監視する本数＝有効ルート × 有効カテゴリ */
@@ -5809,13 +5930,12 @@ function bindBizScenes() {
   };
 }
 
-/** 帳票タイプ詳細のステップ（製品：AI分類設定 → AI読取設定 → 処理ルール設定 → 効果テスト → 出力設定） */
+/** 帳票タイプ詳細のステップ（製品：AI分類設定 → AI読取設定 → 処理ルール設定 → 効果テスト） */
 const TYPE_STEPS = [
   { no: 1, id: 'classify', label: 'AI分類設定' },
   { no: 2, id: 'ocr', label: 'AI読取設定' },
   { no: 3, id: 'rule', label: '処理ルール設定' },
   { no: 4, id: 'test', label: '効果テスト' },
-  { no: 5, id: 'export', label: '出力設定' },
 ];
 
 /** 出力設定（帳票タイプごと）。変更できるのは管理者（R1）だけ。
@@ -6103,7 +6223,6 @@ function typePane(step, t) {
     </div>`;
   }
   if (step === 3) return renderRulePane();
-  if (step === 5) return renderExportPane(t);
   return '<div class="wiz-empty"><p class="wiz-empty-title">効果テスト</p>'
     + '<p class="muted">テスト帳票で分類・読取の精度を確認します。</p>'
     + '<table class="wiz-table"><thead><tr><th>項目</th><th>正解</th><th>読取結果</th><th>判定</th></tr></thead><tbody>'
@@ -6111,103 +6230,6 @@ function typePane(step, t) {
     + '<tr><td>住所</td><td>千代田区…</td><td>千代田区…</td><td><span class="st ok"><span class="dot"></span>一致</span></td></tr>'
     + '<tr><td>生年月日</td><td>1985-04-02</td><td>1985-04-02</td><td><span class="st ok"><span class="dot"></span>一致</span></td></tr>'
     + '</tbody></table><p class="wiz-score">精度：<b>98.2%</b>（サンプル 120 件）</p></div>';
-}
-
-/* ── 帳票タイプ設定 Step5：出力設定 ──────────────────────────────────────
- * 客户回答（機能確認表 No.15）より:
- *   ・CSV の列名・列順は帳票タイプごとに設定する
- *   ・1 人 1 行（1 帳票 1 レコード）で出力する
- *   ・同一帳票タイプなら、選択した複数ファイルを 1 つの CSV にまとめる
- *   ・設定を変更できるのは管理者のみ
- * -------------------------------------------------------------------- */
-function renderExportPane(t) {
-  const C = exportCfgOf(t);
-  const canEdit = isTenantAdmin(state.currentUser);
-  const dis = canEdit ? '' : ' disabled';
-  const onCount = C.cols.filter((c) => c.on).length;
-  const tip = 'CSV の列名・列順は帳票タイプごとに決まります。ここで設定した内容が一括ダウンロードの既定値になります。';
-
-  const fmt = [['csv', 'CSV'], ['json', 'JSON'], ['pdf', 'PDF']].map(([k, label]) =>
-    `<button type="button" class="exp-fmt${C.formats.includes(k) ? ' on' : ''}" data-expform="${k}" aria-pressed="${C.formats.includes(k)}"${dis}>${label}</button>`).join('');
-
-  const recOpts = [
-    ['perTicket', '1 帳票 ＝ 1 行', '1 人 1 行。帳票 1 件が CSV の 1 レコードになります'],
-    ['perRow', '明細行ごと', 'テーブル項目を選んだとき、明細 1 行ごとに 1 レコードで出力します'],
-  ].map(([k, label, hint]) => `<label class="exp-rec${C.record === k ? ' on' : ''}">
-      <input type="radio" name="expRecord" value="${k}" data-exprecord="1" ${C.record === k ? 'checked' : ''}${dis} />
-      <span><b>${label}</b><em>${esc(hint)}</em></span></label>`).join('');
-
-  const colRows = C.cols.map((c, i) => `<tr class="${c.on ? '' : 'off'}">
-      <td class="exp-ord">
-        <button type="button" class="icon-btn sm" data-expcol-up="${c.id}" title="上へ"${i === 0 || !canEdit ? ' disabled' : ''}><span class="ico i-caret-up"></span></button>
-        <button type="button" class="icon-btn sm" data-expcol-down="${c.id}" title="下へ"${i === C.cols.length - 1 || !canEdit ? ' disabled' : ''}><span class="ico i-caret-down"></span></button>
-        <span class="exp-no">${i + 1}</span>
-      </td>
-      <td><input class="fld" data-expcol-label="${c.id}" value="${esc(c.label)}" aria-label="列名"${dis} /></td>
-      <td class="c"><input type="checkbox" class="cb" data-expcol-on="${c.id}" ${c.on ? 'checked' : ''}${dis} aria-label="出力する" /></td>
-      <td class="exp-src">${c.table ? `<span class="exp-tag">テーブル</span>${esc(c.table)}` : 'AI 読取項目'}</td>
-    </tr>`).join('');
-
-  const opt = (key, label, opts) => `<label class="exp-opt"><span>${label}</span><select class="fld" data-expopt="${key}"${dis}>${opts.map(([v, l]) => `<option value="${esc(v)}" ${C[key] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
-
-  return `<div class="exp-pane">
-    <div class="exp-head">
-      <h3 class="exp-title">出力設定 <span class="info-i" data-tip="${esc(tip)}">i</span></h3>
-      <span class="spacer"></span>
-      ${canEdit ? '' : '<span class="exp-lock"><span class="ico i-lock"></span>管理者のみ変更できます</span>'}
-    </div>
-
-    <section class="exp-sec">
-      <div class="exp-row">
-        <span class="exp-lab">出力形式</span>
-        <div class="exp-fmts">${fmt}</div>
-        <span class="exp-help">複数選べます。CSV は下の項目・列順で出力します。</span>
-      </div>
-      <div class="exp-row">
-        <span class="exp-lab">レコード単位</span>
-        <div class="exp-recs">${recOpts}</div>
-      </div>
-      <div class="exp-row">
-        <span class="exp-lab">ファイル名</span>
-        <input class="fld exp-name" data-expopt="fileName" value="${esc(C.fileName || '')}" placeholder="${esc(t.name)}"${dis} />
-        <span class="exp-help">空欄なら帳票名を使います。</span>
-      </div>
-    </section>
-
-    <section class="exp-sec">
-      <div class="exp-sec-head">
-        <h4>出力項目 <span class="exp-count">${onCount} / ${C.cols.length}</span></h4>
-        <span class="spacer"></span>
-        <button type="button" class="link" data-expall="1"${dis}>${onCount === C.cols.length ? 'すべて外す' : 'すべて出力'}</button>
-      </div>
-      <div class="tablewrap exp-tablewrap">
-        <table class="exp-table">
-          <thead><tr><th style="width:110px">順序</th><th>列名</th><th class="c" style="width:64px">出力</th><th style="width:200px">読取項目</th></tr></thead>
-          <tbody>${colRows || '<tr><td colspan="4" class="empty-cell">出力項目がありません</td></tr>'}</tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="exp-sec">
-      <h4>CSV オプション</h4>
-      <div class="exp-opts">
-        ${opt('encoding', '文字コード', [['UTF-8', 'UTF-8'], ['Shift_JIS', 'Shift_JIS']])}
-        ${opt('delimiter', '区切り文字', [['カンマ', 'カンマ ( , )'], ['タブ', 'タブ ( ⇥ )'], ['セミコロン', 'セミコロン ( ; )']])}
-        ${opt('header', 'ヘッダ行', [[true, 'あり'], [false, 'なし']])}
-        ${opt('newline', '改行コード', [['CRLF', 'CRLF'], ['LF', 'LF']])}
-        ${opt('empty', '空欄の扱い', [['空欄', '空欄'], ['NULL', 'NULL']])}
-        ${opt('dateFormat', '日付形式', [['YYYY-MM-DD', 'YYYY-MM-DD'], ['YYYY/MM/DD', 'YYYY/MM/DD'], ['和暦', '和暦（令和）']])}
-      </div>
-    </section>
-
-    <section class="exp-sec">
-      <div class="exp-row exp-row-tgl">
-        <span class="exp-lab">複数ファイルのまとめ</span>
-        <button type="button" class="tgl${C.merge ? '' : ' off'}" data-expmerge="1" role="switch" aria-checked="${C.merge}"${dis}><span class="tgl-knob"></span></button>
-        <span class="exp-help">同じ帳票タイプのファイルを選んだとき、1 つの CSV にまとめて出力します。</span>
-      </div>
-    </section>
-  </div>`;
 }
 
 const RULE_KINDS = ['数字のみ', '小数点付きの数字', 'カタカナ', 'ひらがな', '日付', '西暦年', '西暦月', '西暦日'];
@@ -6279,6 +6301,7 @@ function renderRulePane() {
 /** 帳票タイプ設定（左：タイプ一覧／右：選択中の Step1〜4） */
 function renderTicketDetail() {
   if (!state.typeStep) state.typeStep = 1;
+  if (state.typeStep > TYPE_STEPS.length) state.typeStep = TYPE_STEPS.length;
   if (!state.typePage) state.typePage = 1;
   if (!state.typeZoom) state.typeZoom = 1;
   const q = (cfgState.ticketQ || '').toLowerCase();
@@ -6333,9 +6356,7 @@ function renderTicketDetail() {
   return '<div class="typedetail">'
     + leftList
     + '<section class="type-main">' + stepBar + zoomBar
-    + (step === 5
-      ? '<div class="wiz-body is-wide"><div class="wiz-pane">' + typePane(step, t) + '</div></div>'
-      : '<div class="wiz-body">' + preview + '<div class="wiz-pane">' + typePane(step, t) + '</div></div>')
+    + '<div class="wiz-body">' + preview + '<div class="wiz-pane">' + typePane(step, t) + '</div></div>'
     + '<div class="wiz-foot">'
     + (step === 1 ? '<button class="btn primary" id="tpReupload"><span class="ico i-upload"></span>再アップロード</button>' : '')
     + '<span class="spacer"></span>'
@@ -6818,73 +6839,9 @@ function bindTicketDetail() {
       render();
     };
   });
-  /* Step5 出力設定（帳票タイプごと） */
-  const expType = byId(TICKET_TYPES, state.typeId);
-  if (expType && state.typeStep === 5) bindExportPane(expType);
 }
 
-/** 帳票タイプ設定 Step5 のイベント（管理者のみ編集可） */
-function bindExportPane(t) {
-  const C = exportCfgOf(t);
-  if (!isTenantAdmin(state.currentUser)) return;   /* 参照のみ */
-
-  document.querySelectorAll('[data-expform]').forEach((b) => {
-    b.onclick = () => {
-      const k = b.dataset.expform;
-      const has = C.formats.includes(k);
-      /* CSV は最低 1 つ残す（全部外すと出力形式が無くなる） */
-      if (has && C.formats.length === 1) { toast('出力形式は 1 つ以上選んでください'); return; }
-      C.formats = has ? C.formats.filter((x) => x !== k) : C.formats.concat([k]);
-      render();
-    };
-  });
-  document.querySelectorAll('[data-exprecord]').forEach((el) => {
-    el.onchange = () => { if (el.checked) { C.record = el.value; render(); } };
-  });
-  document.querySelectorAll('[data-expopt]').forEach((el) => {
-    const k = el.dataset.expopt;
-    const apply = () => {
-      let v = el.value;
-      if (k === 'header') v = v === 'true';
-      C[k] = v;
-    };
-    el.onchange = apply;
-    el.oninput = apply;      /* ファイル名は入力中に反映（描き直すとフォーカスが飛ぶ） */
-  });
-  document.querySelectorAll('[data-expcol-on]').forEach((cb) => {
-    cb.onchange = () => {
-      const c = C.cols.find((x) => x.id === cb.dataset.expcolOn);
-      if (c) c.on = cb.checked;
-      render();
-    };
-  });
-  document.querySelectorAll('[data-expcol-label]').forEach((el) => {
-    el.oninput = () => {
-      const c = C.cols.find((x) => x.id === el.dataset.expcolLabel);
-      if (c) c.label = el.value;
-    };
-  });
-  const move = (id, dir) => {
-    const i = C.cols.findIndex((x) => x.id === id);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= C.cols.length) return;
-    const [row] = C.cols.splice(i, 1);
-    C.cols.splice(j, 0, row);
-    render();
-  };
-  document.querySelectorAll('[data-expcol-up]').forEach((b) => { b.onclick = () => move(b.dataset.expcolUp, -1); });
-  document.querySelectorAll('[data-expcol-down]').forEach((b) => { b.onclick = () => move(b.dataset.expcolDown, 1); });
-  const all = document.querySelector('[data-expall]');
-  if (all) all.onclick = () => {
-    const turnOn = C.cols.filter((c) => c.on).length !== C.cols.length;
-    C.cols.forEach((c) => { c.on = turnOn; });
-    render();
-  };
-  const mg = document.querySelector('[data-expmerge]');
-  if (mg) mg.onclick = () => { C.merge = !C.merge; render(); };
-}
-
-/** 権限の割り当て先を小さなチップで表示（ユーザー＝グレー／ロール＝緑） */
+/** /** 権限の割り当て先を小さなチップで表示（ユーザー＝グレー／ロール＝緑） */
 function permChips(list) {
   if (!list || !list.length) return '<span class="perm-empty">—</span>';
   return list.map((id) => `<span class="perm-chip ${permTargetKind(id)}">${esc(permTargetName(id))}</span>`).join('');
@@ -7641,15 +7598,6 @@ function bindTree(treeEl) {
     const node = e.target.closest('.node');
     if (!node) return;
     const type = node.dataset.type, id = node.dataset.id, key = type + ':' + id;
-    if (e.target.closest('[data-treeprem]')) {
-      e.stopPropagation();
-      const nodeId = e.target.closest('[data-treeprem]').dataset.treeprem;
-      /* 権限の編集は帳票権限管理の同じセルで行う（画面を移してセルを開く） */
-      state.page = 'permissions';
-      state.permCell = { kind: 'folder', nodeId, act: 'view' };
-      render();
-      return;
-    }
     if (e.target.closest('[data-rename]')) {
       e.stopPropagation();
       if (type !== 'file') { toast('業務シーン・帳票タイプ名は変更できません'); return; }
@@ -9721,6 +9669,20 @@ function bindUploadPanel() {
       const fmt = b.dataset.batchdl;
       const ids = Object.keys(state.picked).filter((id) => state.picked[id]);
       if (!ids.length) { toast('ダウンロードするファイルを選択してください'); return; }
+      const C = state.exportCfg || {};
+      /* まとめて出力（同一帳票タイプ）なら、複数ファイルを 1 つの CSV に統合して 1 回でダウンロード */
+      if (fmt === 'csv' && C.combineFiles) {
+        const files = ids.map((id) => byId(FILES_DATA, id)).filter(Boolean);
+        const layouts = [...new Set(files.map((f) => f.layout))];
+        if (layouts.length > 1) { toast('選択したファイルの帳票タイプが異なるため、まとめて出力できません'); return; }
+        const built = buildExportCsv(ids);
+        if (!built) { toast('出力できるデータがありません'); return; }
+        csvDownload(exportMergedFileName(files) + '.csv', built.text, built.enc);
+        files.forEach((f) => { f.status = 'exported'; f.exportedAt = nowStamp(); });
+        toast(`${files.length} 件を 1 つの CSV にまとめて出力しました`);
+        render();
+        return;
+      }
       let out = 0;
       let skip = 0;
       ids.forEach((id) => {

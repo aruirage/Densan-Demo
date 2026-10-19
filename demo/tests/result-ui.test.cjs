@@ -1179,10 +1179,10 @@ test('自動アップロード: 監視ルートと帳票タイプ別ルールの
   assert.match(html, /data-wrule-start=/);
   assert.match(html, /data-wrule-case=/);
 
-  /* 業務シーンは選ばせない（カテゴリの見出し行としてだけ残る） */
+  /* 業務シーンの階層は作らない（帳票タイプをそのまま並べる） */
   assert.doesNotMatch(html, /data-wf="biz"|data-wf="pattern"|data-wf="startFile"|data-wf="afterDir"/);
-  assert.equal((html.match(/class="wr-group"/g) || []).length, run('BUSINESS.length'));
-  assert.match(html, /住民異動関係/);
+  assert.equal((html.match(/class="wr-group"/g) || []).length, 0);
+  assert.equal((html.match(/class="wr-rule/g) || []).length, run('CATEGORY.length'));
 
   /* 実際に監視する本数＝有効ルート × 有効カテゴリ */
   assert.match(html, /監視対象 <b>\d+<\/b> 本/);
@@ -1235,8 +1235,8 @@ test('ユーザー権限: 個人の権限はグループの権限に上乗せさ
 
 test('読取ロール: 再読取・一括読取・アップロード画面の読取／削除が出る', () => {
   const run = app();
-  /* u7＝アップロード（R5）＋読取（R8）。確認と出力は持たない */
-  run('state.currentUser = "u7";');
+  /* u7 に R5（アップロード）＋R8（読取）を注入して「読取ロール」の挙動を検証（既定は R5 のみ） */
+  run('entUserByUid("u7").soloPermIds = ["R5", "R8"]; state.currentUser = "u7";');
   const cell = run('resultActionsCell({ id: "f1", status: "done", layout: "l1" })');
   assert.match(cell, /data-act="redo"/);
   assert.match(cell, /data-act="delete"/);
@@ -1258,6 +1258,23 @@ test('読取ロール: 再読取・一括読取・アップロード画面の読
   assert.equal(run('userHasOp("delete","u7")'), true);
   assert.equal(run('userHasOp("confirm","u7")'), false);
   assert.equal(run('userHasOp("export","u7")'), false);
+});
+
+test('アップロードロール: u7 既定はアップロードのみ（閲覧・読取・削除は出ない）', () => {
+  const run = app();
+  /* 既定の u7 は R5（アップロード）だけ。R8（読取）は付けない */
+  run('entUserByUid("u7").soloPermIds = ["R5"]; state.currentUser = "u7";');
+  assert.equal(run('userHasOp("upload", "u7")'), true);
+  assert.equal(run('userHasOp("view", "u7")'), false);
+  assert.equal(run('userHasOp("read", "u7")'), false);
+  assert.equal(run('userHasOp("delete", "u7")'), false);
+  assert.equal(run('userHasOp("confirm", "u7")'), false);
+  assert.equal(run('userHasOp("export", "u7")'), false);
+  /* デモ切替バーは「アップロード」だけ表示される */
+  const caps = JSON.parse(run('JSON.stringify((function(){'
+    + 'const CAPS=[["view","閲覧"],["upload","アップロード"],["read","読取"],["fix","修正"],["confirm","確認"],["export","出力"],["delete","削除"],["settings","設定"]];'
+    + 'return CAPS.filter(([k])=>{try{return userHasOp(k,"u7");}catch(e){return false;}}).map(([,t])=>t);})())'));
+  assert.deepEqual(caps, ['アップロード']);
 });
 
 test('出力ロール: ダウンロードと一括ダウンロードだけが出る', () => {
@@ -1323,25 +1340,34 @@ test('エラー通知: 通知方法を選んだときだけ宛先の入力欄が
   assert.equal((html.match(/data-wf-check=/g) || []).length, 2);
 });
 
-test('帳票タイプ設定: Step5 は出力設定（帳票タイプごとの列名・列順）', () => {
+test('帳票タイプ設定: 4 ステップ（出力設定は Step5 から外し、列は AI 読取設定・文字コードは実行時ダイアログ）', () => {
   const run = app();
-  const html = run('state.typeStep = 5; renderTicketDetail()');
-  /* ステップは 5 つ（効果テストのあとに出力設定） */
-  assert.equal(run('TYPE_STEPS.length'), 5);
-  assert.match(html, /data-typestep="5"/);
-  assert.match(html, /出力設定/);
-  assert.match(html, /data-expform="csv"/);
-  assert.match(html, /data-exprecord/);
-  assert.match(html, /data-expcol-on=/);
-  assert.match(html, /data-expcol-up=/);
-  assert.match(html, /data-expopt="encoding"/);
-  assert.match(html, /複数ファイルのまとめ/);
-  /* 出力項目の初期値＝AI 読取項目（テーブル列は既定で出力しない） */
+  /* ステップは 4 つ。効果テストが最後。出力設定は別画面に統合 */
+  assert.equal(run('TYPE_STEPS.length'), 4);
+  const ids = run('TYPE_STEPS.map((s) => s.id).join(",")');
+  assert.match(ids, /classify/);
+  assert.match(ids, /ocr/);
+  assert.match(ids, /rule/);
+  assert.match(ids, /test/);
+  /* ウィザード本体に Step5（出力設定）タブ・文言・data 属性は無い */
+  const html = run('state.typeStep = 4; renderTicketDetail()');
+  assert.doesNotMatch(html, /data-typestep="5"/);
+  assert.doesNotMatch(html, /data-expform=/);
+  assert.doesNotMatch(html, /data-expcol-/);
+  assert.doesNotMatch(html, /複数ファイルのまとめ/);
+  /* 出力の列名・列順は AI 読取設定のフィールド／テーブルで定義する */
+  const fields = run('ensureTypeFields().map((f) => f.name)');
+  assert.ok(fields.includes('計画書区分'));
+  assert.ok(run('ensureTypeTables().length') >= 1);
+  /* 文字コード（BOM あり／なし／Shift_JIS）は実行時の出力ダイアログで切り替える */
+  const dlg = run('state.exportOpen = true; renderExportDialog()');
+  assert.match(dlg, /UTF-8/);
+  assert.match(dlg, /Shift_JIS/);
+  /* 出力項目の初期値は従来どおり：AI 読取項目は on、テーブル列は既定 off */
   const cols = JSON.parse(run('JSON.stringify(exportCfgOf(TICKET_TYPES[0]).cols)'));
-  assert.ok(cols.length >= 8, `cols=${cols.length}`);
   assert.equal(cols.filter((c) => c.on).length, 8);
   assert.ok(cols.filter((c) => c.table).every((c) => !c.on));
-  /* 既定は「1 帳票＝1 行」で、同一帳票タイプのまとめが有効 */
+  /* 既定は「1 帳票＝1 行」、同一帳票タイプのまとめが有効 */
   const cfg = JSON.parse(run('JSON.stringify(exportCfgOf(TICKET_TYPES[0]))'));
   assert.equal(cfg.record, 'perTicket');
   assert.equal(cfg.merge, true);
