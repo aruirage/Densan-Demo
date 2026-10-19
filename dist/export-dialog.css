@@ -1,0 +1,479 @@
+/**
+ * エクスポート設定ダイアログのレイアウト（再設計版）。
+ *
+ *  - 出力方式：ラジオ「カード」3 枚（選択中は枠と背景で明示）
+ *  - CSV オプション：チェック 2 つ＋2 カラムのラベル付きフィールド
+ *  - プレビュー：ファイル名はインライン編集可（チップ内の input）、表は横スクロール
+ *  - フッターは 2 つだけ（キャンセル／保存）
+ *
+ *  注記（列名・列順は帳票タイプごとに設定／出力対象＝絞り込み結果／結合出力は最大 10000 件）は
+ *  ダイアログから外し、設計文書（権限設計 §4 の注釈）に移した。
+ *
+ * styles.css が再生成されても効くように別ファイル（styles.css の後に読込）。
+ */
+.exp-modal .modal-canvas.exp-canvas {
+  background: #fff;
+  display: block;
+  padding: 18px 20px 16px;
+}
+
+.exp-block + .exp-block {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.exp-modal .exp-sec {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── 出力方式：ラジオカード ── */
+.exp-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exp-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+.exp-radio:hover {
+  border-color: var(--accent-2);
+  background: #f7fafd;
+}
+.exp-radio.on {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.exp-radio input {
+  margin: 2px 0 0;
+  flex: none;
+}
+.exp-radio-body {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.exp-radio-body b {
+  font-size: 12.5px;
+  color: var(--text);
+}
+.exp-radio-desc {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+/* ── CSV オプション ── */
+.exp-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 22px;
+  margin-bottom: 14px;
+}
+.exp-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.exp-check input {
+  flex: none;
+}
+
+.exp-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 22px;
+}
+.exp-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.exp-field-label {
+  flex: 0 0 92px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  text-align: right;
+  white-space: nowrap;
+}
+.exp-control {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  font-size: 12.5px;
+}
+.exp-field.is-wide {
+  grid-column: 1 / -1;
+}
+
+/* ── フッター ── */
+.exp-foot {
+  gap: 10px;
+}
+.exp-foot .btn {
+  min-width: 96px;
+  justify-content: center;
+}
+.exp-foot .btn.primary {
+  min-width: 132px;
+}
+
+/* ── 出力ファイル名（ファイルツリーの名前を使用） ── */
+.exp-filefield {
+  margin-top: 16px;
+}
+.exp-filename {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #f8fbff;
+  font-size: 12.5px;
+  color: var(--text);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.exp-filename .ico {
+  color: var(--accent);
+  font-size: 14px;
+  flex: none;
+}
+.exp-file-ext {
+  color: var(--text-3);
+}
+
+/* ══ エクスポート設定：縦積み・狭い幅・スイッチ ══ */
+.exp-modal .modal-canvas.exp-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 18px 14px;
+}
+.exp-stack-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+.exp-stack-field .exp-field-label {
+  flex: none;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+}
+.exp-stack-field .req {
+  color: var(--red, #e23);
+  font-style: normal;
+  margin-right: 2px;
+}
+.exp-stack-field .exp-control,
+.exp-stack-field .exp-filename {
+  width: 100%;
+}
+.exp-switches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.exp-name-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exp-name-group .exp-stack-field {
+  margin-left: 0;
+}
+.exp-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+.exp-switch .switch-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.exp-filename {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0;
+  background: #fff;
+}
+.exp-filename .exp-name-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 48px 0 10px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.exp-filename .exp-name-input:disabled {
+  color: var(--text-2);
+}
+.exp-filename .exp-file-ext {
+  position: absolute;
+  right: 10px;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+/* ══ エクスポート設定：右側の余白をなくす（幅を内容に合わせる） ══ */
+.exp-modal{ width: min(600px, 100%) !important; }
+.exp-modal .exp-canvas{ padding: 18px 20px; }
+.exp-modal .exp-field{ width: 100%; align-items: center; }
+.exp-modal .exp-field .exp-control,
+.exp-modal .exp-field select{ flex: 1 1 auto; width: 100%; min-width: 0; }
+.exp-modal .exp-checks{ width: 100%; }
+.exp-modal .exp-field{ display:block !important; }
+.exp-modal .exp-field .exp-control,
+.exp-modal .exp-field select{ width:100% !important; }
+.exp-modal .exp-field-label{ display:block; margin-bottom:6px; }
+.exp-modal .exp-checks{ display:grid !important; grid-template-columns:1fr 1fr !important; column-gap:28px !important; row-gap:12px !important; margin-top:14px; }
+
+/* ══ エクスポート設定（現行マークアップ）：スイッチを 2 カラムに（客户：方案 B） ══ */
+#expBack .exp-canvas{ padding:18px 22px; }
+#expBack .exp-stack-field{ display:block; width:100%; margin-bottom:16px; }
+#expBack .exp-stack-field select{ width:100% !important; }
+#expBack .exp-switches{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  column-gap:26px !important;
+  row-gap:14px !important;
+  width:100% !important;
+}
+#expBack .exp-switch{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  width:100% !important;
+  gap:10px;
+}
+
+/* ══ スイッチは 1 行 1 項目（跳行しない）＋「入力名と同じ」を最下段に ══ */
+#expBack .exp-switches{ grid-template-columns:1fr !important; }
+#expBack .exp-switches > .exp-switch:nth-child(2){ order:9 !important; }
+#expBack label:has(#expFileName) .exp-field-label{ display:none !important; }
+
+/* リネーム時の拡張子（固定・編集不可の見た目） */
+.rename-ext{ font-size:12px; color:var(--text-3,#6b7280); margin-left:4px; }
+
+/* ══ 表示次元の切替を廃止（3 層ツリー固定：業務シーン ＞ 帳票タイプ ＞ ファイル） ══ */
+#treeView, .tree-view-pills{ display:none !important; }
+
+/* ══ 一覧の列名を省略せず全部表示（客户：列名显示完整） ══ */
+.result-table thead th{
+  white-space:nowrap;
+  overflow:visible;
+  text-overflow:clip;
+}
+.result-table col{ min-width:0; }
+
+/* ══ 状態バッジの色（客户 d） ══ */
+.st.info{ color:#1668dc; }
+.st.info .dot, .st.info .spin{ background:#1668dc; }
+.st.info .spin{ border-color:rgba(22,104,220,.28); border-top-color:#1668dc; background:transparent; }
+.st.wait{ color:#8a94a6; }
+.st.ok{ color:#12a150; }
+.st.ok .dot{ background:#12a150; }
+.st.ng{ color:#e5484d; }
+
+/* ══ 全テーブルの見出し色をファイル一覧（#eef5fd）に統一（客户：home と揃える） ══ */
+thead th{ background:#eef5fd !important; }
+
+/* ══ 絞り込み欄の背景をホーム（ページ背景）と統一（客户：白にしない） ══ */
+.filters.result-filters{
+  background:var(--bg, #f3f6fa) !important;
+  border:1px solid var(--line, #e5e9f0);
+  border-radius:8px;
+}
+
+/* チェック列：見出しでも枠が見えるように */
+.result-table th.col-pick .cb,
+.result-table td.col-pick .cb{
+  display:inline-block;
+  appearance:auto;
+  -webkit-appearance:checkbox;
+}
+
+/* ══ 絞り込み欄のレイアウト：3 行で横幅を均等に使う（空きを減らす） ══ */
+.result-filter-row.result-search-row,
+.result-filter-row#resultAdvanced{
+  display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:10px 18px !important; align-items:center !important;
+}
+.result-filter-row.result-date-row{
+  display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:10px 18px !important; align-items:center !important;
+}
+.result-filter-row .field{ display:flex !important; align-items:center !important; min-width:0 !important; gap:8px; }
+.result-filter-row .field > .lbl{ flex:0 0 auto; white-space:nowrap; }
+.result-filter-row .field select,
+.result-filter-row .field input.fld,
+.result-filter-row .field .result-date-range{ flex:1 1 auto; min-width:0; width:100%; }
+
+/* 一括ダウンロードのメニューが「選択帳票読取」の下に出ていたのを修正（.batch-dl を基準に配置） */
+.result-tablebar .batch-dl{ position:relative; }
+.result-tablebar .batch-dl-menu{ left:50%; }
+
+/* ══ 一覧の 3 ボタン：配色を整理＋読み取りボタンでダウンロードメニューが出ないように ══ */
+/* メニューは「一括ダウンロード」を hover / フォーカスした時だけ出す */
+.result-tablebar .batch-dl-menu{ display:none !important; }
+.result-tablebar .batch-dl:hover .batch-dl-menu,
+.result-tablebar .batch-dl:focus-within .batch-dl-menu,
+.result-tablebar .batch-dl.is-open .batch-dl-menu{ display:block !important; }
+
+/* 3 ボタンの見た目 */
+.result-tablebar #resRead{
+  background:#1f7fd0 !important; border:1px solid #1f7fd0 !important; color:#fff !important;
+}
+.result-tablebar #resRead:hover:not(:disabled){ background:#1a6cb3 !important; border-color:#1a6cb3 !important; }
+.result-tablebar #resRead:disabled{ background:#e6eef7 !important; border-color:#dbe6f2 !important; color:#9fb3c8 !important; }
+.result-tablebar .batch-dl .btn.result-download{
+  background:#fff !important; border:1px solid #8fc0e8 !important; color:#1f7fd0 !important;
+}
+.result-tablebar .batch-dl .btn.result-download:hover:not(:disabled){ background:#f2f8fe !important; }
+.result-tablebar .btn.danger-ghost, .result-tablebar #batchDelete{
+  background:#fff !important; border:1px solid #efb9c0 !important; color:#d5495c !important;
+}
+.result-tablebar .btn.danger-ghost:hover:not(:disabled), .result-tablebar #batchDelete:hover:not(:disabled){ background:#fdf3f4 !important; }
+
+/* 参考デザインに合わせる：#1 塗り（primary）／#2 枠線（primary）／#3 枠線（red） */
+.result-tablebar #resRead{
+  background:var(--el-color-primary,#3fb6c6) !important;
+  border:1px solid var(--el-color-primary,#3fb6c6) !important;
+  color:#fff !important;
+}
+.result-tablebar .batch-dl .btn.result-download{
+  background:#fff !important;
+  border:1px solid var(--el-color-primary,#3fb6c6) !important;
+  color:var(--el-color-primary,#2f9fb0) !important;
+}
+.result-tablebar .btn.danger-ghost{
+  background:#fff !important;
+  border:1px solid #e8b7b4 !important;
+  color:var(--red,#d5305a) !important;
+}
+
+/* ══ 確認画面：プレビューを縦スクロールできるように（客户指摘） ══ */
+.rv-preview-stage{ overflow-y:auto !important; min-height:0 !important; }
+.rv-preview-canvas{ min-height:0 !important; overflow-y:auto !important; }
+.rv-pane.nl-preview-pane{ overflow:hidden !important; }
+
+/* ══ 確認画面：プレビューを「幅に合わせて」表示し、縦スクロールできるように ══ */
+.rv-pdf-wrap, .rv-pdf-wrap img, .rv-preview-canvas img{
+  max-height:none !important;
+  height:auto !important;
+}
+.rv-pdf-wrap img, .rv-preview-canvas img{ width:100% !important; }
+.rv-preview-stage, .rv-preview-canvas{ overflow-y:auto !important; }
+
+/* ══ 確認画面：プレビュー（mock sheet）を幅に合わせて縦スクロール可能に ══ */
+.rv-preview-canvas .sheet,
+.rv-preview-canvas .sheet-zoom{
+  width:100% !important;
+  height:auto !important;
+  max-height:none !important;
+}
+.rv-preview-canvas{ overflow-y:auto !important; }
+.rv-preview-canvas .sheet-zoom{ transform:none !important; }
+
+/* 確認画面：プレビュー領域（stage）を縦スクロールの主体にする */
+.rv-preview-stage{
+  overflow-y:auto !important;
+  max-height:calc(100vh - 210px) !important;
+}
+.rv-preview-canvas{ height:auto !important; min-height:0 !important; overflow:visible !important; }
+.rv-pdf-wrap{ height:auto !important; min-height:0 !important; }
+
+/* ══ ログ設定：「ログ出力設定」バー（詳細度・保存先）は不要（客户） ══ */
+.log-cfg{ display:none !important; }
+
+/* ══ 帳票タイプ設定 Step5：出力設定（帳票タイプごとの CSV 列定義） ══════ */
+.wiz-body.is-wide { grid-template-columns: 1fr !important; }
+.wiz-body.is-wide .wiz-pane { max-height: none; }
+
+.exp-pane { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px 22px; overflow: auto; }
+.exp-head { display: flex; align-items: center; gap: 10px; }
+.exp-title { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
+.exp-lock { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: #f4f6f9; color: var(--text-3); font-size: 11px; }
+.exp-lock .ico { font-size: 11px; }
+
+.exp-sec { border: 1px solid var(--line); border-radius: var(--radius); background: #fff; padding: 14px 16px; }
+.exp-sec > h4 { margin: 0 0 10px; font-size: 12px; font-weight: 700; color: var(--text-2); }
+.exp-sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.exp-sec-head > h4 { margin: 0; font-size: 12px; font-weight: 700; color: var(--text-2); }
+.exp-count { margin-left: 6px; color: var(--text-3); font-weight: 400; font-size: 11px; }
+
+.exp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 6px 0; }
+.exp-row + .exp-row { border-top: 1px dashed #eef1f6; }
+.exp-lab { flex: 0 0 132px; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.exp-sec-head .spacer { flex: 1 1 auto; }
+.exp-help { color: var(--text-3); font-size: 11px; }
+
+.exp-fmts { display: flex; gap: 6px; }
+.exp-fmt { height: 28px; padding: 0 14px; border: 1px solid var(--line-d); border-radius: 999px; background: #fff; color: var(--text-2); font-size: 12px; cursor: pointer; }
+.exp-fmt:hover { border-color: var(--accent); color: var(--accent); }
+.exp-fmt.on { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); font-weight: 700; }
+
+.exp-recs { display: flex; gap: 10px; flex-wrap: wrap; }
+.exp-rec { display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; border: 1px solid var(--line-d); border-radius: var(--radius); cursor: pointer; background: #fff; }
+.exp-rec.on { border-color: var(--accent); background: #f7faff; }
+.exp-rec input { margin-top: 2px; }
+.exp-rec b { display: block; font-size: 12px; font-weight: 700; color: var(--text); }
+.exp-rec em { display: block; margin-top: 2px; font-style: normal; font-size: 11px; color: var(--text-3); }
+.exp-name { width: 260px; height: 30px; }
+
+.exp-tablewrap { border: 0; overflow-x: visible; }
+.exp-table { width: 100%; min-width: 0 !important; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
+.exp-table th { padding: 6px 10px; background: #f4f8fd; border-bottom: 1px solid var(--line); color: var(--text-3); font-size: 11px; font-weight: 700; text-align: left; white-space: nowrap; }
+.exp-table td { padding: 4px 10px; border-bottom: 1px solid #f2f4f8; vertical-align: middle; }
+.exp-table th.c, .exp-table td.c { text-align: center; }
+.exp-table tr.off td { background: #fafbfd; }
+.exp-table tr.off .fld { color: var(--text-3); }
+.exp-table .fld { width: 100%; height: 28px; font-size: 12.5px; }
+.exp-ord { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+.exp-ord .icon-btn.sm { width: 22px; height: 22px; padding: 0; }
+.exp-no { margin-left: 4px; color: var(--text-3); font-size: 11px; }
+.exp-src { color: var(--text-3); font-size: 11.5px; }
+.exp-tag { margin-right: 6px; padding: 1px 5px; border-radius: 2px; background: #eef2f7; color: var(--text-2); font-size: 10px; }
+
+.exp-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 14px; }
+.exp-opt { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--text-3); }
+.exp-opt .fld { height: 30px; font-size: 12.5px; }
+.exp-row-tgl .tgl { flex: none; }
+
+/* エクスポート設定：帳票タイプ側の出力設定の要約と、混在時の注意 */
+.exp-src-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; padding: 7px 10px; border-radius: var(--radius); background: #f4f8fd; font-size: 11.5px; }
+.exp-src-k { color: var(--text-3); }
+.exp-src-line b { color: var(--accent); font-weight: 700; }
+.exp-warn { padding: 7px 10px; border-radius: var(--radius); background: #fdf1e2; color: #a8621a; font-size: 11.5px; line-height: 1.5; }

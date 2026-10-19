@@ -1,0 +1,211 @@
+/**
+ * 配色テーマ：フロー図のライトブルー系（白地＋淡ブルーの面＋細いブルーの枠線）
+ *
+ * 図から抽出した実値：
+ *   濃いめのブルー（見出し・枠線・矢印） #3d7ab8 / #305a7e
+ *   淡いブルー（下段ボックスの塗り）     #b5d4f4
+ *   ごく淡いブルー（上段ボックスの塗り） #e7f0fb
+ *   枠線（淡）                           #cfe0f5
+ *   補助グレー（ツールチップ枠）         #d9dde3
+ *
+ * styles.css の後に読み込む前提。トークンを上書きし、面・枠線のフラットな質感に揃える。
+ */
+:root {
+  /* ── 主色・アクセント ── */
+  --accent: #3d7ab8;
+  --accent-d: #305a7e;
+  --accent-bg: #e7f0fb;
+  --accent-2: #4a8ccb;
+  --accent-3: #6aa6dc;
+
+  /* ── CTA／グラデーション ── */
+  --cta: #3d7ab8;
+  --cta-d: #305a7e;
+  --grad: linear-gradient(45deg, #6aa6dc 0%, #3d7ab8 100%);
+  --grad-hover: linear-gradient(45deg, #7fb6e6 0%, #4a8ccb 100%);
+
+  /* ── 面・線・文字 ── */
+  --bg: #f7fafd;
+  --panel: #ffffff;
+  --line: #dbe7f5;
+  --line-d: #cfe0f5;
+  /* 文字は読みやすさ優先で濃いめに（フィルタのラベル・補助文字が薄すぎたため） */
+  --text: #1f2f3d;
+  --text-2: #3d556b;
+  --text-3: #55708b;
+  --gray-bg: #eef4fb;
+
+  /* ── 注意・アクセント橙 ── */
+  --warn: #ef8b2c;
+  --warn-d: #d9741a;
+
+  /* ── Element Plus 名のエイリアス ── */
+  --el-color-primary: #3d7ab8;
+  --el-color-primary-hover: #4a8ccb;
+  --el-color-primary-active: #305a7e;
+  --el-color-primary-light-9: #e7f0fb;
+  --app-content-bg-color: #f7fafd;
+  --blue: #3d7ab8;
+
+  --accent-soft: #eef5fd;
+}
+
+/* リンク・ファイル名は図の見出しと同じブルー */
+a,
+.link,
+.result-table .fn {
+  color: #2f66a0;   /* 白地で 4.5:1 を満たす濃さ（リンク＝ファイル名） */
+}
+a:hover,
+.result-table .fn:hover {
+  color: #3d7ab8;
+}
+
+/* ── フラットで軽い質感に統一（影は控えめ、枠線は淡ブルー） ── */
+.panel,
+.card,
+.upload-card,
+.result-panel,
+.mytasks-panel,
+.treepanel,
+.cfg-filters,
+.api-card,
+.access-card,
+.reviewpage .rv-pane,
+.reviewpage .rv-right,
+.sec-page .sec-card {
+  border-color: var(--line);
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.searchbar,
+.result-tablebar,
+.home-filter-actions,
+.mytask-filter-acts {
+  background: #fff;
+}
+
+.result-table thead th,
+.access-table th,
+.mytask-table th {
+  background: #eef5fd;
+  color: #5b7086;
+}
+
+/* 選択・強調の面はごく淡いブルー */
+.node.sel,
+.sidenav-item.on,
+.tabitem.on,
+.exp-radio.on {
+  background: #e7f0fb;
+  border-color: #cfe0f5;
+}
+
+/* モーダル・ドロップダウンは淡い枠線＋弱い影 */
+.modal {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(48, 90, 126, .12);
+}
+
+/* ══ 可読性の底上げ（フィルタ・ラベル・補助文字） ══ */
+.searchbar .lbl,
+.filterarea .lbl,
+.home-field .lbl,
+.mytask-filters .field .lbl,
+.result-filters .lbl,
+.cfg-filters .lbl,
+.fldlabel,
+.exp-field-label,
+.user-add-label,
+.access-label,
+.field .lbl {
+  color: #3d556b !important;
+  font-weight: 600;
+}
+
+input::placeholder,
+textarea::placeholder,
+.fld::placeholder {
+  color: #7b8fa3 !important;
+  opacity: 1;
+}
+
+/* セレクト・入力の値は本文色でしっかり */
+.fld,
+select.fld,
+input.fld {
+  color: #1f2f3d;
+}
+
+/* 薄すぎた補助文字（件数・注記・ミュート）を持ち上げる */
+.muted,
+.hint,
+.cfg-note,
+.up-note,
+.pager,
+.result-pager {
+  color: #4c6478;
+}
+
+/* フィルタ枠は面を白にして境界をはっきり */
+.filterarea,
+.result-filters,
+.home-filters,
+.mytask-filters {
+  background: #fff;
+  border-color: #cfe0f5;
+}
+
+/* ══ 読取結果一覧：先頭の選択列のみ sticky 解除（操作列は styles.css で右固定） ══ */
+.result-table th:first-child,
+.result-table td:first-child {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  box-shadow: none !important;
+}
+
+/* ══ 確認画面：修正済みの項目は赤（エラー）表示を解除する ══
+   app.js は OCR 初期値の hasError をそのまま使い続けるため、
+   ユーザーが値を直したあとも赤枠・赤 bbox が残ってしまう。
+   修正済みの行は赤を消して「修正済み」の見た目に寄せる。 */
+.rv-field-row.has-error.is-corrected .rv-field-input {
+  border-color: var(--line-d);
+  background: #fff8e8;
+}
+.rv-field-row.has-error.is-corrected .rv-field-input:focus {
+  border-color: var(--accent);
+}
+.doc-marks .doc-mark-box.err.is-corrected {
+  border-color: var(--accent-2);
+  background: var(--accent-bg);
+}
+
+/* ══ 権限がない操作・画面の見た目 ══ */
+.btn.perm-off,
+button.perm-off:not(.navitem):not(.tabitem),
+.act-text.perm-off,
+.icon-btn.perm-off {
+  opacity: .45;
+  cursor: not-allowed !important;
+  filter: grayscale(.25);
+}
+/* メニュー権限なし＝非表示（削除線は使わない）。ボタン操作のみ perm-off で無効化 */
+.navitem.perm-off,
+.navmenu-item.perm-off,
+.tabitem.perm-off,
+.pane-tab.perm-off,
+.navitem[hidden],
+.navmenu-item[hidden],
+.tabitem[hidden] {
+  display: none !important;
+}
+
+/* 列名はすべて中央揃え。
+   styles.css の .result-table .col-name / .col-hist が text-align:left を
+   ヘッダにも当ててしまうため、[class] 付きで優先度を上げて打ち消す。 */
+.result-table thead th[class] {
+  text-align: center;
+}
