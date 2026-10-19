@@ -180,6 +180,35 @@ function renderDemoBar() {
   </div>`;
 }
 
+/** デモ担当を切替える（現在ユーザを差し替えて描き直す） */
+function switchDemoActor(id) {
+  if (!id || !byId(USERS, id)) return;
+  if (state.currentUser === id) { state.userMenuOpen = false; render(); return; }
+  state.currentUser = id;
+  state.userMenuOpen = false;
+  if (typeof ensureUpBizAllowed === 'function') ensureUpBizAllowed();
+  const me = currentProfile();
+  render();
+  toast(`デモ担当を「${me.name}」に切替えました`);
+}
+
+/** 切替ボタンは capture で拾う。
+ *  画面側のクリック処理（行選択・ドロップダウン閉じ等）が先に走って
+ *  DOM が作り直されると、ボタン自身の onclick まで届かないため。 */
+let demoActorBound = false;
+function bindDemoActorOnce() {
+  if (demoActorBound) return;
+  demoActorBound = true;
+  window.addEventListener('click', (e) => {
+    const t = e.target;
+    const b = (t && t.closest) ? t.closest('[data-demo-actor]') : null;
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    switchDemoActor(b.dataset.demoActor);
+  }, true);
+}
+
 /* ── 処理ステータス定義（客户回答の9ステータス）─────────────────────────
  * 上传：読取待ち ／ 識別：読取中・読取完了・読取失敗 ／ 確認：確認中(当面不要)・確認済み(承認待ち)
  * 承認：承認済み・差戻中 ／ 出力：出力済み
@@ -7618,17 +7647,10 @@ function bind() {
   document.querySelectorAll('[data-demo-actor]').forEach((b) => {
     b.onclick = (e) => {
       e.stopPropagation();
-      const id = b.dataset.demoActor;
-      if (!id || !byId(USERS, id)) return;
-      if (state.currentUser === id) { state.userMenuOpen = false; render(); return; }
-      state.currentUser = id;
-      state.userMenuOpen = false;
-      ensureUpBizAllowed();
-      const me = currentProfile();
-      render();
-      toast(`デモ担当を「${me.name}」に切替えました`);
+      switchDemoActor(b.dataset.demoActor);
     };
   });
+  bindDemoActorOnce();
 
   // ヘッダー／タブバー → 対応タブを開く／前面化（メニューとタグを同期）
   document.querySelectorAll('[data-opentab]').forEach((el) => {
