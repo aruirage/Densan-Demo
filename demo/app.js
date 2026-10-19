@@ -87,13 +87,18 @@ const USERS = [
   { id: 'u10', name: '小林 直子' },
 ];
 
-/** デモ用：権限の違いを見せるための切替候補（GROUPS／帳票権限表のシードに合わせる） */
+/** デモ用：権限の違いを見せるための切替候補。
+ *  9 ロール設計（R1/R2/R3/R5/R6/R7/R8/R10/R11）に 1 人ずつ対応させる。 */
 const DEMO_ACTORS = [
   { id: 'u1', role: 'システム管理者', email: 'ichiro.sato@itso.co.jp', hint: '全メニュー・全帳票・全操作' },
-  { id: 'u7', role: '読取・アップロード', email: 'aya.yamamoto@itso.co.jp', hint: '閲覧・アップロード・読取（再読取／一括読取）・削除（確認と出力は不可）' },
-  { id: 'u8', role: '確認・修正', email: 'ryo.nakamura@itso.co.jp', hint: '閲覧・修正・確認（アップロードと設定は不可）' },
-  { id: 'u10', role: '出力', email: 'naoko.kobayashi@itso.co.jp', hint: '閲覧と出力（CSV／JSON／PDF）のみ（読取・確認・設定は不可）' },
-  { id: 'u4', role: '閲覧のみ', email: 'minoru.tanaka@itso.co.jp', hint: '一覧の閲覧のみ（操作ボタンは出ない）' },
+  { id: 'u3', role: '業務管理者', email: 'kenta.yamada@itso.co.jp', hint: '「設定」の 2 メニュー（帳票設定・利用設定）だけ。一覧・アップロード・読取は不可' },
+  { id: 'u8', role: 'OCR結果確認', email: 'ryo.nakamura@itso.co.jp', hint: '閲覧・修正・確認（アップロードと設定は不可）' },
+  { id: 'u7', role: 'アップロード', email: 'aya.yamamoto@itso.co.jp', hint: '閲覧とアップロード（読取・確認・出力は不可）' },
+  { id: 'u6', role: '読取', email: 'osamu.watanabe@itso.co.jp', hint: '閲覧・読取（再読取／一括読取）・削除（確認と出力は不可）' },
+  { id: 'u5', role: 'OCR結果修正', email: 'yumi.ito@itso.co.jp', hint: '閲覧と修正のみ（確認・出力は不可）' },
+  { id: 'u2', role: 'AI分類結果修正', email: 'hanako.suzuki@itso.co.jp', hint: '閲覧と AI 分類結果の修正のみ' },
+  { id: 'u10', role: '出力', email: 'naoko.kobayashi@itso.co.jp', hint: '閲覧と出力（CSV／JSON／PDF）のみ' },
+  { id: 'u4', role: '閲覧', email: 'minoru.tanaka@itso.co.jp', hint: '一覧の閲覧のみ（操作ボタンは出ない）' },
 ];
 
 /** 右上に表示するログイン中ユーザ（state.currentUser から導出） */
@@ -106,10 +111,13 @@ function currentProfile() {
   const roles = (typeof ROLES !== 'undefined' && typeof ROLE_MEMBERS !== 'undefined')
     ? ROLES.filter((r) => (ROLE_MEMBERS[r.id] || []).includes(u.id)).map((r) => r.name)
     : [];
-  /* システム管理者は万能権限のため、所属グループよりロール名を優先表示 */
-  const label = (typeof isTenantAdmin === 'function' && isTenantAdmin(u.id))
-    ? (roles[0] || 'システム管理者')
-    : (groupNames.length ? groupNames.join('／') : (roles.length ? roles.join('／') : '一般'));
+  /* デモ切替の担当は「役割名」をそのまま出す（所属グループ名より分かりやすい）。
+     担当外のユーザーは従来どおりグループ名 → ロール名の順。 */
+  const label = (actor && actor.role)
+    ? actor.role
+    : (typeof isTenantAdmin === 'function' && isTenantAdmin(u.id))
+      ? (roles[0] || 'システム管理者')
+      : (groupNames.length ? groupNames.join('／') : (roles.length ? roles.join('／') : '一般'));
   return {
     id: u.id,
     name: u.name,
@@ -580,6 +588,34 @@ const permTargetKind = (id) => (byId(ROLES, id) ? 'role' : byId(GROUPS, id) ? 'g
 const permTargetName = (id) => (byId(ROLES, id) || byId(GROUPS, id) || {}).name || userName(id) || id;
 const permsOf = (layoutId) => TICKET_PERMS[layoutId] || { view: [], confirm: [], approve: [], reapprove: [] };
 
+/* ── フォルダ単位の権限（ファイルツリーの節点＝権限の単位） ──────────────
+ * 権限の単位はツリーのフォルダそのもの（業務シーン → 帳票タイプ）。
+ * 帳票タイプの下に版式はあっても、権限は版式ごとには分けない（フォルダで一括）。
+ * 保存先は従来の帳票権限表（TICKET_PERMS）で、配下の版式すべてに同じ値を書く。
+ * こうしておくと一覧の表示範囲・行のボタン・承認フローがそのまま連動する。 */
+function nodeLayouts(nodeId) {
+  if (byId(BUSINESS, nodeId)) return LAYOUT.filter((l) => (catOf(l.id) || {}).business === nodeId);
+  return LAYOUT.filter((l) => (catOf(l.id) || {}).id === nodeId);
+}
+/** フォルダの権限。配下の版式がすべて同じときだけ確定値、ばらけたら mixed */
+function nodePerm(nodeId, act) {
+  const list = nodeLayouts(nodeId);
+  if (!list.length) return { list: [], mixed: false, count: 0 };
+  const vals = list.map((l) => (permsOf(l.id)[act] || []).join('|'));
+  return {
+    list: (permsOf(list[0].id)[act] || []).slice(),
+    mixed: !vals.every((v) => v === vals[0]),
+    count: list.length,
+  };
+}
+/** フォルダの権限を配下の版式すべてに書く */
+function setNodePerm(nodeId, act, ids) {
+  nodeLayouts(nodeId).forEach((l) => {
+    if (!TICKET_PERMS[l.id]) TICKET_PERMS[l.id] = { view: [], fix: [], confirm: [], approve: [], reapprove: [] };
+    TICKET_PERMS[l.id][act] = ids.slice();
+  });
+}
+
 /** 【アップロード権限表】業務シーン（BUSINESS）× アップロード可 → グループ／ユーザー。
  *  窓口の確認グループがアップロードも担う想定。帳票タイプ権限とは別表。 */
 let UPLOAD_PERMS = {
@@ -735,8 +771,9 @@ let MENU_PERMS = {
   /* システム管理者＝メニュー全項目（業務権限も isTenantAdmin でバイパス） */
   R1: MENU_LEAVES.slice(),
   /* 運用管理者（通用管理者）＝帳票設定まわり＋ユーザー管理 */
+  /* 業務管理者＝「設定」の 2 メニュー（帳票設定・利用設定）だけを持つ。
+     一覧の閲覧もアップロードも与えない（設定専任）。 */
   R2: [
-    'home', 'op-upload', 'op-read', 'result',
     'settings-type', 'settings-type-add', 'settings-type-edit', 'settings-type-form-del',
     'settings-scenes', 'settings-scenes-add', 'settings-scenes-edit', 'settings-scenes-del',
     'usage-dict',
@@ -2048,9 +2085,11 @@ function renderTree() {
         || ((state.activeNode.type === 'biz' || state.activeNode.type === 'cat') && n.type === 'folder' && state.activeNode.id === n.id);
       const ni = treeIcon(n.type === 'file' ? 'document' : 'folder', opened);
       const fullName = nodeLabel(n);
-      /* 名称変更はフォルダ（業務シーン・帳票タイプ）の表示名だけ */
+      /* フォルダ（業務シーン・帳票タイプ）＝権限の単位。名称変更と権限設定を置く */
       const ops = (n.type === 'biz' || n.type === 'cat')
-        ? [`<button class="redo" title="表示名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
+        ? [canReachPage('permissions')
+          ? `<button class="redo" title="このフォルダの権限" data-treeprem="${n.id}"><span class="ico i-lock"></span></button>` : '',
+          `<button class="redo" title="表示名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
         : [];
       /* 長い名前は省略表示。hover で全文（ファイルは data-tip、フォルダは title） */
       const labelTip = n.type === 'file'
@@ -4005,6 +4044,17 @@ function renderExportDialog() {
   const fromInput = C.fileNameFromInput !== false;
   const enc = C.encoding || 'UTF-8';
   const encodings = ['UTF-8', 'UTF-8（BOMなし）', 'Shift_JIS'];
+  /* 選択中のファイルが複数の帳票タイプにまたがるときは「まとめて出力」できない
+     （客户回答：1 つにまとめられるのは同一帳票タイプのときだけ） */
+  const pickedFiles = (typeof visibleFiles === 'function' ? visibleFiles() : [])
+    .filter((f) => state.picked && state.picked[f.id]);
+  const pickedLayouts = [...new Set(pickedFiles.map((f) => f.layout))];
+  const mixedTypes = pickedLayouts.length > 1;
+  const exportType = TICKET_TYPES.find((x) => layoutIdOfTicketType(x) === pickedLayouts[0]);
+  const exportCfg = exportType ? exportCfgOf(exportType) : null;
+  const summary = exportCfg
+    ? `${(exportCfg.formats.join(' / ') || '—').toUpperCase()} ／ ${exportCfg.record === 'perRow' ? '明細行ごと' : '1 帳票 = 1 行'} ／ 出力項目 ${exportCfg.cols.filter((c) => c.on).length} 件`
+    : '';
   const sw = (key, on, label) => `
     <label class="switch exp-switch">
       <span class="switch-text">${esc(label)}</span>
@@ -4025,12 +4075,15 @@ function renderExportDialog() {
     <div class="modal exp-modal" style="width:min(400px,100%)">
       <div class="modal-head"><b>エクスポート設定</b><span class="spacer"></span><button class="icon-btn" id="expClose"><span class="ico i-close"></span></button></div>
       <div class="modal-canvas exp-canvas">
+        ${summary ? `<div class="exp-src-line"><span class="exp-src-k">帳票タイプの出力設定</span><b>${esc(summary)}</b></div>` : ''}
         <label class="exp-stack-field">
           <span class="exp-field-label"><i class="req">*</i>変換方式</span>
           <select class="fld exp-control" data-expcfg="encoding">${encodings.map((o) => `<option ${enc === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
         </label>
         <div class="exp-switches">
-          ${sw('combineFiles', !!C.combineFiles, 'まとめて出力')}
+          ${mixedTypes
+            ? '<div class="exp-warn">選択したファイルの帳票タイプが異なるため、まとめて出力できません。</div>'
+            : sw('combineFiles', !!C.combineFiles, 'まとめて出力')}
           <div class="exp-name-group">
             ${sw('fileNameFromInput', fromInput, '入力名と同じ')}
             ${nameField}
@@ -5297,7 +5350,7 @@ function renderWatch() {
         <td><input class="fld mono" data-wrule-pattern="${c.id}" value="${esc(r.pattern)}" list="watchPatternList" aria-label="ファイル名パターン" /></td>
         <td><input class="fld mono" data-wrule-start="${c.id}" value="${esc(r.startFile || '')}" placeholder="未設定なら即時" aria-label="処理開始ファイル" /></td>
         <td class="c"><input type="checkbox" class="cb" data-wrule-case="${c.id}" ${r.caseSensitive ? 'checked' : ''} aria-label="大文字小文字を区別" /></td>
-        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wruleon="${c.id}" role="switch" aria-checked="${r.on}" aria-label="このカテゴリを取り込む"><span class="tgl-knob"></span></button></td>
+        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wruleon="${c.id}" role="switch" aria-checked="${r.on}" aria-label="この帳票タイプを自動で取り込む"><span class="tgl-knob"></span></button></td>
       </tr>`;
     }).join('');
     if (!rows) return '';
@@ -5312,12 +5365,15 @@ function renderWatch() {
     ? `${String(liveRoots[0].path).replace(/[\\/]+$/, '')}\\${liveRules[0].folder}\\${liveRules[0].pattern}`
     : '';
 
-  return `${cfgHeader('自動アップロード', `<span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>`)}
-  <p class="cfg-hint">監視ルート（テナント）の直下にあるカテゴリフォルダを見張り、条件に合うファイルを自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。${x.updatedAt ? `<span class="muted">最終更新 ${esc(x.updatedAt)}</span>` : ''}</p>
+  return `<div class="cfg-head">
+    <h1 class="cfg-title">自動アップロード <span class="info-i" data-tip="監視ルート（テナント）の直下にある帳票タイプ別フォルダを見張り、条件に合うファイルを自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。">i</span></h1>
+    <span class="spacer"></span>
+    <span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>
+  </div>
   <div class="watch-body">
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">監視ルート（テナント）</h3>
+        <h3 class="watch-sec-head">監視ルート（テナント）<span class="info-i" data-tip="1 行＝1 テナント（1 台の仮想マシン上の共有フォルダ）です。帳票タイプのフォルダはこのパスの直下に置きます。行ごとに有効／無効を切り替えられます。">i</span></h3>
         <div class="watch-tablewrap">
           <table class="watch-table wr-roots">
             <thead><tr>
@@ -5332,40 +5388,37 @@ function renderWatch() {
         </div>
         <div class="watch-sec-foot">
           <button type="button" class="btn wp-add" data-wrootadd="1"><span class="ico i-add"></span>監視ルートを追加</button>
-          <p class="wf-help">1 行＝1 テナント（1 台の仮想マシン上の共有フォルダ）です。カテゴリのフォルダはこのパスの直下に置きます。</p>
         </div>
       </section>
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">カテゴリ別ルール</h3>
+        <h3 class="watch-sec-head">帳票タイプ別ルール<span class="info-i" data-tip="帳票設定に登録されている帳票タイプをそのまま並べています。フォルダ名は全テナント共通です。自動取込が不要な帳票タイプは「自動取込」を切ってください。処理開始が未設定なら、ファイルが現れた時点で取り込みます。大小区別は「ファイル名」と「処理開始」の両方に効きます。">i</span></h3>
         <div class="watch-tablewrap">
           <table class="watch-table wr-rules">
             <thead><tr>
-              <th style="width:180px">帳票カテゴリ</th>
+              <th style="width:180px">帳票タイプ</th>
               <th style="width:190px">フォルダ名</th>
               <th style="width:140px">ファイル名</th>
               <th style="width:130px">処理開始</th>
               <th class="c" style="width:64px">大小区別</th>
-              <th class="c" style="width:52px">有効</th>
+              <th class="c" style="width:64px">自動取込</th>
             </tr></thead>
             <tbody>${ruleRows}</tbody>
           </table>
         </div>
         <datalist id="watchPatternList">${WATCH_PATTERNS.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</datalist>
         <div class="watch-sec-foot">
-          <p class="wf-help">フォルダ名は全テナント共通です。処理開始が未設定なら、ファイルが現れた時点で取り込みます。大小区別は「ファイル名」と「処理開始」の両方に効きます。</p>
-          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本（有効なルート ${liveRoots.length} × カテゴリ ${liveRules.length}）${sample ? `<span class="mono">${esc(sample)}</span>` : ''}</p>
+          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本（有効なルート ${liveRoots.length} × 帳票タイプ ${liveRules.length}）${sample ? `<span class="mono">${esc(sample)}</span>` : ''}</p>
         </div>
       </section>
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">処理後のファイル</h3>
+        <h3 class="watch-sec-head">処理後のファイル<span class="info-i" data-tip="取り込みが成功したファイルをどう扱うかを選びます。「移動」の移動先は、監視ルートごとの「処理済フォルダ」です。">i</span></h3>
         <div class="watch-fields">
           <div class="wf"><span class="wf-label">取込成功時</span>
             <div class="wf-ctl wide"><div class="watch-radios">
               ${['move', 'del', 'keep'].map((v) => `<label><input type="radio" name="wafter" data-wf-radio="after" value="${v}" ${x.after === v ? 'checked' : ''} />${WATCH_AFTER[v]}</label>`).join('')}
             </div>
-            <p class="wf-help">「移動」の移動先は、監視ルートごとの「処理済フォルダ」です。</p>
             </div>
           </div>
         </div>
@@ -5756,13 +5809,51 @@ function bindBizScenes() {
   };
 }
 
-/** 帳票タイプ詳細のステップ（製品：AI分類設定 → AI読取設定 → 処理ルール設定 → 効果テスト） */
+/** 帳票タイプ詳細のステップ（製品：AI分類設定 → AI読取設定 → 処理ルール設定 → 効果テスト → 出力設定） */
 const TYPE_STEPS = [
   { no: 1, id: 'classify', label: 'AI分類設定' },
   { no: 2, id: 'ocr', label: 'AI読取設定' },
   { no: 3, id: 'rule', label: '処理ルール設定' },
   { no: 4, id: 'test', label: '効果テスト' },
+  { no: 5, id: 'export', label: '出力設定' },
 ];
+
+/** 出力設定（帳票タイプごと）。変更できるのは管理者（R1）だけ。
+ *  一括ダウンロードの既定値になり、CSV の列名・列順もここで決める。
+ *  客户回答（機能確認表 No.15）:
+ *   ・CSV の列名・列順は帳票タイプごとに設定
+ *   ・1 人 1 行（＝1 帳票 1 レコード）で出力
+ *   ・同一帳票タイプなら複数ファイルを 1 つの CSV にまとめる
+ *   ・設定変更は管理者のみ */
+function exportCfgOf(t) {
+  if (!t) return null;
+  if (!t.exportCfg) {
+    t.exportCfg = {
+      formats: ['csv'],
+      record: 'perTicket',      // perTicket＝1 帳票 1 行 / perRow＝明細行ごと
+      fileName: '',             // 空なら帳票名
+      encoding: 'UTF-8',
+      delimiter: 'カンマ',
+      header: true,
+      newline: 'CRLF',
+      empty: '空欄',
+      dateFormat: 'YYYY-MM-DD',
+      merge: true,              // 同一帳票タイプの複数ファイルを 1 ファイルにまとめる
+      cols: [],
+    };
+  }
+  if (!t.exportCfg.cols || !t.exportCfg.cols.length) t.exportCfg.cols = defaultExportCols();
+  return t.exportCfg;
+}
+/** 出力項目の初期値：AI 読取の項目＋テーブル列（テーブル列は既定で出力しない） */
+function defaultExportCols() {
+  const cols = [];
+  ensureTypeFields().forEach((f) => cols.push({ id: 'x' + f.id, src: f.id, label: f.name, on: true }));
+  ensureTypeTables().forEach((tb) => (tb.cols || []).forEach((c) => {
+    cols.push({ id: 'x' + c.id, src: c.id, label: `${tb.name} / ${c.name}`, on: false, table: tb.name });
+  }));
+  return cols;
+}
 
 /** 帳票タイプ設定を開く（左リスト＋右 Step1。業務シーン設定と同じ構成） */
 function openTicketTypes() {
@@ -6012,6 +6103,7 @@ function typePane(step, t) {
     </div>`;
   }
   if (step === 3) return renderRulePane();
+  if (step === 5) return renderExportPane(t);
   return '<div class="wiz-empty"><p class="wiz-empty-title">効果テスト</p>'
     + '<p class="muted">テスト帳票で分類・読取の精度を確認します。</p>'
     + '<table class="wiz-table"><thead><tr><th>項目</th><th>正解</th><th>読取結果</th><th>判定</th></tr></thead><tbody>'
@@ -6019,6 +6111,103 @@ function typePane(step, t) {
     + '<tr><td>住所</td><td>千代田区…</td><td>千代田区…</td><td><span class="st ok"><span class="dot"></span>一致</span></td></tr>'
     + '<tr><td>生年月日</td><td>1985-04-02</td><td>1985-04-02</td><td><span class="st ok"><span class="dot"></span>一致</span></td></tr>'
     + '</tbody></table><p class="wiz-score">精度：<b>98.2%</b>（サンプル 120 件）</p></div>';
+}
+
+/* ── 帳票タイプ設定 Step5：出力設定 ──────────────────────────────────────
+ * 客户回答（機能確認表 No.15）より:
+ *   ・CSV の列名・列順は帳票タイプごとに設定する
+ *   ・1 人 1 行（1 帳票 1 レコード）で出力する
+ *   ・同一帳票タイプなら、選択した複数ファイルを 1 つの CSV にまとめる
+ *   ・設定を変更できるのは管理者のみ
+ * -------------------------------------------------------------------- */
+function renderExportPane(t) {
+  const C = exportCfgOf(t);
+  const canEdit = isTenantAdmin(state.currentUser);
+  const dis = canEdit ? '' : ' disabled';
+  const onCount = C.cols.filter((c) => c.on).length;
+  const tip = 'CSV の列名・列順は帳票タイプごとに決まります。ここで設定した内容が一括ダウンロードの既定値になります。';
+
+  const fmt = [['csv', 'CSV'], ['json', 'JSON'], ['pdf', 'PDF']].map(([k, label]) =>
+    `<button type="button" class="exp-fmt${C.formats.includes(k) ? ' on' : ''}" data-expform="${k}" aria-pressed="${C.formats.includes(k)}"${dis}>${label}</button>`).join('');
+
+  const recOpts = [
+    ['perTicket', '1 帳票 ＝ 1 行', '1 人 1 行。帳票 1 件が CSV の 1 レコードになります'],
+    ['perRow', '明細行ごと', 'テーブル項目を選んだとき、明細 1 行ごとに 1 レコードで出力します'],
+  ].map(([k, label, hint]) => `<label class="exp-rec${C.record === k ? ' on' : ''}">
+      <input type="radio" name="expRecord" value="${k}" data-exprecord="1" ${C.record === k ? 'checked' : ''}${dis} />
+      <span><b>${label}</b><em>${esc(hint)}</em></span></label>`).join('');
+
+  const colRows = C.cols.map((c, i) => `<tr class="${c.on ? '' : 'off'}">
+      <td class="exp-ord">
+        <button type="button" class="icon-btn sm" data-expcol-up="${c.id}" title="上へ"${i === 0 || !canEdit ? ' disabled' : ''}><span class="ico i-caret-up"></span></button>
+        <button type="button" class="icon-btn sm" data-expcol-down="${c.id}" title="下へ"${i === C.cols.length - 1 || !canEdit ? ' disabled' : ''}><span class="ico i-caret-down"></span></button>
+        <span class="exp-no">${i + 1}</span>
+      </td>
+      <td><input class="fld" data-expcol-label="${c.id}" value="${esc(c.label)}" aria-label="列名"${dis} /></td>
+      <td class="c"><input type="checkbox" class="cb" data-expcol-on="${c.id}" ${c.on ? 'checked' : ''}${dis} aria-label="出力する" /></td>
+      <td class="exp-src">${c.table ? `<span class="exp-tag">テーブル</span>${esc(c.table)}` : 'AI 読取項目'}</td>
+    </tr>`).join('');
+
+  const opt = (key, label, opts) => `<label class="exp-opt"><span>${label}</span><select class="fld" data-expopt="${key}"${dis}>${opts.map(([v, l]) => `<option value="${esc(v)}" ${C[key] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+
+  return `<div class="exp-pane">
+    <div class="exp-head">
+      <h3 class="exp-title">出力設定 <span class="info-i" data-tip="${esc(tip)}">i</span></h3>
+      <span class="spacer"></span>
+      ${canEdit ? '' : '<span class="exp-lock"><span class="ico i-lock"></span>管理者のみ変更できます</span>'}
+    </div>
+
+    <section class="exp-sec">
+      <div class="exp-row">
+        <span class="exp-lab">出力形式</span>
+        <div class="exp-fmts">${fmt}</div>
+        <span class="exp-help">複数選べます。CSV は下の項目・列順で出力します。</span>
+      </div>
+      <div class="exp-row">
+        <span class="exp-lab">レコード単位</span>
+        <div class="exp-recs">${recOpts}</div>
+      </div>
+      <div class="exp-row">
+        <span class="exp-lab">ファイル名</span>
+        <input class="fld exp-name" data-expopt="fileName" value="${esc(C.fileName || '')}" placeholder="${esc(t.name)}"${dis} />
+        <span class="exp-help">空欄なら帳票名を使います。</span>
+      </div>
+    </section>
+
+    <section class="exp-sec">
+      <div class="exp-sec-head">
+        <h4>出力項目 <span class="exp-count">${onCount} / ${C.cols.length}</span></h4>
+        <span class="spacer"></span>
+        <button type="button" class="link" data-expall="1"${dis}>${onCount === C.cols.length ? 'すべて外す' : 'すべて出力'}</button>
+      </div>
+      <div class="tablewrap exp-tablewrap">
+        <table class="exp-table">
+          <thead><tr><th style="width:110px">順序</th><th>列名</th><th class="c" style="width:64px">出力</th><th style="width:200px">読取項目</th></tr></thead>
+          <tbody>${colRows || '<tr><td colspan="4" class="empty-cell">出力項目がありません</td></tr>'}</tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="exp-sec">
+      <h4>CSV オプション</h4>
+      <div class="exp-opts">
+        ${opt('encoding', '文字コード', [['UTF-8', 'UTF-8'], ['Shift_JIS', 'Shift_JIS']])}
+        ${opt('delimiter', '区切り文字', [['カンマ', 'カンマ ( , )'], ['タブ', 'タブ ( ⇥ )'], ['セミコロン', 'セミコロン ( ; )']])}
+        ${opt('header', 'ヘッダ行', [[true, 'あり'], [false, 'なし']])}
+        ${opt('newline', '改行コード', [['CRLF', 'CRLF'], ['LF', 'LF']])}
+        ${opt('empty', '空欄の扱い', [['空欄', '空欄'], ['NULL', 'NULL']])}
+        ${opt('dateFormat', '日付形式', [['YYYY-MM-DD', 'YYYY-MM-DD'], ['YYYY/MM/DD', 'YYYY/MM/DD'], ['和暦', '和暦（令和）']])}
+      </div>
+    </section>
+
+    <section class="exp-sec">
+      <div class="exp-row exp-row-tgl">
+        <span class="exp-lab">複数ファイルのまとめ</span>
+        <button type="button" class="tgl${C.merge ? '' : ' off'}" data-expmerge="1" role="switch" aria-checked="${C.merge}"${dis}><span class="tgl-knob"></span></button>
+        <span class="exp-help">同じ帳票タイプのファイルを選んだとき、1 つの CSV にまとめて出力します。</span>
+      </div>
+    </section>
+  </div>`;
 }
 
 const RULE_KINDS = ['数字のみ', '小数点付きの数字', 'カタカナ', 'ひらがな', '日付', '西暦年', '西暦月', '西暦日'];
@@ -6125,7 +6314,7 @@ function renderTicketDetail() {
   const stepBar = '<div class="wiz">' + TYPE_STEPS.map((st) =>
     '<button class="wiz-step ' + (step === st.no ? 'on' : '') + ' ' + (step > st.no ? 'done' : '') + '" data-typestep="' + st.no + '">'
     + '<span class="wiz-no">' + st.no + '</span><span class="wiz-label">' + st.label + '</span></button>'
-    + (st.no < 4 ? '<span class="wiz-line ' + (step > st.no ? 'on' : '') + '"></span>' : '')).join('')
+    + (st.no < TYPE_STEPS.length ? '<span class="wiz-line ' + (step > st.no ? 'on' : '') + '"></span>' : '')).join('')
     + '<button class="icon-btn wiz-full" title="全画面表示"><span class="ico i-multi"></span></button></div>';
 
   const zoomBar = '<div class="wiz-tools">'
@@ -6144,13 +6333,15 @@ function renderTicketDetail() {
   return '<div class="typedetail">'
     + leftList
     + '<section class="type-main">' + stepBar + zoomBar
-    + '<div class="wiz-body">' + preview + '<div class="wiz-pane">' + typePane(step, t) + '</div></div>'
+    + (step === 5
+      ? '<div class="wiz-body is-wide"><div class="wiz-pane">' + typePane(step, t) + '</div></div>'
+      : '<div class="wiz-body">' + preview + '<div class="wiz-pane">' + typePane(step, t) + '</div></div>')
     + '<div class="wiz-foot">'
     + (step === 1 ? '<button class="btn primary" id="tpReupload"><span class="ico i-upload"></span>再アップロード</button>' : '')
     + '<span class="spacer"></span>'
     + '<button class="btn" id="tpClose">閉じる</button>'
     + '<button class="btn" id="tpPrevStep"' + (step <= 1 ? ' disabled' : '') + '>前へ</button>'
-    + '<button class="btn" id="tpNextStep"' + (step >= 4 ? ' disabled' : '') + '>次へ</button>'
+    + '<button class="btn" id="tpNextStep"' + (step >= TYPE_STEPS.length ? ' disabled' : '') + '>次へ</button>'
     + '<button class="btn primary" id="tpSave">保存</button>'
     + '</div></section></div>';
 }
@@ -6197,7 +6388,7 @@ function bindTicketDetail() {
   document.querySelectorAll('[data-typestep]').forEach((b) => {
     b.onclick = () => { state.typeStep = Number(b.dataset.typestep); render(); };
   });
-  const nx = $('#tpNextStep'); if (nx) nx.onclick = () => { state.typeStep = Math.min(4, state.typeStep + 1); state.typeMenu = null; render(); };
+  const nx = $('#tpNextStep'); if (nx) nx.onclick = () => { state.typeStep = Math.min(TYPE_STEPS.length, state.typeStep + 1); state.typeMenu = null; render(); };
   const pvStep = $('#tpPrevStep'); if (pvStep) pvStep.onclick = () => { state.typeStep = Math.max(1, state.typeStep - 1); state.typeMenu = null; render(); };
   const cl = $('#tpClose'); if (cl) cl.onclick = () => {
     if (isTabOpen('ticketDetail')) closeTab('ticketDetail');
@@ -6627,6 +6818,70 @@ function bindTicketDetail() {
       render();
     };
   });
+  /* Step5 出力設定（帳票タイプごと） */
+  const expType = byId(TICKET_TYPES, state.typeId);
+  if (expType && state.typeStep === 5) bindExportPane(expType);
+}
+
+/** 帳票タイプ設定 Step5 のイベント（管理者のみ編集可） */
+function bindExportPane(t) {
+  const C = exportCfgOf(t);
+  if (!isTenantAdmin(state.currentUser)) return;   /* 参照のみ */
+
+  document.querySelectorAll('[data-expform]').forEach((b) => {
+    b.onclick = () => {
+      const k = b.dataset.expform;
+      const has = C.formats.includes(k);
+      /* CSV は最低 1 つ残す（全部外すと出力形式が無くなる） */
+      if (has && C.formats.length === 1) { toast('出力形式は 1 つ以上選んでください'); return; }
+      C.formats = has ? C.formats.filter((x) => x !== k) : C.formats.concat([k]);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-exprecord]').forEach((el) => {
+    el.onchange = () => { if (el.checked) { C.record = el.value; render(); } };
+  });
+  document.querySelectorAll('[data-expopt]').forEach((el) => {
+    const k = el.dataset.expopt;
+    const apply = () => {
+      let v = el.value;
+      if (k === 'header') v = v === 'true';
+      C[k] = v;
+    };
+    el.onchange = apply;
+    el.oninput = apply;      /* ファイル名は入力中に反映（描き直すとフォーカスが飛ぶ） */
+  });
+  document.querySelectorAll('[data-expcol-on]').forEach((cb) => {
+    cb.onchange = () => {
+      const c = C.cols.find((x) => x.id === cb.dataset.expcolOn);
+      if (c) c.on = cb.checked;
+      render();
+    };
+  });
+  document.querySelectorAll('[data-expcol-label]').forEach((el) => {
+    el.oninput = () => {
+      const c = C.cols.find((x) => x.id === el.dataset.expcolLabel);
+      if (c) c.label = el.value;
+    };
+  });
+  const move = (id, dir) => {
+    const i = C.cols.findIndex((x) => x.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= C.cols.length) return;
+    const [row] = C.cols.splice(i, 1);
+    C.cols.splice(j, 0, row);
+    render();
+  };
+  document.querySelectorAll('[data-expcol-up]').forEach((b) => { b.onclick = () => move(b.dataset.expcolUp, -1); });
+  document.querySelectorAll('[data-expcol-down]').forEach((b) => { b.onclick = () => move(b.dataset.expcolDown, 1); });
+  const all = document.querySelector('[data-expall]');
+  if (all) all.onclick = () => {
+    const turnOn = C.cols.filter((c) => c.on).length !== C.cols.length;
+    C.cols.forEach((c) => { c.on = turnOn; });
+    render();
+  };
+  const mg = document.querySelector('[data-expmerge]');
+  if (mg) mg.onclick = () => { C.merge = !C.merge; render(); };
 }
 
 /** 権限の割り当て先を小さなチップで表示（ユーザー＝グレー／ロール＝緑） */
@@ -6637,15 +6892,30 @@ function permChips(list) {
 
 /** 帳票権限管理：上＝帳票タイプ×4操作、下＝業務シーン×アップロード */
 function renderPermissions() {
-  const rows = LAYOUT.map((l, i) => {
-    const p = permsOf(l.id);
-    const cat = catOf(l.id) || {};
-    return `<tr>
-      <td class="roles-no">${i + 1}</td>
-      <td>${esc(dispLayout(l.id))}<div class="sub">${esc(dispBiz(cat.business))} ／ ${esc(dispCat(cat.id))}</div></td>
-      ${PERM_ACTS.map((a) => `<td class="permcell"><button type="button" class="perm-cell" data-permcell="${l.id}:${a.key}" title="${esc(a.hint)}：${esc((p[a.key] || []).map(permTargetName).join('、') || '未設定')}">${permChips(p[a.key])}</button></td>`).join('')}
-      <td><div class="acts"><button class="act-text" data-permclear="${l.id}">クリア</button></div></td>
+  /* 行＝ファイルツリーのフォルダ。業務シーンの行を編集すると配下の帳票タイプ
+     すべてに同じ値が入る（帳票タイプの行で個別に上書きできる）。 */
+  let no = 0;
+  const cellOf = (nodeId, act) => {
+    const p = nodePerm(nodeId, act);
+    const names = p.list.map(permTargetName).join('、') || '未設定';
+    const mixed = p.mixed ? '<span class="perm-mixed" title="配下の帳票で設定が異なります">混在</span>' : '';
+    return `<td class="permcell"><button type="button" class="perm-cell${p.mixed ? ' is-mixed' : ''}" data-fpermcell="${nodeId}:${act}" title="${esc(permActHint(act))}：${esc(names)}">${mixed}${permChips(p.list)}</button></td>`;
+  };
+  const rows = BUSINESS.slice().sort((a, b) => a.order - b.order).map((b) => {
+    const cats = CATEGORY.filter((c) => c.business === b.id).sort((x, y) => x.order - y.order);
+    const bizRow = `<tr class="fp-row fp-biz">
+      <td class="roles-no is-sticky">${++no}</td>
+      <td class="fp-name is-sticky">${treeIcon('folder')}<b>${esc(dispBiz(b.id))}</b><span class="fp-sub">帳票タイプ ${cats.length} 件</span></td>
+      ${PERM_ACTS.map((a) => cellOf(b.id, a.key)).join('')}
+      <td class="acts"><button class="act-text" data-fpermclear="${b.id}">クリア</button></td>
     </tr>`;
+    const catRows = cats.map((c) => `<tr class="fp-row fp-cat">
+      <td class="roles-no is-sticky">${++no}</td>
+      <td class="fp-name is-sticky">${treeIcon('document')}<span class="fp-catname">${esc(dispCat(c.id))}</span><span class="fp-sub">版式 ${nodeLayouts(c.id).length} 件</span></td>
+      ${PERM_ACTS.map((a) => cellOf(c.id, a.key)).join('')}
+      <td class="acts"><button class="act-text" data-fpermclear="${c.id}">クリア</button></td>
+    </tr>`).join('');
+    return bizRow + catRows;
   }).join('');
 
   const upRows = BUSINESS.slice().sort((a, b) => a.order - b.order).map((b, i) => {
@@ -6658,17 +6928,16 @@ function renderPermissions() {
     </tr>`;
   }).join('');
 
-  /* 上表：帳票タイプ単位で「閲覧→確認」。下表：業務シーン単位のアップロード。
-   * セルクリックで編集。メニュー権限とは別テーブル。 */
+  /* 上表：フォルダ（業務シーン → 帳票タイプ）単位で「閲覧→修正→確認」。
+   * 下表：業務シーン単位のアップロード。セルクリックで編集。メニュー権限とは別テーブル。 */
   return `${cfgHeader('帳票権限管理', '')}
-  <h3 class="cfg-sub">帳票タイプ権限（閲覧／修正／確認）</h3>
-  <div class="tablewrap"><table>
-    <thead><tr><th style="width:60px">番号</th><th>帳票タイプ</th>
-      ${PERM_ACTS.map((a) => `<th style="width:190px">${a.label}</th>`).join('')}
+  <h3 class="cfg-sub">フォルダ権限（業務シーン → 帳票タイプ）<span class="info-i" data-tip="ファイルツリーのフォルダがそのまま権限の単位です。業務シーンの行は配下の帳票タイプすべてに同じ値を書き込み、帳票タイプの行で個別に変えられます。閲覧を外すと、そのフォルダの帳票は一覧にも出ません。">i</span></h3>
+  <div class="tablewrap"><table class="fp-table">
+    <thead><tr><th style="width:60px">番号</th><th style="width:260px">フォルダ</th>
+      ${PERM_ACTS.map((a) => `<th style="width:150px">${a.label}</th>`).join('')}
       <th style="width:90px;text-align:right">操作</th></tr></thead>
     <tbody>${rows || '<tr><td colspan="7" class="empty-cell">データなし</td></tr>'}</tbody></table></div>
-  <h3 class="cfg-sub">アップロード権限（業務シーン単位）</h3>
-  <p class="muted cfg-note">新規アップロード画面で選べる業務シーンは、ここに割り当てたグループ／ユーザーに限定されます。<b>システム管理者</b>（権限設定の R1）は表の割当に依らず全業務シーンへアップロードできます。</p>
+  <h3 class="cfg-sub">アップロード権限（業務シーン単位）<span class="info-i" data-tip="新規アップロード画面で選べる業務シーンは、ここに割り当てたグループ／ユーザーに限定されます。システム管理者（権限設定の R1）は表の割当に依らず全業務シーンへアップロードできます。">i</span></h3>
   <div class="tablewrap"><table>
     <thead><tr><th style="width:60px">番号</th><th>業務シーン</th>
       <th style="width:280px">アップロード</th>
@@ -6677,20 +6946,29 @@ function renderPermissions() {
   ${permCellDialog()}`;
 }
 
-/** 帳票／アップロード権限のセル編集ダイアログ（グループ／ユーザーは药丸で切替え） */
+/** 帳票／アップロード／フォルダ権限のセル編集ダイアログ（グループ／ユーザーは药丸で切替え） */
 function permCellDialog() {
   const c = state.permCell;
   if (!c) return '';
   const isUpload = c.kind === 'upload';
-  const cur = isUpload ? uploadPermsOf(c.bizId) : (permsOf(c.layoutId)[c.act] || []);
+  const isFolder = c.kind === 'folder';
+  const cur = isUpload ? uploadPermsOf(c.bizId)
+    : isFolder ? nodePerm(c.nodeId, c.act).list
+      : (permsOf(c.layoutId)[c.act] || []);
   let mode = c.mode || assigneeModeOf(isUpload ? 'confirm' : c.act, cur);
   if (mode === 'role') mode = 'group'; /* 旧データ互換 */
   c.mode = mode;
   const actLabel = isUpload ? 'アップロード' : permActLabel(c.act);
   const actHint = isUpload ? 'この業務シーンへファイルをアップロードできる' : permActHint(c.act);
-  const targetLabel = isUpload ? '業務シーン' : '帳票タイプ';
-  const targetName = isUpload ? dispBiz(c.bizId) : dispLayout(c.layoutId);
-  const title = isUpload ? 'アップロード権限の設定' : '帳票権限の設定';
+  const targetLabel = isUpload ? '業務シーン' : isFolder ? 'フォルダ' : '帳票タイプ';
+  const targetName = isUpload ? dispBiz(c.bizId) : isFolder ? (dispCat(c.nodeId) || dispBiz(c.nodeId)) : dispLayout(c.layoutId);
+  const title = isUpload ? 'アップロード権限の設定' : isFolder ? 'フォルダ権限の設定' : '帳票権限の設定';
+  /* フォルダの行は配下の帳票すべてに効く。何件に効くかを出しておく */
+  const scope = isFolder ? `<span class="pt-hint">配下の帳票 ${nodeLayouts(c.nodeId).length} 件すべてに適用</span>` : '';
+  /* フォルダから開いたときは、操作（閲覧／修正／確認）をここで切り替えられる */
+  const actPills = isFolder
+    ? `<div class="fp-act-pills" role="tablist" aria-label="操作">${PERM_ACTS.map((a) => `<button type="button" class="asg-mode-pill${a.key === c.act ? ' on' : ''}" data-fpermact="${a.key}" role="tab" aria-selected="${a.key === c.act}">${esc(a.label)}</button>`).join('')}</div>`
+    : '';
   /* グループはユーザー管理のツリーと同じ階層順・同じインデントで並べる */
   const groupPicks = groupOptsWithDepth().map(([gid, gname, , depth, hasKids]) => {
     const o = byId(GROUPS, gid) || { kind: '', userIds: [] };
@@ -6707,9 +6985,10 @@ function permCellDialog() {
     <div class="modal-head"><b>${esc(title)}</b><span class="spacer"></span><button class="icon-btn" id="permCellClose"><span class="ico i-close"></span></button></div>
     <div class="perm-body">
       <div class="perm-target">
-        <span class="pt-l"><span class="pt-k">${esc(targetLabel)}</span><b>${esc(targetName)}</b></span>
+        <span class="pt-l"><span class="pt-k">${esc(targetLabel)}</span><b>${esc(targetName)}</b>${scope}</span>
         <span class="pt-l"><span class="pt-k">業務操作</span><b class="accent">${esc(actLabel)}</b><span class="pt-hint">${esc(actHint)}</span></span>
       </div>
+      ${actPills}
       <div class="asg-mode-pills perm-mode-pills" role="tablist" aria-label="権限の種類">
         <button type="button" class="asg-mode-pill${mode === 'group' ? ' on' : ''}" data-perm-mode="group" role="tab" aria-selected="${mode === 'group'}">グループ</button>
         <button type="button" class="asg-mode-pill${mode === 'user' ? ' on' : ''}" data-perm-mode="user" role="tab" aria-selected="${mode === 'user'}">ユーザー</button>
@@ -7116,7 +7395,7 @@ function render() {
   let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
   /* メニュー権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
   if (route !== 'review' && !canReachPage(route)) {
-    const fallback = ['home', 'upload', 'result', 'myTasks'].find((p) => canReachPage(p)) || 'home';
+    const fallback = ['home', 'upload', 'result', 'myTasks', 'ticketDetail', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].find((p) => canReachPage(p)) || 'home';
     state.page = fallback;
     route = fallback;
   }
@@ -7362,6 +7641,15 @@ function bindTree(treeEl) {
     const node = e.target.closest('.node');
     if (!node) return;
     const type = node.dataset.type, id = node.dataset.id, key = type + ':' + id;
+    if (e.target.closest('[data-treeprem]')) {
+      e.stopPropagation();
+      const nodeId = e.target.closest('[data-treeprem]').dataset.treeprem;
+      /* 権限の編集は帳票権限管理の同じセルで行う（画面を移してセルを開く） */
+      state.page = 'permissions';
+      state.permCell = { kind: 'folder', nodeId, act: 'view' };
+      render();
+      return;
+    }
     if (e.target.closest('[data-rename]')) {
       e.stopPropagation();
       if (type !== 'file') { toast('業務シーン・帳票タイプ名は変更できません'); return; }
@@ -8930,20 +9218,22 @@ function bindCfgPages() {
     toast('ログ出力設定を保存しました');
   };
 
-  /* ── 帳票権限（業務レベル）：セルをクリックして担当を編集 ── */
-  document.querySelectorAll('[data-permcell]').forEach((b) => {
+  /* ── 帳票権限（業務レベル）：フォルダ（ツリーの節点）単位で担当を編集 ── */
+  document.querySelectorAll('[data-fpermcell]').forEach((b) => {
     b.onclick = () => {
-      const [layoutId, act] = b.dataset.permcell.split(':');
-      state.permCell = { kind: 'ticket', layoutId, act };
+      const [nodeId, act] = b.dataset.fpermcell.split(':');
+      state.permCell = { kind: 'folder', nodeId, act };
       render();
     };
   });
-  document.querySelectorAll('[data-permclear]').forEach((b) => {
+  document.querySelectorAll('[data-fpermclear]').forEach((b) => {
     b.onclick = () => {
-      const id = b.dataset.permclear;
-      TICKET_PERMS[id] = { view: [], confirm: [], approve: [], reapprove: [] };
+      const id = b.dataset.fpermclear;
+      nodeLayouts(id).forEach((l) => {
+        TICKET_PERMS[l.id] = { view: [], fix: [], confirm: [], approve: [], reapprove: [] };
+      });
       render();
-      toast(`「${dispLayout(id)}」の権限をクリアしました`);
+      toast(`「${dispCat(id) || dispBiz(id)}」の権限をクリアしました`);
     };
   });
   document.querySelectorAll('[data-uploadcell]').forEach((b) => {
@@ -9133,6 +9423,15 @@ function bindPermDialogs() {
       });
     });
     syncRoot();
+    /* フォルダから開いたときは、操作（閲覧／修正／確認）を切り替えられる */
+    document.querySelectorAll('[data-fpermact]').forEach((b) => {
+      b.onclick = () => {
+        const act = b.dataset.fpermact;
+        if (!act || c.act === act) return;
+        c.act = act;
+        render();
+      };
+    });
     const ok = $('#permCellOk');
     if (ok) ok.onclick = () => {
       const mode = c.mode === 'user' ? 'user' : 'group';
@@ -9146,6 +9445,13 @@ function bindPermDialogs() {
         UPLOAD_PERMS[c.bizId] = picked;
         state.permCell = null; render();
         toast(`「${dispBiz(c.bizId)}」のアップロード権限を更新しました`);
+        return;
+      }
+      if (c.kind === 'folder') {
+        const n = nodeLayouts(c.nodeId).length;
+        setNodePerm(c.nodeId, c.act, picked);
+        state.permCell = null; render();
+        toast(`「${dispCat(c.nodeId) || dispBiz(c.nodeId)}」の${permActLabel(c.act)}権限を更新しました（帳票 ${n} 件）`);
         return;
       }
       if (!TICKET_PERMS[c.layoutId]) TICKET_PERMS[c.layoutId] = { view: [], confirm: [], approve: [], reapprove: [] };

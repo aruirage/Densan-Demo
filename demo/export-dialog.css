@@ -417,3 +417,63 @@ thead th{ background:#eef5fd !important; }
 
 /* ══ ログ設定：「ログ出力設定」バー（詳細度・保存先）は不要（客户） ══ */
 .log-cfg{ display:none !important; }
+
+/* ══ 帳票タイプ設定 Step5：出力設定（帳票タイプごとの CSV 列定義） ══════ */
+.wiz-body.is-wide { grid-template-columns: 1fr !important; }
+.wiz-body.is-wide .wiz-pane { max-height: none; }
+
+.exp-pane { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px 22px; overflow: auto; }
+.exp-head { display: flex; align-items: center; gap: 10px; }
+.exp-title { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
+.exp-lock { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: #f4f6f9; color: var(--text-3); font-size: 11px; }
+.exp-lock .ico { font-size: 11px; }
+
+.exp-sec { border: 1px solid var(--line); border-radius: var(--radius); background: #fff; padding: 14px 16px; }
+.exp-sec > h4 { margin: 0 0 10px; font-size: 12px; font-weight: 700; color: var(--text-2); }
+.exp-sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.exp-sec-head > h4 { margin: 0; font-size: 12px; font-weight: 700; color: var(--text-2); }
+.exp-count { margin-left: 6px; color: var(--text-3); font-weight: 400; font-size: 11px; }
+
+.exp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 6px 0; }
+.exp-row + .exp-row { border-top: 1px dashed #eef1f6; }
+.exp-lab { flex: 0 0 132px; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.exp-sec-head .spacer { flex: 1 1 auto; }
+.exp-help { color: var(--text-3); font-size: 11px; }
+
+.exp-fmts { display: flex; gap: 6px; }
+.exp-fmt { height: 28px; padding: 0 14px; border: 1px solid var(--line-d); border-radius: 999px; background: #fff; color: var(--text-2); font-size: 12px; cursor: pointer; }
+.exp-fmt:hover { border-color: var(--accent); color: var(--accent); }
+.exp-fmt.on { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); font-weight: 700; }
+
+.exp-recs { display: flex; gap: 10px; flex-wrap: wrap; }
+.exp-rec { display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; border: 1px solid var(--line-d); border-radius: var(--radius); cursor: pointer; background: #fff; }
+.exp-rec.on { border-color: var(--accent); background: #f7faff; }
+.exp-rec input { margin-top: 2px; }
+.exp-rec b { display: block; font-size: 12px; font-weight: 700; color: var(--text); }
+.exp-rec em { display: block; margin-top: 2px; font-style: normal; font-size: 11px; color: var(--text-3); }
+.exp-name { width: 260px; height: 30px; }
+
+.exp-tablewrap { border: 0; overflow-x: visible; }
+.exp-table { width: 100%; min-width: 0 !important; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
+.exp-table th { padding: 6px 10px; background: #f4f8fd; border-bottom: 1px solid var(--line); color: var(--text-3); font-size: 11px; font-weight: 700; text-align: left; white-space: nowrap; }
+.exp-table td { padding: 4px 10px; border-bottom: 1px solid #f2f4f8; vertical-align: middle; }
+.exp-table th.c, .exp-table td.c { text-align: center; }
+.exp-table tr.off td { background: #fafbfd; }
+.exp-table tr.off .fld { color: var(--text-3); }
+.exp-table .fld { width: 100%; height: 28px; font-size: 12.5px; }
+.exp-ord { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+.exp-ord .icon-btn.sm { width: 22px; height: 22px; padding: 0; }
+.exp-no { margin-left: 4px; color: var(--text-3); font-size: 11px; }
+.exp-src { color: var(--text-3); font-size: 11.5px; }
+.exp-tag { margin-right: 6px; padding: 1px 5px; border-radius: 2px; background: #eef2f7; color: var(--text-2); font-size: 10px; }
+
+.exp-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 14px; }
+.exp-opt { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--text-3); }
+.exp-opt .fld { height: 30px; font-size: 12.5px; }
+.exp-row-tgl .tgl { flex: none; }
+
+/* エクスポート設定：帳票タイプ側の出力設定の要約と、混在時の注意 */
+.exp-src-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; padding: 7px 10px; border-radius: var(--radius); background: #f4f8fd; font-size: 11.5px; }
+.exp-src-k { color: var(--text-3); }
+.exp-src-line b { color: var(--accent); font-weight: 700; }
+.exp-warn { padding: 7px 10px; border-radius: var(--radius); background: #fdf1e2; color: #a8621a; font-size: 11.5px; line-height: 1.5; }

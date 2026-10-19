@@ -741,23 +741,27 @@ test('hover tooltips are swept from body before rebinding so they never stack up
   run('globalThis.hovered.onmouseleave()');
   assert.equal(run('globalThis.hovered._tip'), null);
 });
-test('ticket permission matrix lists every layout type against the three business actions', () => {
+test('ticket permission matrix lists every folder (business scene → ticket type) against the three business actions', () => {
   const run = app();
   const html = run('renderPermissions()');
   assert.match(html, /帳票権限管理/);
-  assert.match(html, /帳票タイプ権限（閲覧／修正／確認）/);
+  assert.match(html, /フォルダ権限（業務シーン → 帳票タイプ）/);
   /* 閲覧 → 修正 → 確認 の順で固定（承認・再承認は 5 状態化で廃止） */
   for (const label of ['閲覧', '修正', '確認']) assert.ok(html.includes(`>${label}<`), label);
   assert.ok(html.indexOf('>閲覧<') < html.indexOf('>修正<'));
   assert.ok(html.indexOf('>修正<') < html.indexOf('>確認<'));
   assert.doesNotMatch(html, />承認<|>再承認</);
-  /* 帳票タイプ 1 行につき 3 つの操作セル＋1 つのクリア */
-  const layouts = Number(run('LAYOUT.length'));
-  assert.equal((html.match(/data-permcell="/g) || []).length, layouts * 3);
-  assert.equal((html.match(/data-permclear="/g) || []).length, layouts);
-  assert.match(html, /data-permcell="l1:confirm"/);
-  assert.match(html, /data-permcell="l1:fix"/);
-  assert.match(html, /data-permclear="l1"/);
+  /* 権限の単位はファイルツリーのフォルダ（業務シーン＋帳票タイプ） */
+  const nodes = Number(run('BUSINESS.length + CATEGORY.length'));
+  assert.equal((html.match(/data-fpermcell="/g) || []).length, nodes * 3);
+  assert.equal((html.match(/data-fpermclear="/g) || []).length, nodes);
+  assert.match(html, /data-fpermcell="c1:confirm"/);
+  assert.match(html, /data-fpermcell="c1:fix"/);
+  assert.match(html, /data-fpermclear="c1"/);
+  /* 業務シーンの行は配下の帳票タイプにまとめて効く */
+  assert.match(html, /data-fpermcell="b1:view"/);
+  assert.match(html, /class="fp-row fp-biz"/);
+  assert.match(html, /class="fp-row fp-cat"/);
   /* 閲覧／確認はグループチップ（ユーザー直指定もある） */
   assert.match(html, /class="perm-cell"/);
   assert.match(html, /perm-chip grp">住民異動窓口|perm-chip grp">税務窓口/);
@@ -921,8 +925,8 @@ test('ticket permission cell dialog picks groups for one action', () => {
   assert.match(html, /data-permpick="g:g1" checked/);
   assert.doesNotMatch(html, /data-permpick="u:u1"/);
   for (const id of ['permCellOk', 'permCellCancel', 'permCellClose']) assert.ok(html.includes(`id="${id}"`), id);
-  assert.match(source, /document\.querySelectorAll\('\[data-permcell\]'\)/);
-  assert.match(source, /state\.permCell = \{ kind: 'ticket', layoutId, act \}/);
+  assert.match(source, /document\.querySelectorAll\('\[data-fpermcell\]'\)/);
+  assert.match(source, /state\.permCell = \{ kind: 'folder', nodeId, act \}/);
   assert.equal(run('state.permCell = null; permCellDialog()'), '');
 });
 test('permission dialogs and chips are styled in the shared stylesheet', () => {
@@ -1101,8 +1105,8 @@ test('departments are gone: groups, users and history are organised without them
 
 test('demo actor switcher lets you change currentUser from the header menu', () => {
   const run = app();
-  assert.equal(run('DEMO_ACTORS.length'), 5);
-  assert.deepEqual(JSON.parse(run('JSON.stringify(DEMO_ACTORS.map((a) => a.id))')), ['u1', 'u7', 'u8', 'u10', 'u4']);
+  assert.equal(run('DEMO_ACTORS.length'), 9);
+  assert.deepEqual(JSON.parse(run('JSON.stringify(DEMO_ACTORS.map((a) => a.id))')), ['u1', 'u3', 'u8', 'u7', 'u6', 'u5', 'u2', 'u10', 'u4']);
   /* 既定はシステム管理者 u1 */
   assert.equal(run('state.currentUser'), 'u1');
   assert.equal(run('currentProfile().name'), '佐藤 一郎');
@@ -1147,11 +1151,11 @@ test('ticket permission table gates confirm per layout', () => {
   assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });
 
-test('自動アップロード: 監視ルートとカテゴリ別ルールの 6 セクションを描画する', () => {
+test('自動アップロード: 監視ルートと帳票タイプ別ルールの 6 セクションを描画する', () => {
   const run = app();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視ルート（テナント）', 'カテゴリ別ルール', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知']);
+  assert.deepEqual(heads, ['監視ルート（テナント）', '帳票タイプ別ルール', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知']);
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit/);
 
@@ -1163,11 +1167,11 @@ test('自動アップロード: 監視ルートとカテゴリ別ルールの 6 
   assert.match(html, /data-wroot-path=/);
   assert.match(html, /data-wroot-done=/);
 
-  /* カテゴリ別ルール：帳票カテゴリ 1 行。フォルダ名・ファイル名・処理開始・大小区別 */
+  /* 帳票タイプ別ルール：帳票設定の帳票タイプ 1 行。フォルダ名・ファイル名・処理開始・大小区別 */
   assert.equal(run('CATEGORY.length'), 9);
   assert.equal((html.match(/class="wr-rule/g) || []).length, run('CATEGORY.length'));
   assert.equal((html.match(/data-wruleon=/g) || []).length, run('CATEGORY.length'));
-  for (const t of ['帳票カテゴリ', 'フォルダ名', 'ファイル名', '処理開始', '大小区別', '監視対象']) {
+  for (const t of ['帳票タイプ', 'フォルダ名', 'ファイル名', '処理開始', '大小区別', '監視対象']) {
     assert.ok(html.includes(t), t);
   }
   assert.match(html, /data-wrule-folder=/);
@@ -1317,4 +1321,29 @@ test('エラー通知: 通知方法を選んだときだけ宛先の入力欄が
   assert.match(html, /data-wf="notifyMail"/);
   assert.match(html, /data-wf="notifyUrl"/);
   assert.equal((html.match(/data-wf-check=/g) || []).length, 2);
+});
+
+test('帳票タイプ設定: Step5 は出力設定（帳票タイプごとの列名・列順）', () => {
+  const run = app();
+  const html = run('state.typeStep = 5; renderTicketDetail()');
+  /* ステップは 5 つ（効果テストのあとに出力設定） */
+  assert.equal(run('TYPE_STEPS.length'), 5);
+  assert.match(html, /data-typestep="5"/);
+  assert.match(html, /出力設定/);
+  assert.match(html, /data-expform="csv"/);
+  assert.match(html, /data-exprecord/);
+  assert.match(html, /data-expcol-on=/);
+  assert.match(html, /data-expcol-up=/);
+  assert.match(html, /data-expopt="encoding"/);
+  assert.match(html, /複数ファイルのまとめ/);
+  /* 出力項目の初期値＝AI 読取項目（テーブル列は既定で出力しない） */
+  const cols = JSON.parse(run('JSON.stringify(exportCfgOf(TICKET_TYPES[0]).cols)'));
+  assert.ok(cols.length >= 8, `cols=${cols.length}`);
+  assert.equal(cols.filter((c) => c.on).length, 8);
+  assert.ok(cols.filter((c) => c.table).every((c) => !c.on));
+  /* 既定は「1 帳票＝1 行」で、同一帳票タイプのまとめが有効 */
+  const cfg = JSON.parse(run('JSON.stringify(exportCfgOf(TICKET_TYPES[0]))'));
+  assert.equal(cfg.record, 'perTicket');
+  assert.equal(cfg.merge, true);
+  assert.deepEqual(cfg.formats, ['csv']);
 });

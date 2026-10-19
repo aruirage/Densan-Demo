@@ -817,3 +817,32 @@
   pointer-events: none;
 }
 
+
+/* ══ 帳票権限管理：フォルダ権限表（業務シーン → 帳票タイプ） ══════════ */
+/* ファイルツリーのフォルダが権限の単位。業務シーン行は配下の帳票タイプに
+   同じ値を書き込むので、見出し行ではなく「まとめて設定できる行」として見せる。 */
+.fp-table { width: auto; min-width: 860px; border-collapse: collapse; table-layout: fixed; }
+.fp-table thead th { background: #eef5fd; color: var(--text-2); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.fp-table tbody td { vertical-align: middle; }
+.fp-table .fp-name { line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fp-table .fp-name .tree-icon { width: 14px; height: 14px; margin-right: 6px; color: var(--text-3); }
+.fp-table .fp-biz td { background: #f7fbff; border-top: 1px solid var(--line); }
+.fp-table .fp-biz .fp-name b { font-weight: 700; color: var(--text); }
+.fp-table .fp-cat .fp-name { padding-left: 26px; }
+.fp-table .fp-cat .fp-name .tree-icon { width: 13px; height: 13px; }
+.fp-table .fp-catname { color: var(--text-2); }
+.fp-table .fp-sub { margin-left: 8px; color: var(--text-3); font-size: 11px; white-space: nowrap; }
+.fp-table .perm-cell { background: #fff; border-color: transparent; }
+.fp-table .fp-biz .perm-cell { background: #fff; }
+/* チップは縮めない（長い名前は省略記号で切る。折り返すとセルの高さが崩れる） */
+.fp-table .perm-chip {
+  flex: 0 0 auto; display: inline-block; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fp-table th:last-child, .fp-table td.acts { width: 90px; text-align: right; white-space: nowrap; }
+/* 配下の帳票で設定が割れている行（編集すると揃う） */
+.perm-mixed { flex: none; margin-right: 2px; padding: 1px 5px; border-radius: 2px; background: #fdf1e2; color: #a8621a; font-size: 10px; font-weight: 700; }
+.fp-table .perm-cell.is-mixed { border-color: #e8c79c; background: #fffdf9; }
+
+/* フォルダ権限ダイアログ：操作の切替（閲覧／修正／確認） */
+.fp-act-pills { display: flex; gap: 6px; padding: 0 0 2px; }
