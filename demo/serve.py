@@ -1595,6 +1595,7 @@ def apply_roles_9(src):
     src = src.replace("name: 'アップロード者'", "name: 'アップロード'")
     # 初期表示を「新規アップロード」にする（客户）
     src = re.sub(r"page: 'home',(\s+)//", r"page: 'upload',\1//", src, count=1)
+    src = src.replace("state.page = 'home';", "state.page = 'upload';")
     # 「万能（全権限）」の重複ロールを出さない（スーパーロールを R1=システム管理者 に寄せる）
     src = src.replace("var SUPER_ROLE_ID = 'R9';", "var SUPER_ROLE_ID = 'R1';")
     seed = """
