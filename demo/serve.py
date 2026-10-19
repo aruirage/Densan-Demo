@@ -103,8 +103,9 @@ STRING_FIXES = [
 # 外部プロセスが app.js を再生成してこれらの編集を消してしまうため、配信時に当てる。
 # 万能角色（全权限）。ロール定義・ユーザー定義・権限判定の 3 箇所に注入する。
 SUPER_ROLE = """
-/* 万能角色：メニューもユーザー権限もすべて許可（serve.py 注入） */
-var SUPER_ROLE_ID = 'R9';
+/* 万能角色：メニューもユーザー権限もすべて許可（serve.py 注入）
+   ※ SUPER_ROLE_ID は R1（システム管理者）に寄せる＝重複ロールを作らない */
+var SUPER_ROLE_ID = 'R1';
 var ROLE_OPS = {
   R1: ['view', 'upload', 'fix', 'confirm', 'approve', 'export', 'settings'],
   R2: ['view', 'upload', 'confirm', 'approve', 'export', 'settings'],
@@ -1707,10 +1708,6 @@ def apply_minimal_flow2(src):
     src = re.sub(r"\s*\{\s*(?:id|page):\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
     # ② アップロード済ファイルの一覧カードを非表示（投入専用）
     src = src.replace("</style>", ".upload-list-card{display:none !important;}\n</style>", 1)
-    # ③ ファイル一覧のタブに「読取待ち」を戻す（＝読取対象が分かるように）
-    src = re.sub(r"const TAB_STATUS\s*=\s*\[[^\]]*\]",
-                 "const TAB_STATUS = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported']",
-                 src, count=1)
     return src
 
 
@@ -2095,6 +2092,9 @@ def apply_encoding_fix(src):
 
 
 def apply_read_op_finalize(src):
+    # 重複ロール「万能（全権限）」を出さない（最終段で確実に当てる）
+    src = src.replace("var SUPER_ROLE_ID = 'R9';", "var SUPER_ROLE_ID = 'R1';")
+    src = src.replace("name: '万能（全権限）'", "name: 'システム管理者（全権限）'")
     """最終調整：読取は独立した操作権限なので、旧ラベル寄せ（読取→閲覧）を外す。
 
     GROUP_NODE_ALIAS は apply_group_nodes が注入するため、パイプラインの最後で当てる。
