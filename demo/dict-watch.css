@@ -458,6 +458,65 @@
 .watch-inline .fld { width: 84px; flex: 0 0 84px; }
 .watch-inline .muted { font-size: 11.5px; color: var(--text-3); }
 
+/* 監視パス（複数行・行ごとに有効／無効） */
+.watch-paths {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.wp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wp-row .fld { flex: 1 1 auto; min-width: 0; }
+
+.wp-row .tgl {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 20px;
+  padding: 0;
+}
+
+.wp-row .tgl .tgl-knob {
+  top: 3px;
+  right: 3px;
+  width: 14px;
+  height: 14px;
+}
+
+.wp-row .tgl.off .tgl-knob { right: auto; left: 3px; }
+
+.wp-row.off .fld {
+  background: #f6f7fa;
+  color: var(--text-3);
+}
+
+.wp-del {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wp-del:hover:not(:disabled) { color: #c0392b; border-color: #e0b4ae; }
+.wp-del:disabled { opacity: .35; cursor: default; }
+
+.wp-add {
+  height: 30px;
+  font-size: 12px;
+}
+
 @media (max-width: 1180px) {
   .watch-body { flex-wrap: wrap; }
   .watch-col { flex-basis: 100%; }

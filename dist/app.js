@@ -5690,12 +5690,18 @@ function renderDictDialogs() {
    未処理テーブルに溜まり、「選択帳票読取」で初めて読取結果一覧へ入る。
    ══════════════════════════════════════════════════════════════════════════ */
 
-/** 自動アップロードの設定（テナントに 1 つ）。監視フォルダは 1 つだけ。
+/** 自動アップロードの設定（1 テナント 1 設定）。
+ *  監視パスは複数持てる（1 パス＝1 仮想マシン上のフォルダ）。パスごとに有効／無効を切替える。
  *  入力は即時反映、保存で更新日時を更新する。 */
 let WATCH = {
   on: true,
-  path: '\\\\filesv01\\住民課\\住民異動届', pattern: '*.pdf', startFile: '処理開始.txt', caseSensitive: false,
-  tenant: 'tenant02', layout: 'auto',
+  paths: [
+    { id: 'p1', path: '\\\\filesv01\\住民課\\住民異動届', on: true },
+    { id: 'p2', path: '\\\\filesv02\\住民課\\転入転出', on: true },
+    { id: 'p3', path: '\\\\filesv03\\住民課\\世帯異動', on: false },
+  ],
+  pattern: '*.pdf', startFile: '処理開始.txt', caseSensitive: false,
+  layout: 'auto',
   after: 'move', afterDir: '\\\\filesv01\\処理済\\住民異動届',
   dupGuard: true, dupMethod: 'meta',
   retry: 3, retryGap: 5,
@@ -5709,7 +5715,6 @@ const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容�
 const WATCH_NOTIFY_ON = { fail: '失敗したときだけ', always: '毎回' };
 const WATCH_LOG_LEVELS = ['簡略', '標準', '詳細'];
 
-const watchTenantName = (id) => (byId(TENANTS, id) || {}).name || id || '—';
 const watchLayoutName = (id) => (id === 'auto' ? '自動判定' : dispLayout(id));
 
 /* フォーム部品（この画面だけで使う） */
@@ -5721,7 +5726,6 @@ const watchRow = (label, inner, wide) => `<div class="wf${wide ? ' wf-wide' : ''
 function renderWatch() {
   const x = WATCH;
   const row = watchRow;
-  const tenantOpts = TENANTS.map((t) => [t.id, `${t.name}（${t.note}）`]);
   const layoutOpts = [['auto', '自動判定（業務シーンから推定）']].concat(LAYOUT.map((l) => [l.id, dispLayout(l.id)]));
 
   return `${cfgHeader('自動アップロード', `<span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>`)}
@@ -5732,7 +5736,18 @@ function renderWatch() {
       <section class="watch-sec">
         <h3 class="watch-sec-head">監視先</h3>
         <div class="watch-fields">
-          ${row('監視パス', `<input class="fld mono" data-wf="path" value="${esc(x.path)}" placeholder="\\\\filesv01\\..." />`, true)}
+          <div class="wf wf-wide"><span class="wf-label">監視パス（仮想マシン上のフォルダ）</span>
+            <div class="wf-ctl">
+              <div class="watch-paths">
+                ${x.paths.map((p, i) => `<div class="wp-row${p.on ? '' : ' off'}">
+                  <input class="fld mono" data-watchpath="${p.id}" value="${esc(p.path)}" placeholder="\\\\filesv01\\..." aria-label="監視パス ${i + 1}" />
+                  <button type="button" class="tgl${p.on ? '' : ' off'}" data-watchpathon="${p.id}" role="switch" aria-checked="${p.on}" aria-label="この監視パスを有効にする"><span class="tgl-knob"></span></button>
+                  <button type="button" class="wp-del" data-watchpathdel="${p.id}" aria-label="この監視パスを削除"${x.paths.length > 1 ? '' : ' disabled'}>×</button>
+                </div>`).join('')}
+              </div>
+              <button type="button" class="btn wp-add" data-watchpathadd="1"><span class="ico i-add"></span>監視パスを追加</button>
+            </div>
+          </div>
           ${row('対象ファイル', `<input class="fld" data-wf="pattern" value="${esc(x.pattern)}" placeholder="*.pdf" />`)}
           ${row('処理開始ファイル', `<input class="fld" data-wf="startFile" value="${esc(x.startFile)}" placeholder="未指定なら即時" />`)}
           ${row('大文字小文字を区別', watchToggle('caseSensitive', x.caseSensitive), true)}
@@ -5742,8 +5757,7 @@ function renderWatch() {
       <section class="watch-sec">
         <h3 class="watch-sec-head">取込先</h3>
         <div class="watch-fields">
-          ${row('テナント', watchSelect('tenant', tenantOpts, x.tenant))}
-          ${row('帳票タイプ', watchSelect('layout', layoutOpts, x.layout))}
+          ${row('帳票タイプ', watchSelect('layout', layoutOpts, x.layout), true)}
         </div>
       </section>
 
@@ -8609,10 +8623,34 @@ function bindCfgPages() {
   if (state.page === 'watch') {
     document.querySelectorAll('[data-watchsave]').forEach((b) => {
       b.onclick = () => {
-        if (!String(WATCH.path || '').trim()) { toast('監視パスを入力してください'); return; }
+        if (!WATCH.paths.some((p) => String(p.path || '').trim())) { toast('監視パスを入力してください'); return; }
         WATCH.updatedAt = nowStamp(); render(); toast('設定を保存しました');
       };
     });
+    /* 監視パス：行ごとの入力・有効切替・追加・削除 */
+    document.querySelectorAll('[data-watchpath]').forEach((el) => {
+      const id = el.dataset.watchpath;
+      el.oninput = () => { const p = WATCH.paths.find((q) => q.id === id); if (p) p.path = el.value; };
+    });
+    document.querySelectorAll('[data-watchpathon]').forEach((b) => {
+      b.onclick = () => {
+        const p = WATCH.paths.find((q) => q.id === b.dataset.watchpathon);
+        if (!p) return;
+        p.on = !p.on; render();
+      };
+    });
+    document.querySelectorAll('[data-watchpathdel]').forEach((b) => {
+      b.onclick = () => {
+        if (WATCH.paths.length <= 1) return;
+        WATCH.paths = WATCH.paths.filter((q) => q.id !== b.dataset.watchpathdel);
+        render();
+      };
+    });
+    const addPath = document.querySelector('[data-watchpathadd]');
+    if (addPath) addPath.onclick = () => {
+      WATCH.paths.push({ id: `p${Date.now()}`, path: '', on: true });
+      render();
+    };
     document.querySelectorAll('[data-wf]').forEach((el) => {
       const k = el.dataset.wf;
       const put = () => { WATCH[k] = (el.type === 'number') ? Number(el.value) : el.value; };

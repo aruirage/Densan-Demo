@@ -1154,10 +1154,15 @@ test('自動アップロード: 1 画面 1 設定で 7 セクションを描画�
   assert.deepEqual(heads, ['監視先', '取込先', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知', 'ログ']);
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit|watch-table/);
-  /* 顧客要件の設定項目 */
-  for (const t of ['監視パス', '対象ファイル', '処理開始ファイル', 'テナント', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL', '詳細度']) {
+  /* 顧客要件の設定項目（テナント切替は持たない） */
+  for (const t of ['監視パス', '対象ファイル', '処理開始ファイル', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL', '詳細度']) {
     assert.ok(html.includes(t), t);
   }
+  assert.doesNotMatch(html, /テナント/);
+  /* 監視パスは複数。行ごとに有効／無効のトグルを持つ */
+  assert.equal((html.match(/class="wp-row/g) || []).length, run('WATCH.paths.length'));
+  assert.equal((html.match(/data-watchpathon=/g) || []).length, run('WATCH.paths.length'));
+  assert.match(html, /data-watchpathadd/);
 });
 
 test('自動アップロード: 移動先は「移動」を選んだときだけ出る', () => {
