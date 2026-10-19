@@ -594,6 +594,17 @@ td .sub{color:var(--text-3);font-size:10.5px;margin-top:2px}
 .user-add-status input[type="checkbox"]::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
 .user-add-status input[type="checkbox"]:checked{background:var(--accent-2)}
 .user-add-status input[type="checkbox"]:checked::after{transform:translateX(16px)}
+/* 権限チップ（個人に付ける役割。グループ継承分は下の注記で見せる） */
+.user-add-field.is-top{align-items:flex-start}
+.user-add-field.is-top .user-add-label{padding-top:8px}
+.user-perms{flex:1 1 auto;min-width:0}
+.user-perm-chips{display:flex;flex-wrap:wrap;gap:6px}
+.perm-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:2px;background:#fff;font-size:12px;color:var(--text-2);cursor:pointer;line-height:1.35}
+.perm-chip:hover{border-color:var(--accent)}
+.perm-chip.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);font-weight:600}
+.perm-chip .cb{margin:0;accent-color:var(--accent)}
+.user-perm-note{margin:8px 0 0;font-size:11px;line-height:1.65;color:var(--text-3)}
+.user-perm-note b{color:var(--text-2);font-weight:600}
 .access-key-modal .access-field{margin-bottom:16px}
 .access-key-modal .access-field:last-child{margin-bottom:0}
 /* 自動化処理の対応表（機能確認表の「分類／機能／内容」構成） */

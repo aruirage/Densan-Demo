@@ -396,6 +396,8 @@ const BIZ_LEAF_OP = {
   'op-fix': 'fix',
   'op-confirm': 'confirm',
   'op-download': 'export',
+  /* 9 ロール設計では出力の葉が op-export になるため両方受ける */
+  'op-export': 'export',
   'op-delete': 'delete',
   'op-upload': 'upload',
   'op-read': 'read',
@@ -409,22 +411,29 @@ function syncOpFixConfirm(ids) {
   return set;
 }
 
-/** 在组里用组的 permId；不在组里用用户自己选的权限 */
+/** 在组里用组的 permId；个人に付けた権限は上乗せ（実効権限＝和集合） */
 function groupLeafSet(uid) {
   const ids = [];
-  const gs = groupsOfUser(uid);
-  if (!gs.length) {
-    const eu = entUserByUid(uid);
-    ((eu && eu.soloPermIds) || []).forEach((rid) => {
-      (MENU_PERMS[rid] || []).forEach((id) => ids.push(id));
-    });
-  } else {
-    gs.forEach((g) => {
-      const rid = g.permId || (g.permIds && g.permIds[0]);
-      (MENU_PERMS[rid] || []).forEach((id) => ids.push(id));
-    });
-  }
+  groupsOfUser(uid).forEach((g) => {
+    const rid = g.permId || (g.permIds && g.permIds[0]);
+    (MENU_PERMS[rid] || []).forEach((id) => ids.push(id));
+  });
+  /* 個人に付けた役割も足す（グループ所属の有無に関わらず常に和集合） */
+  const eu = entUserByUid(uid);
+  ((eu && eu.soloPermIds) || []).forEach((rid) => {
+    (MENU_PERMS[rid] || []).forEach((id) => ids.push(id));
+  });
   return syncOpFixConfirm(ids);
+}
+
+/** 実効権限の役割 ID（所属グループの役割 ∪ 個人に付けた役割） */
+function rolesOfUser(uid) {
+  const out = [];
+  const add = (rid) => { if (rid && !out.includes(rid)) out.push(rid); };
+  groupsOfUser(uid).forEach((g) => add(g.permId || (g.permIds && g.permIds[0])));
+  const eu = entUserByUid(uid);
+  ((eu && eu.soloPermIds) || []).forEach(add);
+  return out;
 }
 
 /** 所属グループの按钮叶子から操作を集約（兼務は和集合）。承認は無い */
@@ -458,7 +467,7 @@ function userHasOp(op, uid) {
   if (op === 'fix') return leaves.has('op-fix') || leaves.has('op-confirm');
   if (op === 'confirm') return leaves.has('op-confirm');
   if (op === 'redo') return leaves.has('op-redo');
-  if (op === 'export') return leaves.has('op-download');
+  if (op === 'export') return leaves.has('op-download') || leaves.has('op-export');
   if (op === 'upload') return leaves.has('op-upload') || leaves.has('upload');
   if (op === 'read') return leaves.has('op-read');
   if (op === 'delete') return leaves.has('op-delete');
@@ -4200,17 +4209,26 @@ function renderUserAddDialog() {
           <span class="user-add-label"><i class="req">*</i>メールアドレス</span>
           <input class="fld" id="userAddEmail" value="${esc(d.email)}" placeholder="メールアドレスを入力してください" />
         </label>
-        <label class="user-add-field">
+        <div class="user-add-field is-top">
           <span class="user-add-label"><i class="req">*</i>権限</span>
-          ${(() => {
-            const gs = d.uid ? groupsOfUser(d.uid) : [];
-            if (gs.length) {
-              const names = gs.map((g) => (byId(ROLES, g.permId) || {}).name).filter(Boolean);
-              return `<div class="fld" style="background:#f6f7f9">${esc(names.join('、') || '—')}</div>`;
-            }
-            return `<select class="fld" id="userAddRole">${ROLES.map((r) => `<option value="${esc(r.id)}" ${(d.soloPermIds || [d.roleId]).includes(r.id) ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select>`;
-          })()}
-        </label>
+          <div class="user-perms">
+            <div class="user-perm-chips">
+              ${ROLES.map((r) => {
+                const on = (d.soloPermIds || []).includes(r.id);
+                return `<label class="perm-chip${on ? ' on' : ''}" title="${esc(r.desc || '')}"><input type="checkbox" class="cb" data-userperm="${r.id}" ${on ? 'checked' : ''} /><span>${esc(r.name)}</span></label>`;
+              }).join('')}
+            </div>
+            ${(() => {
+              const gs = d.uid ? groupsOfUser(d.uid) : [];
+              /* 兼務で同じ役割のグループに複数入っていても 1 回だけ出す */
+              const ids = [];
+              gs.forEach((g) => { const rid = g.permId || (g.permIds && g.permIds[0]); if (rid && !ids.includes(rid)) ids.push(rid); });
+              const names = ids.map((rid) => (byId(ROLES, rid) || {}).name).filter(Boolean);
+              if (!names.length) return '<p class="user-perm-note">グループ未所属。ここで選んだ権限だけが有効になります。</p>';
+              return `<p class="user-perm-note">所属グループから継承：<b>${esc(names.join('、'))}</b>　実効権限はグループと個人の和集合です。</p>`;
+            })()}
+          </div>
+        </div>
         <div class="user-add-field">
           <span class="user-add-label">帳票类别</span>
           <div>${(() => {
@@ -4362,7 +4380,7 @@ function renderUsers() {
   const rows = base.filter((u) => {
     if (ug.q && !u.name.toLowerCase().includes(ug.q.toLowerCase())) return false;
     if (ug.email && !u.email.toLowerCase().includes(ug.email.toLowerCase())) return false;
-    if (ug.role && u.role !== ug.role) return false;
+    if (ug.role && !rolesOfUser(u.uid).some((rid) => (byId(ROLES, rid) || {}).name === ug.role)) return false;
     if (ug.status && u.status !== ug.status) return false;
     return true;
   });
@@ -4371,11 +4389,16 @@ function renderUsers() {
   if (ug.page > pages) ug.page = pages;
   const start = (ug.page - 1) * per;
   const pageRows = rows.slice(start, start + per);
-  const body = pageRows.map((u, i) => `<tr>
+  const body = pageRows.map((u, i) => {
+    const rs = rolesOfUser(u.uid);
+    const roleHtml = rs.length
+      ? rs.map((rid) => `<span class="pill">${esc((byId(ROLES, rid) || {}).name || rid)}</span>`).join('')
+      : '<span class="muted">—</span>';
+    return `<tr>
     <td class="col-no" style="color:var(--text-2)">${start + i + 1}</td>
     <td title="${esc(u.name)}">${esc(u.name)}</td>
     <td title="${esc(u.email)}">${esc(u.email)}</td>
-    <td><span class="pill">${esc(u.role)}</span></td>
+    <td><div class="grp-members">${roleHtml}</div></td>
     <td><div class="grp-members user-grp-cell">${userGroupsCellHtml(u, focus)}</div></td>
     <td style="white-space:nowrap;color:var(--text-2)">${esc(u.created || '—')}</td>
     <td><span class="st ${u.status === '有効' ? 'ok' : 'wait'}"><span class="dot"></span>${esc(u.status)}</span></td>
@@ -4384,7 +4407,8 @@ function renderUsers() {
       <button class="act-text" data-useredit="${u.id}">編集</button>
       <button class="act-text" data-userreset="${u.id}">パスワードリセット</button>
       <button class="act-text danger" data-userdel="${u.id}">削除</button>
-    </div></td></tr>`).join('') || `<tr><td colspan="8" class="empty-cell">${!focusRoot && direct.length === 0 && scopeUsers.length > 0
+    </div></td></tr>`;
+  }).join('') || `<tr><td colspan="8" class="empty-cell">${!focusRoot && direct.length === 0 && scopeUsers.length > 0
       ? `このグループに直属のユーザーはいません（配下に ${scopeUsers.length} 名）`
       : '該当するユーザーはいません'}</td></tr>`;
   const pagesHtml = [];
@@ -8316,7 +8340,15 @@ function bindCfgPages() {
     const cancel = $('#userAddCancel'); if (cancel) cancel.onclick = closeDlg;
     const nm = $('#userAddName'); if (nm) nm.oninput = () => { USER_ADD_DRAFT.name = nm.value; };
     const em = $('#userAddEmail'); if (em) em.oninput = () => { USER_ADD_DRAFT.email = em.value; };
-    const rl = $('#userAddRole'); if (rl) rl.onchange = () => { USER_ADD_DRAFT.soloPermIds = [rl.value]; USER_ADD_DRAFT.roleId = rl.value; };
+    /* 個人の権限：チップを押すたびに付け外し（グループ継承分は別表示なので触らない） */
+    document.querySelectorAll('[data-userperm]').forEach((cb) => {
+      cb.onchange = () => {
+        const id = cb.dataset.userperm;
+        const cur = USER_ADD_DRAFT.soloPermIds || [];
+        USER_ADD_DRAFT.soloPermIds = cb.checked ? [...cur, id] : cur.filter((x) => x !== id);
+        render();
+      };
+    });
     const dp = $('#userAddDataPerm'); if (dp) dp.onchange = () => { USER_ADD_DRAFT.dataPerm = dp.value; };
     const st = $('#userAddStatus');
     if (st) st.onchange = () => {
@@ -8335,7 +8367,8 @@ function bindCfgPages() {
           u.name = d.name.trim();
           u.email = d.email.trim();
           u.role = role ? role.name : u.role;
-          if (!(groupsOfUser(u.uid).length)) u.soloPermIds = d.soloPermIds || (d.roleId ? [d.roleId] : u.soloPermIds);
+          /* 個人の権限はグループ所属に関係なく保存する（実効権限は和集合） */
+          u.soloPermIds = d.soloPermIds || [];
           u.dataPerm = d.dataPerm;
           u.status = d.status;
         }
@@ -8404,7 +8437,7 @@ function bindCfgPages() {
         uid: u.uid,
         name: u.name,
         email: u.email,
-        soloPermIds: u.soloPermIds || ((r && [r.id]) || []),
+        soloPermIds: u.soloPermIds || [],
         dataPerm: u.dataPerm || DATA_PERMISSIONS[0],
         status: u.status,
       };

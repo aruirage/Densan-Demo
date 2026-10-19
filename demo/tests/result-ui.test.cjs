@@ -1198,3 +1198,27 @@ test('ログ設定: 出力設定（詳細度・保存先）はログ画面に持
   assert.match(html, /操作日時/);
   assert.equal((html.match(/<tr>/g) || []).length, run('SECURITY.logs.length') + 1);
 });
+
+test('ユーザー権限: 個人の権限はグループの権限に上乗せされる（和集合）', () => {
+  const run = app();
+  /* u5 は承認者グループ（R4）のみ → 確認はできない */
+  assert.equal(run('userHasOp("confirm","u5")'), false);
+  run('entUserByUid("u5").soloPermIds = ["R3"]');
+  /* 個人に R3 を足すと、グループの R4 と合わせて確認ができる */
+  assert.equal(run('userHasOp("confirm","u5")'), true);
+  assert.deepEqual(JSON.parse(run('JSON.stringify(rolesOfUser("u5"))')), ['R4', 'R3']);
+  run('entUserByUid("u5").soloPermIds = []');
+  assert.equal(run('userHasOp("confirm","u5")'), false);
+});
+
+test('ユーザー編集: 権限はチップで編集でき、グループ継承分は別に表示する', () => {
+  const run = app();
+  run('USER_ADD_DRAFT = { mode:"edit", id:"U5", uid:"u5", name:"伊藤 由美", email:"yumi.ito@itso.co.jp", soloPermIds:["R3"], status:"有効" };');
+  const html = run('renderUserAddDialog()');
+  /* 個人の権限はチェックボックスで編集（旧：読み取り専用のテキスト／単一セレクト） */
+  assert.doesNotMatch(html, /id="userAddRole"/);
+  assert.match(html, /data-userperm="R3"[^>]*checked/);
+  assert.match(html, /data-userperm="R4"/);
+  assert.match(html, /所属グループから継承/);
+  assert.match(html, /和集合/);
+});
