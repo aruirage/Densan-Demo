@@ -385,16 +385,15 @@
 
 .watch-body {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.watch-col {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
   flex-direction: column;
   gap: 12px;
+  /* 間延びしないよう、設定フォームは 1 カラムで幅を止める */
+  max-width: 980px;
+}
+
+/* 左右 2 段組みは廃止。列の入れ物は残し、中身をそのまま縦に並べる。 */
+.watch-col {
+  display: contents;
 }
 
 /* セクション ───────────────────────────────────────────────────── */
@@ -416,37 +415,37 @@
   color: var(--accent);
 }
 
+/* 1 項目＝「ラベル｜入力」の 1 行。縦に積むだけなので視線が上下に流れる。 */
 .watch-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0;
-}
-
-/* 1 項目＝ラベル（上）＋入力（下） */
-.wf {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+}
+
+.wf {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  align-items: start;
+  gap: 6px 14px;
   min-width: 0;
-  padding: 9px 12px 11px;
+  padding: 9px 14px;
   border-bottom: 1px solid #f2f4f8;
 }
 
-.wf-wide { grid-column: 1 / -1; }
-
-.watch-fields > .wf:nth-last-child(-n+2) { border-bottom: 0; }
-/* 最終行が全幅（＝1 行を占める）のときは、その 1 つ前の行の下線は残す */
-.watch-fields:has(> .wf.wf-wide:last-child) > .wf:nth-last-child(2) { border-bottom: 1px solid #f2f4f8; }
-.watch-fields > .wf.wf-wide:last-child { border-bottom: 0; }
+/* 行の最後だけ下線を落とす */
+.watch-fields > .wf:last-child { border-bottom: 0; }
 
 .wf-label {
-  font-size: 11px;
+  /* 32px の入力と 1 行目を揃える（折り返しても行間が開かないよう line-height は普通に） */
+  padding-top: 7px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--text-3);
-  line-height: 1.4;
+  color: var(--text-2);
+  line-height: 1.5;
 }
 
-.wf-ctl { min-width: 0; }
+/* 入力は横幅いっぱいに伸ばさない（セレクトが間延びするため） */
+.wf-ctl { min-width: 0; max-width: 420px; }
+.wf-ctl.wide { max-width: 620px; }
 
 /* 入力の下に添える補足（処理開始ファイルの説明など）
    注：`.wf-note` は serve.py が説明文として HTML コメント化するので使わない。 */

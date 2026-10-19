@@ -1171,6 +1171,10 @@ test('自動アップロード: 1 画面 1 設定で 6 セクションを描画�
   assert.equal((html.match(/class="wp-row/g) || []).length, run('WATCH.paths.length'));
   assert.equal((html.match(/data-watchpathon=/g) || []).length, run('WATCH.paths.length'));
   assert.match(html, /data-watchpathadd/);
+  /* 取込先は業務シーンで絞る（帳票タイプが増えると自動判定が効かなくなるため） */
+  assert.match(html, /<select class="fld" data-wf="biz">/);
+  const layoutSel = html.match(/data-wf="layout"[\s\S]*?<\/select>/)[0];
+  assert.equal((layoutSel.match(/<option/g) || []).length, run('layoutsOfBiz(WATCH.biz).length') + 1);
 });
 
 test('自動アップロード: 移動先は「移動」を選んだときだけ出る', () => {
