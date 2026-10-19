@@ -185,7 +185,7 @@ var GROUP_OPS = {
     /* 最上位。ほかのグループはすべてこの下（削除不可） */
     { id: 'groot', name: '電算', kind: '', roles: [], desc: 'すべての操作グループの最上位（削除不可）', userIds: [], root: true, permId: 'R1', parentId: null },
     { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u2', 'u6', 'u7'], permId: 'R5', parentId: 'groot' },
-    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u3', 'u5', 'u8'], permId: 'R3', parentId: 'groot' },
+    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u5', 'u8'], permId: 'R3', parentId: 'groot' },
     { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: 'CSV/JSON/PDF の出力', userIds: ['u4', 'u5'], permId: 'R4', parentId: 'groot' },
     /* 新設計（9 グループ）で追加した 5 つ */
     { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u1'], permId: 'R2', parentId: 'groot' },
@@ -1609,7 +1609,7 @@ try {
   const _extraRoles = [
     { id: 'R6', name: '閲覧', code: 'viewer', desc: '一覧の閲覧のみ（操作なし）', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
-    { id: 'R8', name: '読取', code: 'reader', desc: 'OCR 読取の実行', created: '2026-01-01 00:00:00', status: '有効' },
+    { id: 'R8', name: '読取', code: 'reader', desc: 'アップロード済ファイルの読取実行・再読取・削除', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R10', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の修正（確認は不可）', created: '2026-01-01 00:00:00', status: '有効' },
   ];
@@ -2805,7 +2805,7 @@ try {
   MENU_PERMS.R5 = _biz.concat(['op-upload']);
   MENU_PERMS.R6 = _biz.slice();
   MENU_PERMS.R7 = _biz.concat(['op-classify']);
-  MENU_PERMS.R8 = _biz.concat(['op-read', 'op-redo']);
+  MENU_PERMS.R8 = _biz.concat(['op-read', 'op-redo', 'op-delete']);
   MENU_PERMS.R10 = _biz.concat(['op-export']);
   MENU_PERMS.R11 = _biz.concat(['op-fix']);
 } catch (_e) { /* ignore */ }
