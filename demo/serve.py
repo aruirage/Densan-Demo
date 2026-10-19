@@ -1511,8 +1511,8 @@ def apply_stage_matrix(src):
     src = re.sub(r"\$\{PERM_ACTS\.map\(\(a\) => `<th style=\"width:150px\">\$\{a\.label\}</th>`\)\.join\(''\)\}",
                  "${folderHeadOf()}", src, count=1)
     #    ダイアログの操作切替も表と同じ列（閲覧／アップロード／OCR結果修正／確認／出力）に揃える
-    src = src.replace('${PERM_ACTS.map((a) => `<button type="button" class="asg-mode-pill',
-                      '${FOLDER_COLS().map((a) => `<button type="button" class="asg-mode-pill', 1)
+    src = src.replace('${PERM_ACTS.map((a) => `<button type="button" class="fp-act-pill',
+                      '${FOLDER_COLS().map((a) => `<button type="button" class="fp-act-pill', 1)
     # ② セルダイアログ：現在値の取得と保存を段対応に
     src = src.replace("const cur = isUpload ? uploadPermsOf(c.bizId)\n    : isFolder ? nodePerm(c.nodeId, c.act).list\n      : (permsOf(c.layoutId)[c.act] || []);",
                       "const cur = permTargetsForCell(c);", 1)

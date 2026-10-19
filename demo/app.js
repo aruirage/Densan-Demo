@@ -6967,7 +6967,7 @@ function permCellDialog() {
   const scope = isFolder ? `<span class="pt-hint">配下の帳票 ${nodeLayouts(c.nodeId).length} 件すべてに適用</span>` : '';
   /* フォルダから開いたときは、操作（閲覧／修正／確認）をここで切り替えられる */
   const actPills = isFolder
-    ? `<div class="fp-act-pills" role="tablist" aria-label="操作">${PERM_ACTS.map((a) => `<button type="button" class="asg-mode-pill${a.key === c.act ? ' on' : ''}" data-fpermact="${a.key}" role="tab" aria-selected="${a.key === c.act}">${esc(a.label)}</button>`).join('')}</div>`
+    ? `<div class="fp-act-row"><span class="fp-act-lab">操作</span><div class="fp-act-pills" role="tablist" aria-label="操作">${PERM_ACTS.map((a) => `<button type="button" class="fp-act-pill${a.key === c.act ? ' on' : ''}" data-fpermact="${a.key}" role="tab" aria-selected="${a.key === c.act}">${esc(a.label)}</button>`).join('')}</div></div>`
     : '';
   /* グループはユーザー管理のツリーと同じ階層順・同じインデントで並べる */
   const groupPicks = groupOptsWithDepth().map(([gid, gname, , depth, hasKids]) => {
@@ -6981,7 +6981,7 @@ function permCellDialog() {
   const userPicks = USERS.map((o) =>
     `<label class="perm-pick"><input type="radio" class="cb" name="permUserPick" data-permpick="u:${o.id}" ${cur.includes(o.id) ? 'checked' : ''} /><span>${esc(o.name)}</span></label>`
   ).join('');
-  return `<div class="modal-back" id="permCellBack"><div class="modal perm-modal pc-modal">
+  return `<div class="modal-back" id="permCellBack"><div class="modal perm-modal pc-modal${isFolder ? ' fp-modal' : ''}">
     <div class="modal-head"><b>${esc(title)}</b><span class="spacer"></span><button class="icon-btn" id="permCellClose"><span class="ico i-close"></span></button></div>
     <div class="perm-body">
       <div class="perm-target">

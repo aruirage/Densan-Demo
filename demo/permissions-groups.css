@@ -844,5 +844,16 @@
 .perm-mixed { flex: none; margin-right: 2px; padding: 1px 5px; border-radius: 2px; background: #fdf1e2; color: #a8621a; font-size: 10px; font-weight: 700; }
 .fp-table .perm-cell.is-mixed { border-color: #e8c79c; background: #fffdf9; }
 
-/* フォルダ権限ダイアログ：操作の切替（閲覧／修正／確認） */
-.fp-act-pills { display: flex; gap: 6px; padding: 0 0 2px; }
+/* フォルダ権限ダイアログ：操作の切替（閲覧／修正／確認）
+   割り当て方法のピル（グループ／ユーザー）と見分けが付くよう、
+   枠で囲んだセグメント表示にして左にラベルを置く。 */
+.fp-act-row { display: flex; align-items: center; gap: 10px; padding: 0 0 2px; }
+.fp-act-lab { flex: none; font-size: 11.5px; color: var(--text-3); }
+.fp-act-pills { display: flex; align-items: stretch; border: 1px solid var(--line-d); border-radius: var(--radius); overflow: hidden; background: #fff; }
+.fp-act-pill { padding: 6px 16px; border: 0; background: #fff; color: var(--text-2); font-size: 12px; cursor: pointer; }
+.fp-act-pill + .fp-act-pill { border-left: 1px solid var(--line); }
+.fp-act-pill:hover { background: #f7faff; color: var(--accent); }
+.fp-act-pill.on { background: var(--accent-bg); color: var(--accent); font-weight: 700; }
+
+/* フォルダ権限ダイアログは対象（配下の帳票件数）と操作の切替が入るぶん広く取る */
+.perm-modal.fp-modal { width: min(760px, 100%) !important; }

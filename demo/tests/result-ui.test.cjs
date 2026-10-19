@@ -1347,3 +1347,13 @@ test('帳票タイプ設定: Step5 は出力設定（帳票タイプごとの列
   assert.equal(cfg.merge, true);
   assert.deepEqual(cfg.formats, ['csv']);
 });
+
+test('出力設定は帳票タイプごとに独立している', () => {
+  const run = app();
+  /* 1 つ目の列名を変えても、別の帳票タイプの設定は変わらない */
+  const other = run('(exportCfgOf(TICKET_TYPES[0]).cols[0].label = "独自列名", exportCfgOf(TICKET_TYPES[1]).cols[0].label)');
+  assert.notEqual(other, '独自列名');
+  /* レコード単位・まとめもタイプごと */
+  run('exportCfgOf(TICKET_TYPES[0]).record = "perRow"');
+  assert.equal(run('exportCfgOf(TICKET_TYPES[1]).record'), 'perTicket');
+});
