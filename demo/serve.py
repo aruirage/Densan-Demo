@@ -1562,10 +1562,11 @@ try {
     { id: 'R6', name: '閲覧', code: 'viewer', desc: '一覧の閲覧のみ（操作なし）', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R8', name: '読取', code: 'reader', desc: 'OCR 読取の実行', created: '2026-01-01 00:00:00', status: '有効' },
-    { id: 'R9', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
+    { id: 'R10', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
+    { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の修正（確認は不可）', created: '2026-01-01 00:00:00', status: '有効' },
   ];
   _extraRoles.forEach((r) => { if (!ROLES.some((x) => x.id === r.id)) ROLES.push(r); });
-  ['R6', 'R7', 'R8', 'R9'].forEach((id) => {
+  ['R6', 'R7', 'R8', 'R10', 'R11'].forEach((id) => {
     if (!MENU_PERMS[id]) MENU_PERMS[id] = ['home', 'result'];
   });
 } catch (_e) { /* ignore */ }
@@ -1696,12 +1697,12 @@ def apply_minimal_flow2(src):
     """最小変動：
     ① メニューから「マイタスク」を外す（画面は残す）
     ② アップロード画面の「アップロード済ファイル」一覧を非表示（投入専用化）
-    ③ ファイル一覧のタブに「読取待ち」を追加
+
+    ※ 以前は ③ としてタブに「読取待ち」を足していたが、状態は 5 つ（読取中／完了／失敗／
+      確認済み／出力済）で確定したため廃止。読取待ちはアップロード画面だけの一時状態。
     """
     # ① メニュー項目（スペース・引用符の揺れに対応して全部消す）
     src = re.sub(r"\s*\{\s*(?:id|page):\s*['\"]myTasks['\"]\s*,\s*label:\s*['\"]マイタスク['\"]\s*\},?", "", src)
-    # ③ タブに「読取待ち」を先頭追加（STATUS.waiting.label = 読取待ち）
-    src = re.sub(r"const TAB_STATUS = \[[^\]]*\];", "const TAB_STATUS = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];", src, count=1)
     # ② アップロード済ファイルの一覧カードを非表示（投入専用）
     src = src.replace("</style>", ".upload-list-card{display:none !important;}\n</style>", 1)
     return src
