@@ -1155,9 +1155,11 @@ test('自動アップロード: 1 画面 1 設定で 6 セクションを描画�
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit|watch-table/);
   /* 顧客要件の設定項目（テナント切替・ログ設定は持たない） */
-  for (const t of ['監視パス', '対象ファイル', '処理開始ファイル', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL']) {
+  for (const t of ['監視パス', '対象ファイル', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL']) {
     assert.ok(html.includes(t), t);
   }
+  /* 処理開始ファイルは要件外なので撤去 */
+  assert.doesNotMatch(html, /処理開始ファイル|data-wf="startFile"/);
   assert.doesNotMatch(html, /テナント/);
   /* 対象ファイルは定型から選ぶセレクト（現場が glob を書かないため） */
   assert.match(html, /<select class="fld" data-wf="pattern">/);

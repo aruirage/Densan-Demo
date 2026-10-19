@@ -372,6 +372,9 @@
    2 段組みのセクションとしてそのまま並べる。 */
 #app[data-page="watch"] .maincol { overflow-y: auto; }
 
+/* 有効トグルと保存ボタンは右端に寄せる（cfg-head の spacer は既定で伸びない） */
+#app[data-page="watch"] .cfg-head .spacer { flex: 1 1 auto; }
+
 #app[data-page="watch"] .cfg-head .tgl {
   width: 70px;
   height: 26px;
@@ -387,8 +390,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  /* 間延びしないよう、設定フォームは 1 カラムで幅を止める */
-  max-width: 980px;
 }
 
 /* 左右 2 段組みは廃止。列の入れ物は残し、中身をそのまま縦に並べる。 */
@@ -444,8 +445,8 @@
 }
 
 /* 入力は横幅いっぱいに伸ばさない（セレクトが間延びするため） */
-.wf-ctl { min-width: 0; max-width: 420px; }
-.wf-ctl.wide { max-width: 620px; }
+.wf-ctl { min-width: 0; max-width: 560px; }
+.wf-ctl.wide { max-width: 920px; }
 
 /* 入力の下に添える補足（処理開始ファイルの説明など）
    注：`.wf-note` は serve.py が説明文として HTML コメント化するので使わない。 */

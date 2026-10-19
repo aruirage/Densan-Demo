@@ -5206,7 +5206,7 @@ let WATCH = {
     { id: 'p2', path: '\\\\filesv02\\住民課\\転入転出', on: true },
     { id: 'p3', path: '\\\\filesv03\\住民課\\世帯異動', on: false },
   ],
-  pattern: '*.pdf', startFile: '処理開始.txt', caseSensitive: false,
+  pattern: '*.pdf', caseSensitive: false,
   biz: 'b1', layout: 'auto',
   after: 'move', afterDir: '\\\\filesv01\\処理済\\住民異動届',
   dupGuard: true, dupMethod: 'meta',
@@ -5269,13 +5269,7 @@ function renderWatch() {
               <p class="wf-help">1 行＝1 台の仮想マシン上のフォルダです。行ごとに有効／無効を切替えられます。</p>
             </div>
           </div>
-          ${row('対象ファイル', watchSelect('pattern', WATCH_PATTERNS, x.pattern))}
-          <div class="wf"><span class="wf-label">処理開始ファイル</span>
-            <div class="wf-ctl">
-              <input class="fld" data-wf="startFile" value="${esc(x.startFile)}" placeholder="未指定なら即時" />
-              <p class="wf-help">このファイルが置かれた時点で取込を開始します。転送中のファイルを掴まないための合図用ファイルです。</p>
-            </div>
-          </div>
+          ${row('対象ファイル', watchSelect('pattern', WATCH_PATTERNS, x.pattern), true)}
           ${row('大文字小文字を区別', watchToggle('caseSensitive', x.caseSensitive), true)}
         </div>
       </section>
@@ -5312,7 +5306,7 @@ function renderWatch() {
         <h3 class="watch-sec-head">二重取込防止</h3>
         <div class="watch-fields">
           ${row('同一ファイルを除外', watchToggle('dupGuard', x.dupGuard))}
-          ${row('判定方法', watchSelect('dupMethod', Object.keys(WATCH_DUP).map((k) => [k, WATCH_DUP[k]]), x.dupMethod))}
+          ${row('判定方法', watchSelect('dupMethod', Object.keys(WATCH_DUP).map((k) => [k, WATCH_DUP[k]]), x.dupMethod), true)}
         </div>
       </section>
 
@@ -5328,7 +5322,7 @@ function renderWatch() {
         <h3 class="watch-sec-head">エラー通知</h3>
         <div class="watch-fields">
           ${row('通知する', watchToggle('notify', x.notify))}
-          ${row('通知条件', watchSelect('notifyOn', Object.keys(WATCH_NOTIFY_ON).map((k) => [k, WATCH_NOTIFY_ON[k]]), x.notifyOn))}
+          ${row('通知条件', watchSelect('notifyOn', Object.keys(WATCH_NOTIFY_ON).map((k) => [k, WATCH_NOTIFY_ON[k]]), x.notifyOn), true)}
           ${row('宛先メール', `<input class="fld" data-wf="notifyMail" value="${esc(x.notifyMail)}" placeholder="admin@example.jp" />`)}
           ${row('Webhook URL', `<input class="fld" data-wf="notifyUrl" value="${esc(x.notifyUrl)}" placeholder="任意" />`)}
         </div>
