@@ -1147,45 +1147,61 @@ test('ticket permission table gates confirm per layout', () => {
   assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });
 
-test('自動アップロード: 1 画面 1 設定で 6 セクションを描画する', () => {
+test('自動アップロード: 監視ルートとカテゴリ別ルールの 6 セクションを描画する', () => {
   const run = app();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視先', '取込先', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知']);
+  assert.deepEqual(heads, ['監視ルート（テナント）', 'カテゴリ別ルール', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知']);
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
-  assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit|watch-table/);
-  /* 顧客要件の設定項目（テナント切替・ログ設定は持たない） */
-  for (const t of ['監視パス', '対象ファイル', '業務シーン', '取込成功時', '同一ファイルを除外', '再実行回数', '通知方法', '宛先メール']) {
+  assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit/);
+
+  /* 監視ルート：1 行＝1 テナント。行ごとに有効／無効のトグルを持つ */
+  assert.equal((html.match(/class="wr-root/g) || []).length, run('WATCH.roots.length'));
+  assert.equal((html.match(/data-wrooton=/g) || []).length, run('WATCH.roots.length'));
+  assert.match(html, /data-wrootadd/);
+  assert.match(html, /data-wroot-tenant=/);
+  assert.match(html, /data-wroot-path=/);
+  assert.match(html, /data-wroot-done=/);
+
+  /* カテゴリ別ルール：帳票カテゴリ 1 行。フォルダ名・ファイル名・処理開始・大小区別 */
+  assert.equal(run('CATEGORY.length'), 9);
+  assert.equal((html.match(/class="wr-rule/g) || []).length, run('CATEGORY.length'));
+  assert.equal((html.match(/data-wruleon=/g) || []).length, run('CATEGORY.length'));
+  for (const t of ['帳票カテゴリ', 'フォルダ名', 'ファイル名', '処理開始', '大小区別', '監視対象']) {
     assert.ok(html.includes(t), t);
   }
-  /* 処理開始ファイルは要件外なので撤去 */
-  assert.doesNotMatch(html, /処理開始ファイル|data-wf="startFile"/);
-  assert.doesNotMatch(html, /テナント/);
-  /* 対象ファイルは定型から選ぶセレクト（現場が glob を書かないため） */
-  assert.match(html, /<select class="fld" data-wf="pattern">/);
-  assert.doesNotMatch(html, /data-wf="pattern"[^>]*value=/);
-  for (const v of ['*.pdf', '*.pdf,*.tif,*.tiff', '*.tif,*.tiff', '*.jpg,*.jpeg,*.png', '*.*']) {
-    assert.ok(html.includes(`value="${v}"`), v);
+  assert.match(html, /data-wrule-folder=/);
+  assert.match(html, /data-wrule-pattern=/);
+  assert.match(html, /data-wrule-start=/);
+  assert.match(html, /data-wrule-case=/);
+
+  /* 業務シーンは選ばせない（カテゴリの見出し行としてだけ残る） */
+  assert.doesNotMatch(html, /data-wf="biz"|data-wf="pattern"|data-wf="startFile"|data-wf="afterDir"/);
+  assert.equal((html.match(/class="wr-group"/g) || []).length, run('BUSINESS.length'));
+  assert.match(html, /住民異動関係/);
+
+  /* 実際に監視する本数＝有効ルート × 有効カテゴリ */
+  assert.match(html, /監視対象 <b>\d+<\/b> 本/);
+  assert.equal(run('WATCH.roots.filter((r) => r.on).length * WATCH.rules.filter((r) => r.on).length'), 18);
+
+  /* 共通設定は従来どおり */
+  for (const t of ['取込成功時', '同一ファイルを除外', '再実行回数', '通知方法', '宛先メール']) {
+    assert.ok(html.includes(t), t);
   }
   /* ログ設定はログ設定ページへ移した */
   assert.doesNotMatch(html, /data-wf="logLevel"|data-wf="logPath"|ログ<\/h3>/);
-  /* 監視パスは複数。行ごとに有効／無効のトグルを持つ */
-  assert.equal((html.match(/class="wp-row/g) || []).length, run('WATCH.paths.length'));
-  assert.equal((html.match(/data-watchpathon=/g) || []).length, run('WATCH.paths.length'));
-  assert.match(html, /data-watchpathadd/);
-  /* 取込先は業務シーンだけ（帳票タイプは自動判定に任せる） */
-  assert.match(html, /<select class="fld" data-wf="biz">/);
-  assert.doesNotMatch(html, /data-wf="layout"/);
-  assert.equal(run('BUSINESS.length'), 6);
 });
 
-test('自動アップロード: 移動先は「移動」を選んだときだけ出る', () => {
+test('自動アップロード: 処理済フォルダは「移動」を選んだときだけ入力できる', () => {
   const run = app();
   let html = run('WATCH.after = "move"; renderWatch()');
-  assert.match(html, /data-wf="afterDir"/);
+  assert.doesNotMatch(html, /data-wroot-done="[^"]*"[^>]*disabled/);
   html = run('WATCH.after = "del"; renderWatch()');
-  assert.doesNotMatch(html, /data-wf="afterDir"/);
+  assert.match(html, /data-wroot-done="[^"]*"[^>]*disabled/);
   assert.equal((html.match(/class="watch-sec"/g) || []).length, 6);
+  /* 保存時にフォルダ名の重複を弾く */
+  run('WATCH.after = "move"; WATCH.rules[0].folder = WATCH.rules[1].folder;');
+  assert.equal(run('WATCH.rules.filter((r) => r.on).map((r) => r.folder.trim().toLowerCase()).filter((n, i, a) => a.indexOf(n) !== i).length'), 1);
 });
 
 test('ログ設定: 出力設定（詳細度・保存先）はログ画面に持つ', () => {

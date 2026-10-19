@@ -508,42 +508,7 @@
 .watch-inline .fld { width: 84px; flex: 0 0 84px; }
 .watch-inline .muted { font-size: 11.5px; color: var(--text-3); }
 
-/* 監視パス（複数行・行ごとに有効／無効） */
-.watch-paths {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.wp-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.wp-row .fld { flex: 1 1 auto; min-width: 0; }
-
-.wp-row .tgl {
-  flex: 0 0 auto;
-  width: 34px;
-  height: 20px;
-  padding: 0;
-}
-
-.wp-row .tgl .tgl-knob {
-  top: 3px;
-  right: 3px;
-  width: 14px;
-  height: 14px;
-}
-
-.wp-row .tgl.off .tgl-knob { right: auto; left: 3px; }
-
-.wp-row.off .fld {
-  background: #f6f7fa;
-  color: var(--text-3);
-}
+/* 監視パスの行組みは廃止（テナント表＋カテゴリ表に置き換え）。.wp-del / .wp-add は表で使用中。 */
 
 .wp-del {
   flex: 0 0 auto;
@@ -576,3 +541,82 @@
   .watch-fields { grid-template-columns: minmax(0, 1fr); }
   .wf-wide { grid-column: auto; }
 }
+
+/* ── 監視ルート／カテゴリ別ルールの表 ────────────────────────────────
+   1 行＝1 テナント、1 行＝1 カテゴリ。入力欄を並べるので表の方が読みやすい。 */
+.watch-tablewrap { overflow-x: auto; }
+
+.watch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.watch-table th {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  background: #f4f8fd;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-align: left;
+  white-space: nowrap;
+}
+.watch-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #f2f4f8;
+  vertical-align: middle;
+}
+.watch-table tbody tr:last-child td { border-bottom: 0; }
+.watch-table th.c, .watch-table td.c { text-align: center; }
+/* 右端のトグル／× が枠に接しないよう余白を足す */
+.watch-table th:last-child, .watch-table td:last-child { padding-right: 14px; }
+.watch-table .fld {
+  width: 100%;
+  height: 30px;
+  font-size: 12.5px;
+}
+/* 行の有効／無効は行全体を淡くして示す */
+.watch-table tr.off td { background: #fafbfd; }
+.watch-table tr.off .fld { background: #f6f7fa; color: var(--text-3); }
+
+/* 業務シーンの見出し行（カテゴリのグルーピング。選択させる項目ではない） */
+.wr-group td {
+  padding: 5px 10px;
+  border-bottom: 1px solid #e3eefb;
+  background: #eef5fd;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--accent);
+}
+
+.wr-cat { color: var(--text-2); }
+
+/* 表の中のトグルは小さめ（wp-row と同じ寸法） */
+.watch-table .tgl {
+  width: 34px;
+  height: 20px;
+  padding: 0;
+}
+.watch-table .tgl .tgl-knob {
+  top: 3px;
+  right: 3px;
+  width: 14px;
+  height: 14px;
+}
+.watch-table .tgl.off .tgl-knob { right: auto; left: 3px; }
+
+/* 表の下の補足・追加ボタン */
+.watch-sec-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 9px 14px;
+  border-top: 1px solid #f2f4f8;
+}
+.watch-sec-foot .wf-help { flex: 1 1 320px; margin: 0; }
+.watch-resolve { color: var(--text-2); }
+.watch-resolve b { color: var(--accent); font-weight: 700; }
+.watch-resolve .mono { margin-left: 8px; color: var(--text-3); font-size: 11px; }
+

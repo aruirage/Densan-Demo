@@ -5766,25 +5766,40 @@ function renderDictDialogs() {
    未処理テーブルに溜まり、「選択帳票読取」で初めて読取結果一覧へ入る。
    ══════════════════════════════════════════════════════════════════════════ */
 
-/** 自動アップロードの設定（1 テナント 1 設定）。
- *  監視パスは複数持てる（1 パス＝1 仮想マシン上のフォルダ）。パスごとに有効／無効を切替える。
- *  入力は即時反映、保存で更新日時を更新する。 */
+/** 自動アップロードの設定。
+ *  ① 監視ルート＝テナントごとの UNC パス（1 テナント 1 本。VM が増えれば行を足す）
+ *  ② その直下に「帳票カテゴリ」名のフォルダがあり、カテゴリごとにファイル名パターンを持つ
+ *  業務シーンは選ばせない（カテゴリ→業務シーンは従属なので導出できる）。 */
 let WATCH = {
   on: true,
-  paths: [
-    { id: 'p1', path: '\\\\filesv01\\住民課\\住民異動届', on: true },
-    { id: 'p2', path: '\\\\filesv02\\住民課\\転入転出', on: true },
-    { id: 'p3', path: '\\\\filesv03\\住民課\\世帯異動', on: false },
+  roots: [
+    { id: 'r1', tenant: 'tenant01', path: '\\\\filesv01\\取込', doneDir: '\\\\filesv01\\処理済', on: true },
+    { id: 'r2', tenant: 'tenant02', path: '\\\\filesv02\\取込', doneDir: '\\\\filesv02\\処理済', on: true },
+    { id: 'r3', tenant: 'tenant03', path: '\\\\filesv03\\取込', doneDir: '\\\\filesv03\\処理済', on: false },
   ],
-  pattern: '*.pdf',
-  biz: 'b1',
-  after: 'move', afterDir: '\\\\filesv01\\処理済\\住民異動届',
+  /* カテゴリ 1 行。フォルダ名はルート直下の名前（全テナント共通） */
+  rules: [],
+  after: 'move',
   dupGuard: true, dupMethod: 'meta',
   retry: 3, retryGap: 5,
   notify: true, notifyOn: 'fail', notifyMailOn: true, notifyWebOn: false,
   notifyMail: 'admin@itso.co.jp', notifyUrl: '',
   updatedAt: '2026-10-16 09:12:30',
 };
+/* 帳票カテゴリの数だけルール行を作る（カテゴリを増やしたら行も増える） */
+WATCH.rules = CATEGORY.map((c) => ({
+  cat: c.id, folder: c.name, pattern: '*.pdf', startFile: '*.trg', caseSensitive: false, on: true,
+}));
+/** カテゴリ ID → ルール。カテゴリを後から足した場合も既定値で作る */
+function watchRuleOf(catId) {
+  let r = WATCH.rules.find((q) => q.cat === catId);
+  if (!r) {
+    const c = byId(CATEGORY, catId) || {};
+    r = { cat: catId, folder: c.name || catId, pattern: '*.pdf', startFile: '', caseSensitive: false, on: true };
+    WATCH.rules.push(r);
+  }
+  return r;
+}
 
 const WATCH_AFTER = { move: '移動', del: '削除', keep: 'そのまま' };
 const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容ハッシュ（SHA-256）' };
@@ -5803,47 +5818,88 @@ const watchSelect = (key, opts, cur) => `<select class="fld" data-wf="${key}">${
 const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-checked="${on}"><span class="tgl-txt">${on ? 'する' : 'しない'}</span><span class="tgl-knob"></span></button>`;
 const watchRow = (label, inner, wide) => `<div class="wf"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
 
-/** 自動アップロード設定（1 画面 1 設定）。顧客要件の 6 項目をそのまま並べる。 */
+/** 自動アップロード設定。
+ *  ① 監視ルート（テナント）② カテゴリ別ルール ③ 共通設定 の 3 段で見せる。
+ *  監視する実パスは「ルート × カテゴリ」で決まる。 */
 function renderWatch() {
   const x = WATCH;
   const row = watchRow;
-  /* 帳票タイプは業務シーンで絞って自動判定させる（選択肢を増やすと精度が落ちるため） */
-  const bizOpts = BUSINESS.map((b) => [b.id, dispBiz(b.id)]);
+
+  const rootRows = x.roots.map((r) => `<tr class="wr-root${r.on ? '' : ' off'}">
+        <td><select class="fld" data-wroot-tenant="${r.id}" aria-label="テナント">${TENANTS.map((t) => `<option value="${t.id}" ${t.id === r.tenant ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></td>
+        <td><input class="fld mono" data-wroot-path="${r.id}" value="${esc(r.path)}" placeholder="\\\\filesv01\\取込" aria-label="ルートパス" /></td>
+        <td><input class="fld mono" data-wroot-done="${r.id}" value="${esc(r.doneDir || '')}" placeholder="\\\\filesv01\\処理済" aria-label="処理済フォルダ"${x.after === 'move' ? '' : ' disabled'} /></td>
+        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wrooton="${r.id}" role="switch" aria-checked="${r.on}" aria-label="このルートを有効にする"><span class="tgl-knob"></span></button></td>
+        <td class="c"><button type="button" class="wp-del" data-wrootdel="${r.id}" aria-label="このルートを削除"${x.roots.length > 1 ? '' : ' disabled'}>×</button></td>
+      </tr>`).join('');
+
+  const ruleRows = BUSINESS.map((b) => {
+    const rows = CATEGORY.filter((c) => c.business === b.id).map((c) => {
+      const r = watchRuleOf(c.id);
+      return `<tr class="wr-rule${r.on ? '' : ' off'}">
+        <td class="wr-cat">${esc(c.name)}</td>
+        <td><input class="fld mono" data-wrule-folder="${c.id}" value="${esc(r.folder)}" placeholder="フォルダ名" aria-label="フォルダ名" /></td>
+        <td><input class="fld mono" data-wrule-pattern="${c.id}" value="${esc(r.pattern)}" list="watchPatternList" aria-label="ファイル名パターン" /></td>
+        <td><input class="fld mono" data-wrule-start="${c.id}" value="${esc(r.startFile || '')}" placeholder="未設定なら即時" aria-label="処理開始ファイル" /></td>
+        <td class="c"><input type="checkbox" class="cb" data-wrule-case="${c.id}" ${r.caseSensitive ? 'checked' : ''} aria-label="大文字小文字を区別" /></td>
+        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wruleon="${c.id}" role="switch" aria-checked="${r.on}" aria-label="このカテゴリを取り込む"><span class="tgl-knob"></span></button></td>
+      </tr>`;
+    }).join('');
+    if (!rows) return '';
+    return `<tr class="wr-group"><td colspan="6">${esc(dispBiz(b.id))}</td></tr>${rows}`;
+  }).join('');
+
+  /* 実際に監視する本数＝有効ルート × 有効カテゴリ */
+  const liveRoots = x.roots.filter((r) => r.on && String(r.path || '').trim());
+  const liveRules = x.rules.filter((r) => r.on && String(r.folder || '').trim());
+  const combos = liveRoots.length * liveRules.length;
+  const sample = (liveRoots[0] && liveRules[0])
+    ? `${String(liveRoots[0].path).replace(/[\\/]+$/, '')}\\${liveRules[0].folder}\\${liveRules[0].pattern}`
+    : '';
 
   return `${cfgHeader('自動アップロード', `<span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>`)}
-  <p class="cfg-hint">指定フォルダにファイルが置かれると自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。${x.updatedAt ? `<span class="muted">最終更新 ${esc(x.updatedAt)}</span>` : ''}</p>
+  <p class="cfg-hint">監視ルート（テナント）の直下にあるカテゴリフォルダを見張り、条件に合うファイルを自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。${x.updatedAt ? `<span class="muted">最終更新 ${esc(x.updatedAt)}</span>` : ''}</p>
   <div class="watch-body">
-    <div class="watch-col">
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">監視先</h3>
-        <div class="watch-fields">
-          <div class="wf"><span class="wf-label">監視パス</span>
-            <div class="wf-ctl wide">
-              <div class="watch-paths">
-                ${x.paths.map((p, i) => `<div class="wp-row${p.on ? '' : ' off'}">
-                  <input class="fld mono" data-watchpath="${p.id}" value="${esc(p.path)}" placeholder="\\\\filesv01\\..." aria-label="監視パス ${i + 1}" />
-                  <button type="button" class="tgl${p.on ? '' : ' off'}" data-watchpathon="${p.id}" role="switch" aria-checked="${p.on}" aria-label="この監視パスを有効にする"><span class="tgl-knob"></span></button>
-                  <button type="button" class="wp-del" data-watchpathdel="${p.id}" aria-label="この監視パスを削除"${x.paths.length > 1 ? '' : ' disabled'}>×</button>
-                </div>`).join('')}
-              </div>
-              <button type="button" class="btn wp-add" data-watchpathadd="1"><span class="ico i-add"></span>監視パスを追加</button>
-              <p class="wf-help">1 行＝1 台の仮想マシン上のフォルダです。行ごとに有効／無効を切替えられます。</p>
-            </div>
-          </div>
-          ${row('対象ファイル', watchSelect('pattern', WATCH_PATTERNS, x.pattern), true)}
+        <h3 class="watch-sec-head">監視ルート（テナント）</h3>
+        <div class="watch-tablewrap">
+          <table class="watch-table wr-roots">
+            <thead><tr>
+              <th style="width:140px">テナント</th>
+              <th>ルートパス</th>
+              <th style="width:210px">処理済フォルダ</th>
+              <th class="c" style="width:52px">有効</th>
+              <th class="c" style="width:40px"></th>
+            </tr></thead>
+            <tbody>${rootRows}</tbody>
+          </table>
+        </div>
+        <div class="watch-sec-foot">
+          <button type="button" class="btn wp-add" data-wrootadd="1"><span class="ico i-add"></span>監視ルートを追加</button>
+          <p class="wf-help">1 行＝1 テナント（1 台の仮想マシン上の共有フォルダ）です。カテゴリのフォルダはこのパスの直下に置きます。</p>
         </div>
       </section>
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">取込先</h3>
-        <div class="watch-fields">
-          <div class="wf"><span class="wf-label">業務シーン</span>
-            <div class="wf-ctl wide">
-              ${watchSelect('biz', bizOpts, x.biz)}
-              <p class="wf-help">選んだ業務シーンに含まれる帳票だけを対象に、帳票の種類を自動判定します。</p>
-            </div>
-          </div>
+        <h3 class="watch-sec-head">カテゴリ別ルール</h3>
+        <div class="watch-tablewrap">
+          <table class="watch-table wr-rules">
+            <thead><tr>
+              <th style="width:180px">帳票カテゴリ</th>
+              <th style="width:190px">フォルダ名</th>
+              <th style="width:140px">ファイル名</th>
+              <th style="width:130px">処理開始</th>
+              <th class="c" style="width:64px">大小区別</th>
+              <th class="c" style="width:52px">有効</th>
+            </tr></thead>
+            <tbody>${ruleRows}</tbody>
+          </table>
+        </div>
+        <datalist id="watchPatternList">${WATCH_PATTERNS.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</datalist>
+        <div class="watch-sec-foot">
+          <p class="wf-help">フォルダ名は全テナント共通です。処理開始が未設定なら、ファイルが現れた時点で取り込みます。大小区別は「ファイル名」と「処理開始」の両方に効きます。</p>
+          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本（有効なルート ${liveRoots.length} × カテゴリ ${liveRules.length}）${sample ? `<span class="mono">${esc(sample)}</span>` : ''}</p>
         </div>
       </section>
 
@@ -5853,14 +5909,12 @@ function renderWatch() {
           <div class="wf"><span class="wf-label">取込成功時</span>
             <div class="wf-ctl wide"><div class="watch-radios">
               ${['move', 'del', 'keep'].map((v) => `<label><input type="radio" name="wafter" data-wf-radio="after" value="${v}" ${x.after === v ? 'checked' : ''} />${WATCH_AFTER[v]}</label>`).join('')}
-            </div></div>
+            </div>
+            <p class="wf-help">「移動」の移動先は、監視ルートごとの「処理済フォルダ」です。</p>
+            </div>
           </div>
-          ${x.after === 'move' ? row('移動先', `<input class="fld mono" data-wf="afterDir" value="${esc(x.afterDir || '')}" placeholder="\\\\filesv01\\処理済\\..." />`, true) : ''}
         </div>
       </section>
-
-    </div>
-    <div class="watch-col">
 
       <section class="watch-sec">
         <h3 class="watch-sec-head">二重取込防止</h3>
@@ -5892,7 +5946,6 @@ function renderWatch() {
         </div>
       </section>
 
-    </div>
   </div>`;
 }
 
@@ -8717,7 +8770,13 @@ function bindCfgPages() {
   if (state.page === 'watch') {
     document.querySelectorAll('[data-watchsave]').forEach((b) => {
       b.onclick = () => {
-        if (!WATCH.paths.some((p) => String(p.path || '').trim())) { toast('監視パスを入力してください'); return; }
+        if (!WATCH.roots.some((r) => String(r.path || '').trim())) { toast('監視ルートを入力してください'); return; }
+        /* 無効行も含めて重複を見る（あとで有効にしたときに二重取込になるため） */
+        const folders = WATCH.rules.map((r) => String(r.folder || '').trim());
+        if (folders.some((n) => !n)) { toast('フォルダ名を入力してください'); return; }
+        const lower = folders.map((n) => n.toLowerCase());
+        const dupAt = lower.findIndex((n, i) => lower.indexOf(n) !== i);
+        if (dupAt >= 0) { toast(`フォルダ名が重複しています：${folders[dupAt]}`); return; }
         if (WATCH.notify) {
           if (!WATCH.notifyMailOn && !WATCH.notifyWebOn) { toast('通知方法を選択してください'); return; }
           if (WATCH.notifyMailOn && !String(WATCH.notifyMail || '').trim()) { toast('宛先メールを入力してください'); return; }
@@ -8726,30 +8785,66 @@ function bindCfgPages() {
         WATCH.updatedAt = nowStamp(); render(); toast('設定を保存しました');
       };
     });
-    /* 監視パス：行ごとの入力・有効切替・追加・削除 */
-    document.querySelectorAll('[data-watchpath]').forEach((el) => {
-      const id = el.dataset.watchpath;
-      el.oninput = () => { const p = WATCH.paths.find((q) => q.id === id); if (p) p.path = el.value; };
-    });
-    document.querySelectorAll('[data-watchpathon]').forEach((b) => {
-      b.onclick = () => {
-        const p = WATCH.paths.find((q) => q.id === b.dataset.watchpathon);
-        if (!p) return;
-        p.on = !p.on; render();
-      };
-    });
-    document.querySelectorAll('[data-watchpathdel]').forEach((b) => {
-      b.onclick = () => {
-        if (WATCH.paths.length <= 1) return;
-        WATCH.paths = WATCH.paths.filter((q) => q.id !== b.dataset.watchpathdel);
+    /* 監視ルート：テナント・パス・処理済フォルダ・有効切替・追加・削除 */
+    document.querySelectorAll('[data-wroot-tenant]').forEach((el) => {
+      el.onchange = () => {
+        const r = WATCH.roots.find((q) => q.id === el.dataset.wrootTenant);
+        if (r) r.tenant = el.value;
         render();
       };
     });
-    const addPath = document.querySelector('[data-watchpathadd]');
-    if (addPath) addPath.onclick = () => {
-      WATCH.paths.push({ id: `p${Date.now()}`, path: '', on: true });
+    document.querySelectorAll('[data-wroot-path]').forEach((el) => {
+      el.oninput = () => {
+        const r = WATCH.roots.find((q) => q.id === el.dataset.wrootPath);
+        if (r) r.path = el.value;
+      };
+    });
+    document.querySelectorAll('[data-wroot-done]').forEach((el) => {
+      el.oninput = () => {
+        const r = WATCH.roots.find((q) => q.id === el.dataset.wrootDone);
+        if (r) r.doneDir = el.value;
+      };
+    });
+    document.querySelectorAll('[data-wrooton]').forEach((btn) => {
+      btn.onclick = () => {
+        const r = WATCH.roots.find((q) => q.id === btn.dataset.wrooton);
+        if (!r) return;
+        r.on = !r.on; render();
+      };
+    });
+    document.querySelectorAll('[data-wrootdel]').forEach((btn) => {
+      btn.onclick = () => {
+        if (WATCH.roots.length <= 1) return;
+        WATCH.roots = WATCH.roots.filter((q) => q.id !== btn.dataset.wrootdel);
+        render();
+      };
+    });
+    const addRoot = document.querySelector('[data-wrootadd]');
+    if (addRoot) addRoot.onclick = () => {
+      const used = WATCH.roots.map((r) => r.tenant);
+      const t = TENANTS.find((q) => !used.includes(q.id)) || TENANTS[0];
+      WATCH.roots.push({ id: `r${Date.now()}`, tenant: t.id, path: '', doneDir: '', on: true });
       render();
     };
+    /* カテゴリ別ルール：入力は即時反映（描き直すとフォーカスが飛ぶ）、トグル類は描き直す */
+    document.querySelectorAll('[data-wrule-folder]').forEach((el) => {
+      el.oninput = () => { watchRuleOf(el.dataset.wruleFolder).folder = el.value; };
+    });
+    document.querySelectorAll('[data-wrule-pattern]').forEach((el) => {
+      el.oninput = () => { watchRuleOf(el.dataset.wrulePattern).pattern = el.value; };
+    });
+    document.querySelectorAll('[data-wrule-start]').forEach((el) => {
+      el.oninput = () => { watchRuleOf(el.dataset.wruleStart).startFile = el.value; };
+    });
+    document.querySelectorAll('[data-wrule-case]').forEach((cb) => {
+      cb.onchange = () => { watchRuleOf(cb.dataset.wruleCase).caseSensitive = cb.checked; };
+    });
+    document.querySelectorAll('[data-wruleon]').forEach((btn) => {
+      btn.onclick = () => {
+        const r = watchRuleOf(btn.dataset.wruleon);
+        r.on = !r.on; render();
+      };
+    });
     document.querySelectorAll('[data-wf]').forEach((el) => {
       const k = el.dataset.wf;
       const put = () => { WATCH[k] = (el.type === 'number') ? Number(el.value) : el.value; };
@@ -10010,6 +10105,8 @@ render();
 window.__demo = {
   GROUPS, ROLE_MEMBERS, USER_OPS, LAYOUT, CATEGORY, BUSINESS, UPLOAD_PERMS, ROLES, catStagesOf, setCatStages, approvalStageCountOf, maxApprovalStageCount, stageTargetsOf, setStageTargets,
   state,
+  WATCH,
+  watchRuleOf,
   FILES_DATA,
   openTab,
   closeTab,
