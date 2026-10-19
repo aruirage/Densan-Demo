@@ -2834,7 +2834,11 @@ try {
     # 操作権限ツリーに「出力」を追加（op-export）
     if 'op-export' not in patched:
         patched = patched.replace("{ id: 'op-download', label: 'ダウンロード' }",
-                                  "{ id: 'op-download', label: 'ダウンロード' }, { id: 'op-export', label: '出力' }, { id: 'op-rename', label: 'フォルダ名変更' }", 1)
+                                  "{ id: 'op-download', label: 'ダウンロード' }, { id: 'op-export', label: '出力' }", 1)
+    # フォルダ名変更（ツリー）の権限ノードを追加
+    if 'op-rename' not in patched:
+        patched = patched.replace("{ id: 'op-export', label: '出力' }",
+                                  "{ id: 'op-export', label: '出力' }, { id: 'op-rename', label: 'フォルダ名変更' }", 1)
     if m_perms and 'SUPER_ROLE_ID' not in patched:
         # MENU_PERMS の直後に差し込む（ROLES / MENU_LEAVES も定義済みの位置）
         patched = patched[:m_perms.end()] + "\n" + SUPER_ROLE + patched[m_perms.end():]
