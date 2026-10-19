@@ -372,7 +372,8 @@ test('selecting forms for reading promotes rows and jumps to result list while r
 });
 test('upload screen business division is a dropdown select filtered by UPLOAD_PERMS', () => {
   const run = app();
-  /* 既定ユーザー u2＝g1/g6/g9 → b1,b3,b4,b6 のみ */
+  /* u2＝読取グループ → アップロードできる業務シーンだけが出る */
+  run('state.currentUser = "u2";');
   const html = run('renderUpload()');
   assert.match(html, /業務シーンの選択/);
   assert.doesNotMatch(html, /帳票分類タイプの選択/);
@@ -980,7 +981,7 @@ test('ticket permissions are the single source of truth for the approval flow', 
   assert.match(source, /const idx = Math\.min\(done, lists\.length - 1\)/);
   assert.match(source, /return lists\[idx\] \|\| lists\[0\] \|\| \[\]/);
   /* フロー担当はグループ展開後のユーザー照合 */
-  assert.match(source, /currentUser: 'u2'/);
+  assert.match(source, /currentUser: 'u1'/);
   assert.match(source, /assigneeUserIds\(ids\)\.includes\(me\)/);
   assert.match(source, /function pickRandomAssignee/);
   /* シードはグループ（g*）またはユーザー（u*） */
@@ -1101,17 +1102,17 @@ test('departments are gone: groups, users and history are organised without them
 test('demo actor switcher lets you change currentUser from the header menu', () => {
   const run = app();
   assert.equal(run('DEMO_ACTORS.length'), 4);
-  assert.deepEqual(JSON.parse(run('JSON.stringify(DEMO_ACTORS.map((a) => a.id))')), ['u1', 'u2', 'u4', 'u8']);
-  /* 既定は確認窓口 u2 */
-  assert.equal(run('state.currentUser'), 'u2');
-  assert.equal(run('currentProfile().name'), '鈴木 花子');
-  assert.match(run('currentProfile().hint'), /確認窓口/);
+  assert.deepEqual(JSON.parse(run('JSON.stringify(DEMO_ACTORS.map((a) => a.id))')), ['u1', 'u7', 'u8', 'u4']);
+  /* 既定はシステム管理者 u1 */
+  assert.equal(run('state.currentUser'), 'u1');
+  assert.equal(run('currentProfile().name'), '佐藤 一郎');
+  assert.match(run('currentProfile().hint'), /全メニュー/);
   /* 切替後はプロフィール名が変わる */
   assert.equal(run('state.currentUser = "u4"; currentProfile().name'), '田中 実');
   assert.equal(run('state.currentUser = "u8"; currentProfile().name'), '中村 亮');
   assert.equal(run('state.currentUser = "u1"; currentProfile().name'), '佐藤 一郎');
   assert.equal(run('currentProfile().roleLabel'), 'システム管理者');
-  assert.match(run('currentProfile().hint'), /システム管理者/);
+  assert.match(run('currentProfile().hint'), /全メニュー/);
   /* ソースにデモ切替 UI／ハンドラがある */
   assert.match(source, /data-demo-actor/);
   assert.match(source, /デモ：担当者を切替え/);
@@ -1146,16 +1147,20 @@ test('ticket permission table gates confirm per layout', () => {
   assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });
 
-test('自動アップロード: 左一覧＋右フォームの 7 セクションで描画される', () => {
+test('自動アップロード: 一覧テーブル＋展開パネルの 7 セクションで描画される', () => {
   const run = app();
-  const html = run('state.watch = { sel: "w1" }; renderWatch()');
-  assert.match(html, /class="watch-page"/);
-  assert.match(html, /class="watch-side"/);
-  assert.equal((html.match(/<div class="watch-item[^"]*">/g) || []).length, run('WATCHES.length'));
+  let html = run('state.watch = { edit: null }; renderWatch()');
+  assert.match(html, /class="tablewrap watch-table"/);
+  /* 1 行＝監視フォルダ 1 つ。閉じているときは設定パネルを出さない */
+  assert.equal((html.match(/data-watchedit=/g) || []).length, run('WATCHES.length'));
+  assert.doesNotMatch(html, /class="watch-sec"/);
+
+  html = run('state.watch = { edit: "w1" }; renderWatch()');
+  assert.match(html, /class="watch-detail-row"/);
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
   assert.deepEqual(heads, ['監視先', '取込先', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知', 'ログ']);
-  /* 旧 UI（並べ替え・断片エディタ）は残っていない */
-  assert.doesNotMatch(html, /watch-block|watch-order|watch-seg|data-watchorder|data-watchseg/);
+  /* 旧 UI（左リスト・並べ替え・断片エディタ）は残っていない */
+  assert.doesNotMatch(html, /watch-page|watch-side|watch-block|watch-order|watch-seg|data-watchorder|data-watchseg/);
   /* 顧客要件の設定項目 */
   for (const t of ['監視パス', '処理開始ファイル', 'テナント', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL', '詳細度']) {
     assert.ok(html.includes(t), t);
@@ -1164,11 +1169,12 @@ test('自動アップロード: 左一覧＋右フォームの 7 セクション
 
 test('自動アップロード: 移動先は「移動」を選んだときだけ出る', () => {
   const run = app();
-  let html = run('state.watch = { sel: "w1" }; WATCHES.find((w) => w.id === "w1").after = "move"; renderWatch()');
+  let html = run('state.watch = { edit: "w1" }; WATCHES.find((w) => w.id === "w1").after = "move"; renderWatch()');
   assert.match(html, /data-wf="afterDir"/);
   html = run('WATCHES.find((w) => w.id === "w1").after = "del"; renderWatch()');
   assert.doesNotMatch(html, /data-wf="afterDir"/);
-  /* 選択中の設定だけがフォームに出る */
-  html = run('state.watch = { sel: "w2" }; renderWatch()');
+  /* 開いている行だけがパネルを持つ */
+  html = run('state.watch = { edit: "w2" }; renderWatch()');
+  assert.equal((html.match(/class="watch-detail-row"/g) || []).length, 1);
   assert.match(html, /<h2>税務 申告書 取込<\/h2>/);
 });

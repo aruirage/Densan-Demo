@@ -332,159 +332,93 @@
 .dict-bulk-preview { max-height: 240px; border: 1px solid var(--line); border-radius: 2px; }
 
 /* ── 自動アップロード ─────────────────────────────────────────────── */
-/* 左：監視設定の一覧（フォルダ 1 件＝1 設定）／右：選択中 1 件の設定フォーム。
-   フォームは「監視先・取込先・処理後・二重取込・再実行・通知・ログ」の
-   7 セクションを 2 列グリッドで並べる。 */
-.watch-page {
-  display: flex;
-  align-items: stretch;
-  flex: 1 1 auto;
-  min-height: 0;
+/* 1 行＝監視フォルダ 1 つ。行の「編集」で下に設定パネルが開く。
+   設定パネルは 2 段組み（監視先・取込先・処理後 ／ 二重取込・再実行・通知・ログ）。 */
+
+/* この画面はページごと縦スクロールさせる（.maincol の overflow:hidden を解除） */
+#app[data-page="watch"] .maincol { overflow-y: auto; }
+
+.watch-table {
   border: 1px solid var(--line);
-  border-radius: 2px;
   background: #fff;
 }
 
-/* 左ペイン ─────────────────────────────────────────────────────── */
-.watch-side {
-  display: flex;
-  flex-direction: column;
-  width: 268px;
-  flex: 0 0 268px;
-  border-right: 1px solid var(--line);
-  background: #fbfcfe;
-}
+.watch-table table { min-width: 1020px; width: 100%; }
+.watch-table thead th { white-space: nowrap; background: #eef5fd; }
+.watch-table tbody td { vertical-align: middle; }
 
-.watch-side-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text);
-  background: #f4f8fd;
-}
+.watch-table tbody tr.is-open > td { background: #f4f9fe; }
 
-.watch-side-head .muted {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-3);
-  font-variant-numeric: tabular-nums;
-}
+.watch-on-cell { text-align: center; }
 
-.watch-side-list {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.watch-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
-  border-left: 3px solid transparent;
-  background: transparent;
-}
-
-.watch-item.on {
-  border-left-color: var(--accent);
-  background: #fff;
-}
-
-.watch-item:hover { background: #fff; }
-
-/* 一覧内のトグルは小さめ（文字ラベルを持たない） */
-.watch-item .tgl {
-  flex: 0 0 auto;
+/* 一覧内のトグルは文字ラベルを持たないので小さく */
+.watch-on-cell .tgl {
   width: 34px;
   height: 20px;
   padding: 0;
-  margin-top: 2px;
+  vertical-align: middle;
 }
 
-.watch-item .tgl .tgl-knob {
+.watch-on-cell .tgl .tgl-knob {
   top: 3px;
   right: 3px;
   width: 14px;
   height: 14px;
 }
 
-.watch-item .tgl.off .tgl-knob { right: auto; left: 3px; }
+.watch-on-cell .tgl.off .tgl-knob { right: auto; left: 3px; }
 
-.watch-item-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 0;
-  border: 0;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-}
-
-.watch-item-title {
-  font-size: 12.5px;
+.watch-name-cell {
   font-weight: 600;
   color: var(--text);
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.watch-item.on .watch-item-title { color: var(--accent); }
-
-.watch-item-path {
-  display: block;
-  font-size: 11px;
+.watch-path-cell {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-3);
+}
+
+.watch-layout-cell {
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text);
 }
 
-.watch-item-meta {
-  display: block;
-  font-size: 11px;
-  color: var(--text-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
+.watch-upd-cell {
+  font-size: 11.5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.watch-side-empty {
-  padding: 28px 14px;
+.watch-acts-cell { text-align: right; white-space: nowrap; }
+
+.watch-empty-cell {
+  padding: 40px 16px !important;
   text-align: center;
-  font-size: 12px;
-  line-height: 1.7;
   color: var(--text-3);
 }
 
-/* 右ペイン ─────────────────────────────────────────────────────── */
-.watch-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+/* 展開した設定パネル ───────────────────────────────────────────── */
+.watch-detail-row > td {
+  padding: 0 !important;
+  border-top: 1px solid var(--line);
+  background: #f7fafd;
 }
 
 .watch-main-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px;
+  padding: 9px 14px;
   border-bottom: 1px solid var(--line);
-  background: #f7fafd;
+  background: #fff;
 }
 
 .watch-head-text {
@@ -496,13 +430,10 @@
 
 .watch-head-text h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--text);
   line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .watch-head-text .muted {
@@ -521,15 +452,12 @@
   height: 26px;
 }
 
-/* 左段：監視先・取込先・処理後 ／ 右段：二重取込・再実行・通知・ログ */
+/* 2 段組み：左＝監視先・取込先・処理後 ／ 右＝二重取込・再実行・通知・ログ */
 .watch-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 12px 14px 16px;
 }
 
 .watch-col {
@@ -605,7 +533,8 @@
 }
 
 /* OFF 時の白文字が読めるよう、灰色を少し濃くする */
-.watch-page .tgl.off { background: #98a1b0; }
+.watch-table .tgl.off,
+.wf .tgl.off { background: #98a1b0; }
 
 /* ラジオ（処理後のファイル） */
 .watch-radios {
@@ -636,21 +565,12 @@
 .watch-inline .fld { width: 84px; flex: 0 0 84px; }
 .watch-inline .muted { font-size: 11.5px; color: var(--text-3); }
 
-.watch-empty {
-  padding: 60px 24px;
-  text-align: center;
-  font-size: 12.5px;
-  line-height: 1.8;
-  color: var(--text-3);
-}
-
 @media (max-width: 1180px) {
   .watch-body { flex-wrap: wrap; }
   .watch-col { flex-basis: 100%; }
 }
 
 @media (max-width: 900px) {
-  .watch-side { width: 220px; flex-basis: 220px; }
   .watch-fields { grid-template-columns: minmax(0, 1fr); }
   .wf-wide { grid-column: auto; }
 }

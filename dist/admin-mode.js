@@ -1,38 +1,11 @@
 
-/* デモは常に管理者（全権限）で動作する（serve.py 注入） */
-(function forceFullAdmin() {
-  window.DEMO_FULL_ADMIN = true;
-  /* app.js 側の到達判定も無効化（関数宣言は後から上書きできる） */
-  try { window.canReachPage = function () { return true; }; } catch (e) {}
-  try { window.canReachMenu = function () { return true; }; } catch (e) {}
-  /* 権限レイヤーが参照する管理者判定も常に true に */
-  (function patchTenantAdmin(tries) {
-    var h = window.__demo;
-    if (h && h.isTenantAdmin) { h.isTenantAdmin = function () { return true; }; return; }
-    if (tries > 0) setTimeout(function () { patchTenantAdmin(tries - 1); }, 120);
-  })(20);
-  /* 権限レイヤー：すべて許可 */
-  window.__demoPerm = window.__demoPerm || {};
-  window.__demoPerm.visibleLayouts = function () { return null; };
-  window.__demoPerm.canViewFile = function () { return true; };
-  window.__demoPerm.countVisible = function () {
-    var h = window.__demo;
-    return h && h.FILES_DATA ? h.FILES_DATA.length : 0;
-  };
-  window.isSuperUser = function () { return true; };
-  window.__demoUserOps = window.__demoUserOps || {};
-  window.__demoUserOps.allowed = function () { return null; };
-  window.__demoUserOps.has = function () { return true; };
-  window.__demoUserOps.apply = function () {};
-  window.__demoPerm.menu = window.__demoPerm.menu || {};
-  window.__demoPerm.menu.allowed = function () { return null; };
-  window.__demoPerm.menu.can = function () { return true; };
-  window.__demoPerm.menu.canReach = function () { return true; };
-  window.__demoPerm.menu.canWorkflow = function () { return true; };
-  window.__demoPerm.menu.apply = function () {};
-  window.opsFromGroups = function () {
-    return ['view', 'upload', 'fix', 'confirm', 'approve', 'export', 'settings'];
-  };
+/* デモの権限モード（serve.py 注入）。
+   既定は「ログインユーザーの権限どおり」。ヘッダー下の切替バーでユーザーを変えると、
+   メニュー・帳票一覧・操作ボタンがそのユーザーの権限で描き直される。
+   制限を外して全機能を見たいときだけ URL に ?full=1 を付ける。 */
+(function permissionMode() {
+  var src = location.search + location.hash;
+  window.DEMO_FULL_ADMIN = /(?:^|[?&#])full=1(?:&|#|$)/.test(src);
 })();
 
 /* ファイル一覧の可視範囲は「業務区分（フォルダ）権限」で判定する（客户回答 ⑤）。

@@ -88,10 +88,10 @@ const USERS = [
 
 /** デモ用：権限の違いを見せるための切替候補（GROUPS／帳票権限表のシードに合わせる） */
 const DEMO_ACTORS = [
-  { id: 'u1', email: 'ichiro.sato@itso.co.jp', hint: 'システム管理者：メニュー全到達＋全業務シーンの閲覧／確認／承認／アップロード' },
-  { id: 'u2', email: 'hanako.suzuki@itso.co.jp', hint: '確認者：住民異動・保育児童・高齢者の確認窓口' },
-  { id: 'u4', email: 'minoru.tanaka@itso.co.jp', hint: '承認者：税務確認＋住民課の承認担当' },
-  { id: 'u8', email: 'ryo.nakamura@itso.co.jp', hint: '確認者：介護保険・高齢者調査の確認担当' },
+  { id: 'u1', role: 'システム管理者', email: 'ichiro.sato@itso.co.jp', hint: '全メニュー・全帳票・全操作' },
+  { id: 'u7', role: '読取・アップロード', email: 'aya.yamamoto@itso.co.jp', hint: '閲覧とアップロードのみ（確認・出力は不可）' },
+  { id: 'u8', role: '確認・修正', email: 'ryo.nakamura@itso.co.jp', hint: '閲覧・アップロード・修正・確認・出力（設定は不可）' },
+  { id: 'u4', role: '閲覧のみ', email: 'minoru.tanaka@itso.co.jp', hint: '一覧の閲覧のみ（操作ボタンは出ない）' },
 ];
 
 /** 右上に表示するログイン中ユーザ（state.currentUser から導出） */
@@ -115,6 +115,30 @@ function currentProfile() {
     roleLabel: label,
     hint: (actor && actor.hint) || '',
   };
+}
+
+/** デモ用の権限切替バー（ヘッダー直下に常設）。切替えると state.currentUser が変わり、
+ *  メニュー・帳票一覧・操作ボタンがそのユーザーの権限で描き直される。 */
+function renderDemoBar() {
+  const me = state.currentUser;
+  const CAPS = [['view', '閲覧'], ['upload', 'アップロード'], ['fix', '修正'], ['confirm', '確認'], ['export', '出力'], ['settings', '設定']];
+  const caps = CAPS
+    .filter(([k]) => { try { return userHasOp(k, me); } catch (e) { return false; } })
+    .map(([, t]) => t);
+  const btns = DEMO_ACTORS.map((a) => {
+    const u = byId(USERS, a.id);
+    const cur = me === a.id;
+    return `<button type="button" class="ds-btn${cur ? ' on' : ''}" data-demo-actor="${a.id}" aria-pressed="${cur}" title="${esc(a.hint || '')}">`
+      + `<span class="ds-role">${esc(a.role)}</span>`
+      + `<span class="ds-name">${esc(u ? u.name : a.id)}</span>`
+      + `</button>`;
+  }).join('');
+  return `<div class="demo-bar" role="group" aria-label="デモ用の権限切替">
+    <span class="demo-bar-h">デモ：権限で切替</span>
+    <div class="demo-bar-btns">${btns}</div>
+    <span class="spacer"></span>
+    <span class="demo-bar-caps">この権限でできる操作：<b>${caps.length ? caps.join(' / ') : 'なし'}</b></span>
+  </div>`;
 }
 
 /* ── 処理ステータス定義（客户回答の9ステータス）─────────────────────────
@@ -892,9 +916,9 @@ const HOME_TO = (() => {
 
 /* ── マルチテナント（客户回答：データ分離・GPU共有。デモではテナントで表示データを切替） ── */
 const TENANTS = [
-  { id: 'tenant01', name: '農林水産省', note: '本番' },
-  { id: 'tenant02', name: '〇〇市', note: '本番' },
-  { id: 'tenant03', name: '△△町', note: '検証' },
+  { id: 'tenant01', name: '青葉市', note: '本番' },
+  { id: 'tenant02', name: '緑ヶ丘町', note: '本番' },
+  { id: 'tenant03', name: '白川村', note: '検証' },
 ];
 
 /* ── 承認フロー設定（帳票タイプ単位。ここは「承認を使うか」だけを持つ） ──
@@ -1328,7 +1352,7 @@ const state = {
   myTaskTab: 'pending',           // マイタスク：pending(未対応) | done(対応済)
   myTaskFilters: { name: '', biz: '', cat: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' },
   /* デモ用：現在ユーザ（帳票タイプの確認／承認ユーザーと照合） */
-  currentUser: 'u2',              // デモ既定：確認窓口（閲覧範囲が広い）
+  currentUser: 'u1',              // デモ既定：システム管理者（権限切替バーの起点）
   userMenuOpen: false,            // 右上ユーザーメニューの開閉
   exportOpen: false,              // 実行時の出力確認（形式は帳票タイプ設定で保持）
   exportCfg: { mode: 'combine', header: true, encoding: 'UTF-8', newline: 'CRLF', delimiter: 'カンマ', emptyValue: '空欄', dateFormat: 'YYYY-MM-DD', merge: true, maxRows: 10000 },
@@ -1559,21 +1583,21 @@ function toast(msg) {
  * テナント分離：どのテナントに属するファイルか（デモは id の番号から決定的に割り当てる）
  * 実運用ではテナントIDでデータが分離される想定。
  */
-/* QA 用：ステータス別の代表ファイルを既定テナント（農林水産省）に固定する。
+/* QA 用：ステータス別の代表ファイルを既定テナント（青葉市）に固定する。
    これで既定表示のままでも 10 ステータスすべてが一覧に現れる。 */
 const TENANT_PIN = {
-  /* 既定テナント（〇〇市）に足りないステータスを補う
+  /* 既定テナント（緑ヶ丘町）に足りないステータスを補う
      ※ 分類中／読取待ちは結果一覧に出ないためピン不要（アップロード画面のみの状態） */
   f13: 'tenant02',   // 読取中
   f36: 'tenant02',   // 確認中
   f41: 'tenant02',   // 確認済み
   f45: 'tenant02',   // 出力済み
-  /* 検証テナント（△△町）にも 10 ステータスを揃える */
+  /* 検証テナント（白川村）にも 10 ステータスを揃える */
   f37: 'tenant03',   // 読取失敗
   f40: 'tenant03',   // 確認済み
   f43: 'tenant03',   // 承認済み
   f44: 'tenant03',   // 差戻中
-  /* 農林水産省（tenant01）に足りないステータスを補う */
+  /* 青葉市（tenant01）に足りないステータスを補う */
   f39: 'tenant01',   // 読取失敗
   f12: 'tenant01',   // 読取完了
 };
@@ -1584,12 +1608,12 @@ function tenantOfFile(f) {
   if (TENANT_PIN[f.id]) return TENANT_PIN[f.id] === state.tenant;
   const id = String(f.id);
   const n = parseInt(id.replace(/\D/g, ''), 10) || 0;
-  /* 割り当ては「△△町 → 〇〇市 → 農林水産省」の順に判定（重複しない） */
-  const ends36 = /[36]$/.test(String(n));                                  // △△町（検証テナント）
-  const explicit2 = ['f15', 'f18', 'f19'].includes(id);                   // 〇〇市に置く代表ファイル（承認済み・差戻中を揃える）
+  /* 割り当ては「白川村 → 緑ヶ丘町 → 青葉市」の順に判定（重複しない） */
+  const ends36 = /[36]$/.test(String(n));                                  // 白川村（検証テナント）
+  const explicit2 = ['f15', 'f18', 'f19'].includes(id);                   // 緑ヶ丘町に置く代表ファイル（承認済み・差戻中を揃える）
   if (state.tenant === 'tenant03') return ends36;
   if (state.tenant === 'tenant02') return !ends36 && (n % 5 === 0 || explicit2);
-  return !ends36 && !(n % 5 === 0) && !explicit2;                        // 農林水産省（既定）
+  return !ends36 && !(n % 5 === 0) && !explicit2;                        // 青葉市（既定）
 }
 const inTenant = (f) => tenantOfFile(f);
 
@@ -1662,9 +1686,13 @@ function canSeeCategory(catId, uid) {
   if (typeof isTenantAdmin === 'function' && isTenantAdmin(me)) return true;
   const c = byId(CATEGORY, catId);
   if (!c) return false;
+  /* カテゴリ側で絞らない（未設定＝全員）。帳票タイプ単位の閲覧権限は canSeeLayout /
+     canViewFile 側で見る。ここで二重に絞ると、グループ再編後に一覧が空になる。 */
+  const gids = c.groupIds || [];
+  if (!gids.length) return true;
   const mine = groupsOfUser(me).map((g) => g.id);
   if (!mine.length) return false;
-  return (c.groupIds || []).some((id) => mine.includes(id));
+  return gids.some((id) => mine.includes(id));
 }
 
 /** 帳票タイプのデータ権限。操作グループの多選のみ（所属ユーザー全員が対象）。未設定なら全員。 */
@@ -5138,7 +5166,7 @@ const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容�
 const WATCH_NOTIFY_ON = { fail: '失敗したときだけ', always: '毎回' };
 const WATCH_LOG_LEVELS = ['簡略', '標準', '詳細'];
 
-const watchState = () => (state.watch = state.watch || { sel: null });
+const watchState = () => (state.watch = state.watch || { edit: null });
 const watchTenantName = (id) => (byId(TENANTS, id) || {}).name || id || '—';
 const watchLayoutName = (id) => (id === 'auto' ? '自動判定' : dispLayout(id));
 
@@ -5238,26 +5266,39 @@ function renderWatchForm(x) {
 
 function renderWatch() {
   const w = watchState();
-  if (!byId(WATCHES, w.sel)) w.sel = (WATCHES[0] || {}).id || null;
-  const cur = byId(WATCHES, w.sel);
+  if (w.edit && !byId(WATCHES, w.edit)) w.edit = null;
 
-  const item = (x) => `<div class="watch-item${x.id === w.sel ? ' on' : ''}">
-      <button type="button" class="tgl${x.on ? '' : ' off'}" data-watchon="${x.id}" role="switch" aria-checked="${x.on}" aria-label="有効"><span class="tgl-knob"></span></button>
-      <button type="button" class="watch-item-main" data-watchsel="${x.id}">
-        <span class="watch-item-title">${esc(x.name || '（名称未設定）')}</span>
-        <span class="watch-item-path mono">${esc(x.path || '—')}</span>
-        <span class="watch-item-meta">${esc(watchTenantName(x.tenant))} ／ ${esc(watchLayoutName(x.layout))}</span>
-      </button>
-    </div>`;
+  /* 1 行＝監視フォルダ 1 つ。編集は行の下に開く（画面遷移しない）。 */
+  const row = (x) => {
+    const open = w.edit === x.id;
+    return `<tr class="${open ? 'is-open' : ''}">
+      <td class="watch-on-cell"><button type="button" class="tgl${x.on ? '' : ' off'}" data-watchon="${x.id}" role="switch" aria-checked="${x.on}" aria-label="有効"><span class="tgl-knob"></span></button></td>
+      <td class="watch-name-cell">${esc(x.name || '（名称未設定）')}</td>
+      <td class="watch-path-cell mono">${esc(x.path || '—')}</td>
+      <td>${esc(watchTenantName(x.tenant))}</td>
+      <td class="watch-layout-cell">${esc(watchLayoutName(x.layout))}</td>
+      <td>${esc(WATCH_AFTER[x.after] || '—')}</td>
+      <td class="watch-upd-cell">${esc(x.updatedAt || '—')}</td>
+      <td class="watch-acts-cell"><button class="act-text" data-watchedit="${x.id}">${open ? '閉じる' : '編集'}</button></td>
+    </tr>${open ? `<tr class="watch-detail-row"><td colspan="8">${renderWatchForm(x)}</td></tr>` : ''}`;
+  };
 
   return `${cfgHeader('自動アップロード', `<button class="btn primary" data-watchadd="1"><span class="ico i-add"></span>監視設定を追加</button>`)}
-  <p class="cfg-hint">指定フォルダにファイルが置かれると自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。</p>
-  <div class="watch-page">
-    <aside class="watch-side">
-      <div class="watch-side-head"><span>監視設定</span><span class="muted">${WATCHES.length}</span></div>
-      <div class="watch-side-list">${WATCHES.length ? WATCHES.map(item).join('') : '<div class="watch-side-empty">監視設定がありません</div>'}</div>
-    </aside>
-    <div class="watch-main">${cur ? renderWatchForm(cur) : '<div class="watch-empty">左の一覧から監視設定を選ぶか、「監視設定を追加」から作成してください。</div>'}</div>
+  <p class="cfg-hint">指定フォルダにファイルが置かれると自動で取り込みます。1 行＝監視フォルダ 1 つ。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。</p>
+  <div class="tablewrap watch-table">
+    <table>
+      <thead><tr>
+        <th style="width:64px;text-align:center">有効</th>
+        <th style="width:200px">名称</th>
+        <th>監視パス</th>
+        <th style="width:120px">テナント</th>
+        <th style="width:240px">帳票タイプ</th>
+        <th style="width:80px">処理後</th>
+        <th style="width:140px">最終更新</th>
+        <th style="width:80px;text-align:right">操作</th>
+      </tr></thead>
+      <tbody>${WATCHES.length ? WATCHES.map(row).join('') : '<tr><td colspan="8" class="watch-empty-cell">監視設定がありません。「監視設定を追加」から作成してください。</td></tr>'}</tbody>
+    </table>
   </div>`;
 }
 
@@ -7033,6 +7074,7 @@ function render() {
       })()}
     </div>
   </header>
+  ${renderDemoBar()}
   ${renderTabbar()}
   <main class="layout ${(isHome || isUpload || isMyTasks || isFullPane) ? 'layout-home' : (noSidePane || isTypeList ? 'layout-pane layout-noside' : 'layout-pane')}">
     ${(isHome || isUpload || isMyTasks || isReview || isFullPane || noSidePane || isTypeList) ? '' : (isCfg ? renderCfgNav() : renderSidebarPane())}
@@ -8070,9 +8112,13 @@ function bindCfgPages() {
 
   /* ── 自動アップロード（監視設定） ──────────────────────────────────── */
   if (state.watch) {
-    const curW = byId(WATCHES, state.watch.sel);
-    document.querySelectorAll('[data-watchsel]').forEach((b) => {
-      b.onclick = () => { state.watch.sel = b.dataset.watchsel; render(); };
+    const curW = byId(WATCHES, state.watch.edit);
+    document.querySelectorAll('[data-watchedit]').forEach((b) => {
+      b.onclick = () => {
+        const id = b.dataset.watchedit;
+        state.watch.edit = (state.watch.edit === id) ? null : id;
+        render();
+      };
     });
     document.querySelectorAll('[data-watchon]').forEach((b) => {
       b.onclick = () => {
@@ -8093,14 +8139,14 @@ function bindCfgPages() {
         logLevel: '標準', logPath: '\\\\filesv01\\ログ\\自動アップロード',
         updatedAt: nowStamp(),
       });
-      state.watch.sel = id; render();
+      state.watch.edit = id; render();
     };
     document.querySelectorAll('[data-watchdel]').forEach((b) => {
       b.onclick = () => {
         const x = byId(WATCHES, b.dataset.watchdel); if (!x) return;
         if (!window.confirm(`「${x.name}」を削除しますか？`)) return;
         WATCHES = WATCHES.filter((y) => y.id !== x.id);
-        state.watch.sel = (WATCHES[0] || {}).id || null;
+        state.watch.edit = null;
         render(); toast('監視設定を削除しました');
       };
     });
