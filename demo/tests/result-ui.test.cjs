@@ -1147,18 +1147,20 @@ test('ticket permission table gates confirm per layout', () => {
   assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });
 
-test('自動アップロード: 1 画面 1 設定で 7 セクションを描画する', () => {
+test('自動アップロード: 1 画面 1 設定で 6 セクションを描画する', () => {
   const run = app();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視先', '取込先', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知', 'ログ']);
+  assert.deepEqual(heads, ['監視先', '取込先', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知']);
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit|watch-table/);
-  /* 顧客要件の設定項目（テナント切替は持たない） */
-  for (const t of ['監視パス', '対象ファイル', '処理開始ファイル', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL', '詳細度']) {
+  /* 顧客要件の設定項目（テナント切替・ログ設定は持たない） */
+  for (const t of ['監視パス', '対象ファイル', '処理開始ファイル', '帳票タイプ', '取込成功時', '同一ファイルを除外', '再実行回数', '宛先メール', 'Webhook URL']) {
     assert.ok(html.includes(t), t);
   }
   assert.doesNotMatch(html, /テナント/);
+  /* ログ設定はログ設定ページへ移した */
+  assert.doesNotMatch(html, /data-wf="logLevel"|data-wf="logPath"|ログ<\/h3>/);
   /* 監視パスは複数。行ごとに有効／無効のトグルを持つ */
   assert.equal((html.match(/class="wp-row/g) || []).length, run('WATCH.paths.length'));
   assert.equal((html.match(/data-watchpathon=/g) || []).length, run('WATCH.paths.length'));
@@ -1171,5 +1173,18 @@ test('自動アップロード: 移動先は「移動」を選んだときだけ
   assert.match(html, /data-wf="afterDir"/);
   html = run('WATCH.after = "del"; renderWatch()');
   assert.doesNotMatch(html, /data-wf="afterDir"/);
-  assert.equal((html.match(/class="watch-sec"/g) || []).length, 7);
+  assert.equal((html.match(/class="watch-sec"/g) || []).length, 6);
+});
+
+test('ログ設定: 出力設定（詳細度・保存先）はログ画面に持つ', () => {
+  const run = app();
+  const html = run('renderLogs()');
+  assert.match(html, /log-cfg/);
+  assert.match(html, /data-logcfg="level"/);
+  assert.match(html, /data-logcfg="path"/);
+  assert.match(html, /data-logsave/);
+  for (const t of ['詳細度', '保存先', 'ログ出力設定']) assert.ok(html.includes(t), t);
+  /* ログの閲覧テーブルは残っている */
+  assert.match(html, /操作日時/);
+  assert.equal((html.match(/<tr>/g) || []).length, run('SECURITY.logs.length') + 1);
 });

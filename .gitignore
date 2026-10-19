@@ -20,6 +20,7 @@ __pycache__/
 # 一時ファイル（検証用スクリプト等）
 _*.mjs
 tmp/
+demo/shots/
 
 # 別リポジトリ（React プロトタイプ）は独自リモートを持つため除外
 #   origin: https://github.com/lialuong/llm-ocr-nl.git

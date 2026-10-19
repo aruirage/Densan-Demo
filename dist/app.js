@@ -5397,6 +5397,18 @@ function renderSecurity() {
   </div>`;
 }
 
+/** ログ出力の設定。自動アップロードの設定から切り離し、この画面で管理する。 */
+let LOG_CFG = {
+  level: '標準',
+  path: '\\\\filesv01\\ログ',
+  updatedAt: '2026-10-16 09:12:30',
+};
+const LOG_LEVELS = [
+  ['簡略', '取り込みの成否だけ'],
+  ['標準', '成否＋ファイル名・帳票タイプ'],
+  ['詳細', '上記＋処理時間・判定の内訳'],
+];
+
 /** ログ設定 */
 function renderLogs() {
   const body = SECURITY.logs.map((l, i) => `<tr>
@@ -5407,6 +5419,14 @@ function renderLogs() {
     <td><span class="st ${l.result === '成功' ? 'ok' : 'ng'}"><span class="dot"></span>${esc(l.result)}</span></td>
     <td class="hist done">${esc(l.note)}</td></tr>`).join('');
   return `${cfgHeader('ログ設定', `<button class="btn" data-logexport="1"><span class="ico i-export"></span>ダウンロード</button>`)}
+  <div class="cfg-filters log-cfg">
+    <span class="log-cfg-h">ログ出力設定</span>
+    <div class="field"><span class="lbl">詳細度</span><select class="fld" data-logcfg="level">${LOG_LEVELS.map(([v, d]) => `<option value="${esc(v)}" ${LOG_CFG.level === v ? 'selected' : ''} title="${esc(d)}">${esc(v)}</option>`).join('')}</select></div>
+    <div class="field log-cfg-path"><span class="lbl">保存先</span><input class="fld mono" data-logcfg="path" value="${esc(LOG_CFG.path)}" placeholder="\\\\filesv01\\ログ" /></div>
+    <span class="spacer"></span>
+    <span class="log-cfg-note">${esc((LOG_LEVELS.find(([v]) => v === LOG_CFG.level) || [])[1] || '')}${LOG_CFG.updatedAt ? ` ／ 最終更新 ${esc(LOG_CFG.updatedAt)}` : ''}</span>
+    <button class="btn primary" data-logsave="1"><span class="ico i-save"></span>保存</button>
+  </div>
   <div class="cfg-filters">
     <div class="field"><span class="lbl">期間</span><div class="di"><input class="fld date" type="date" value="2026-10-01" /><span class="sep">-</span><input class="fld date" type="date" value="2026-10-14" /></div></div>
     <div class="field"><span class="lbl">メールアドレス</span><input class="fld" placeholder="入力してください" /></div>
@@ -5707,14 +5727,12 @@ let WATCH = {
   dupGuard: true, dupMethod: 'meta',
   retry: 3, retryGap: 5,
   notify: true, notifyOn: 'fail', notifyMail: 'admin@itso.co.jp', notifyUrl: '',
-  logLevel: '標準', logPath: '\\\\filesv01\\ログ\\自動アップロード',
   updatedAt: '2026-10-16 09:12:30',
 };
 
 const WATCH_AFTER = { move: '移動', del: '削除', keep: 'そのまま' };
 const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容ハッシュ（SHA-256）' };
 const WATCH_NOTIFY_ON = { fail: '失敗したときだけ', always: '毎回' };
-const WATCH_LOG_LEVELS = ['簡略', '標準', '詳細'];
 
 const watchLayoutName = (id) => (id === 'auto' ? '自動判定' : dispLayout(id));
 
@@ -5800,14 +5818,6 @@ function renderWatch() {
           ${row('通知条件', watchSelect('notifyOn', Object.keys(WATCH_NOTIFY_ON).map((k) => [k, WATCH_NOTIFY_ON[k]]), x.notifyOn))}
           ${row('宛先メール', `<input class="fld" data-wf="notifyMail" value="${esc(x.notifyMail)}" placeholder="admin@example.jp" />`)}
           ${row('Webhook URL', `<input class="fld" data-wf="notifyUrl" value="${esc(x.notifyUrl)}" placeholder="任意" />`)}
-        </div>
-      </section>
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">ログ</h3>
-        <div class="watch-fields">
-          ${row('詳細度', watchSelect('logLevel', WATCH_LOG_LEVELS.map((v) => [v, v]), x.logLevel))}
-          ${row('保存先', `<input class="fld mono" data-wf="logPath" value="${esc(x.logPath)}" />`, true)}
         </div>
       </section>
 
@@ -8358,7 +8368,7 @@ function renderReview() {
         <div class="review-foot nl-review-foot${isApproveUi ? ' is-approve' : ''}">
           <div class="rv-foot-actions">
       <button type="button" class="btn" id="rvClose">閉じる</button>
-            ${fl.canSave ? `<button type="button" class="btn${saveBtnPrimary ? ' primary' : ''}" id="rvSave">保存</button>` : ''}
+            <button type="button" class="btn${saveBtnPrimary ? ' primary' : ''}" id="rvSave">保存</button>
             ${showFixDoneBtn ? '<button type="button" class="btn confirm primary" id="rvFixDone">修正完了</button>' : ''}
             ${showConfirmBtn ? '<button type="button" class="btn confirm primary" id="rvConfirm">確認完了</button>' : ''}
             ${footCta}
@@ -9249,6 +9259,20 @@ function bindCfgPages() {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `操作ログ_${SECURITY.logs.length}件.csv`;
     document.body.appendChild(a); a.click(); a.remove();
     toast(`${SECURITY.logs.length} 件のログをダウンロードしました`);
+  };
+  /* ログ出力設定（詳細度・保存先）。入力は即時反映、保存で更新日時を更新する。 */
+  document.querySelectorAll('[data-logcfg]').forEach((el) => {
+    el.onchange = () => {
+      LOG_CFG[el.dataset.logcfg] = el.value;
+      render();
+    };
+  });
+  const logSave = document.querySelector('[data-logsave]');
+  if (logSave) logSave.onclick = () => {
+    if (!String(LOG_CFG.path || '').trim()) { toast('保存先を入力してください'); return; }
+    LOG_CFG.updatedAt = nowStamp();
+    render();
+    toast('ログ出力設定を保存しました');
   };
 
   /* ── 帳票権限（業務レベル）：セルをクリックして担当を編集 ── */
