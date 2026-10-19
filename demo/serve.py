@@ -187,6 +187,12 @@ var GROUP_OPS = {
     { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u2', 'u6', 'u7'], parentId: 'groot' },
     { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u1', 'u3', 'u5', 'u8'], parentId: 'groot' },
     { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: '承認（1 段目・2 段目）', userIds: ['u4', 'u5'], parentId: 'groot' },
+    /* 新設計（9 グループ）で追加した 5 つ */
+    { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u1'], parentId: 'groot' },
+    { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: '一覧の閲覧のみ（操作なし）', userIds: ['u2'], parentId: 'groot' },
+    { id: 'gk', name: 'AI分類結果修正グループ', kind: 'AI分類結果修正', roles: ['AI分類結果修正'], desc: 'AI 分類結果（帳票タイプ）の修正', userIds: ['u2', 'u3'], parentId: 'groot' },
+    { id: 'gr', name: '読取実行グループ', kind: '読取', roles: ['読取'], desc: 'OCR 読取の実行', userIds: ['u6'], parentId: 'groot' },
+    { id: 'gf', name: 'OCR結果修正グループ', kind: 'OCR結果修正', roles: ['OCR結果修正'], desc: 'OCR 結果の修正（確認は不可）', userIds: ['u3'], parentId: 'groot' },
     { id: 'gm', name: '管理者グループ', kind: all.join('、'), roles: all.slice(), desc: 'すべての権限', userIds: ['u1', 'u9'], parentId: 'groot' }
   ];
   list.length = 0;
