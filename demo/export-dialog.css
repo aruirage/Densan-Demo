@@ -491,3 +491,7 @@ thead th{ background:#eef5fd !important; }
 
 /* ══ 案 A の前段：監視ルート表の「処理済フォルダ」列は隠す（処理後セクションへ移す予定） ══ */
 .watch-table.wr-roots th:nth-child(3), .watch-table.wr-roots td:nth-child(3){ display:none !important; }
+
+/* ══ 「処理後のファイル」のラジオ（移動/削除/そのまま）と移動先は非表示（客户：移動を廃止し、監視パス単位の選択に統合） ══ */
+.watch-radios:has([data-wf-radio="after"]){ display:none !important; }
+[data-wf-done]{ display:none !important; }
