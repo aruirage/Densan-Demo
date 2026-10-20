@@ -480,6 +480,7 @@ thead th{ background:#eef5fd !important; }
 
 /* ══ 自動アップロード：帳票タイプ別ルールの「ファイル名(3)」「大小区別(5)」を非表示（客户） ══ */
 .watch-table.wr-rules th:nth-child(3), .watch-table.wr-rules td:nth-child(3),
+.watch-table.wr-rules th:nth-child(4), .watch-table.wr-rules td:nth-child(4),
 .watch-table.wr-rules th:nth-child(5), .watch-table.wr-rules td:nth-child(5){
   display:none !important;
 }
