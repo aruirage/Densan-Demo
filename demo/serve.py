@@ -1646,31 +1646,6 @@ try {
     if (!MENU_PERMS[id]) MENU_PERMS[id] = ['home', 'result'];
   });
 } catch (_e) { /* ignore */ }
-/* ── 案A：処理後のファイルに「移動先」を統合 ───────────── */
-try {
-  function __syncAfter(i2, v2) { if (!i2) return; var d2 = v2 !== 'move'; i2.disabled = d2; i2.style.opacity = d2 ? '0.5' : '1'; }
-  function __applyAfterUI() {
-    var rs = document.querySelectorAll('[data-wf-radio="after"]');
-    if (!rs.length) return;
-    var sec = rs[0].closest('.watch-sec');
-    if (!sec || sec.querySelector('[data-wf-done]')) return;
-    var ck = document.querySelector('[data-wf-radio="after"]:checked');
-    var cur = (ck && ck.value) || 'move';
-    var rt = (typeof WATCH !== 'undefined' && WATCH.roots && WATCH.roots[0]) || {};
-    var wr = document.createElement('div');
-    wr.className = 'wf';
-    wr.innerHTML = '<span class="wf-label">移動先（処理済フォルダ）</span><div class="wf-ctl wide"><input class="fld mono" data-wf-done placeholder="処理済フォルダのパス" value="' + (rt.doneDir || '') + '"></div>';
-    sec.appendChild(wr);
-    var i2 = wr.querySelector('[data-wf-done]');
-    __syncAfter(i2, cur);
-    i2.addEventListener('input', function () { if (typeof WATCH !== 'undefined' && WATCH.roots[0]) WATCH.roots[0].doneDir = i2.value; });
-  }
-  document.addEventListener('change', function (ev) {
-    var t2 = ev.target;
-    if (t2 && t2.getAttribute && t2.getAttribute('data-wf-radio') === 'after') __syncAfter(document.querySelector('[data-wf-done]'), t2.value);
-  }, true);
-  setInterval(__applyAfterUI, 800);
-} catch (_e) { /* ignore */ }
 """
     if '追加ロール（9 組設計）' not in src:
         src = src + seed
@@ -2862,12 +2837,9 @@ try {
     if 'メニュー権限の配分（9 ロール設計）' not in patched:
         patched = patched + _menufix
     # 操作権限ツリーに「出力」を追加（op-export）
-    _op_old = "{ id: 'op-download', label: 'ダウンロード' }"
-    if _op_old in patched and 'op-rename' not in patched:
-        patched = patched.replace(_op_old, _op_old
-            + " , { id: 'op-export', label: '出力' }"
-            + " , { id: 'op-rename', label: 'フォルダ名変更' }"
-            + " , { id: 'op-move', label: 'フォルダ移動' }", 1)
+    if 'op-export' not in patched:
+        patched = patched.replace("{ id: 'op-download', label: 'ダウンロード' }",
+                                  "{ id: 'op-download', label: 'ダウンロード' }, { id: 'op-export', label: '出力' }", 1)
     # フォルダ名変更（ツリー）の権限ノードを追加
     if 'op-rename' not in patched:
         patched = patched.replace("{ id: 'op-export', label: '出力' }",
