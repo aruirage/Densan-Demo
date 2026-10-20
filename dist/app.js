@@ -6031,7 +6031,7 @@ let WATCH = {
   after: 'move',
   dupGuard: true, dupMethod: 'meta',
   retry: 3, retryGap: 5,
-  notify: true, notifyOn: 'fail', notifyMailOn: true, notifyWebOn: false,
+  notify: true, notifyOn: 'fail', notifyMailOn: true, notifyWebOn: true,
   notifyMail: 'admin@itso.co.jp', notifyUrl: '',
   updatedAt: '2026-10-16 09:12:30',
 };

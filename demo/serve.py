@@ -1642,6 +1642,8 @@ def apply_roles_9(src):
               'value="${esc((WATCH.roots && WATCH.roots[0] && WATCH.roots[0].doneDir) || \'\')}" '
               '${x.after === \'move\' ? \'\' : \'disabled\'} /></div>')
     src = src.replace(_j_old, _j_new, 1)
+    # 通知方法の選択は不要（客户）：Webhook を既定で有効にし、検証を通す
+    src = src.replace("notifyWebOn: false", "notifyWebOn: true")
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {

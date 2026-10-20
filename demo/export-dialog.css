@@ -498,3 +498,6 @@ thead th{ background:#eef5fd !important; }
 
 /* ══ 自動アップロード：通知チャネルの「メール」を非表示（客户） ══ */
 label:has(> [data-wf-check="notifyMailOn"]){ display:none !important; }
+
+/* ══ 自動アップロード：通知方法の選択は不要（客户） ══ */
+.watch-checks:has([data-wf-check="notifyWebOn"]){ display:none !important; }
