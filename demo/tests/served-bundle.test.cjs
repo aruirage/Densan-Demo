@@ -151,3 +151,49 @@ test('served bundle: 権限表のセルに内部グループ ID が出ていな�
   const leaked = (html.match(/>\s*g\d+\s*</g) || []).map((s) => s.trim());
   assert.deepEqual(leaked, [], `内部 ID がそのまま出ている: ${leaked.slice(0, 5).join(', ')}`);
 });
+
+test('served bundle: ステータス・詳細条件とも「未出力／出力未済」を出さない', () => {
+  const run = servedApp();
+  const html = run('state.filterOpen = true; renderFilters()');
+  const sel = (html.match(/data-fs="status"[\s\S]*?<\/select>/) || [])[0] || '';
+  assert.ok(sel, 'ステータスの絞り込みが見つからない');
+  assert.doesNotMatch(sel, /notExported|未出力|出力未済/);
+  assert.doesNotMatch(html, /data-fs="exportPending"|未出力|出力未済/);
+});
+
+test('served bundle: 自動アップロードは監視ルートごとの処理後と Webhook URL 直接入力', () => {
+  const run = servedApp();
+  const html = run('renderWatch()');
+  const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
+  assert.deepEqual(heads, ['監視ルート（テナント）', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'エラー通知']);
+  assert.equal((html.match(/data-wroot-after=/g) || []).length, run('WATCH.roots.length'));
+  assert.doesNotMatch(html, /data-wroot-done=|宛先メール|data-wf="notifyMail"/);
+  assert.doesNotMatch(html, /通知方法|data-wf-check/);
+  assert.match(html, /Webhook URL/);
+  assert.match(html, /data-wf="notifyUrl"/);
+});
+
+test('served bundle: 絞り込みは既定 1 行（ファイル名・ステータス・帳票タイプ）＋詳細 2 行', () => {
+  const run = servedApp();
+  const collapsed = run('state.filterOpen = false; renderFilters()');
+  assert.match(collapsed, /id="filtName"/);
+  assert.match(collapsed, /data-fs="status"/);
+  assert.match(collapsed, /data-fs="layout"/);
+  assert.doesNotMatch(collapsed, /data-fs="biz"/);
+  assert.doesNotMatch(collapsed, /id="filtRvq"/);
+  assert.equal((collapsed.match(/class="result-filter-row/g) || []).length, 1);
+
+  const open = run('state.filterOpen = true; renderFilters()');
+  assert.equal((open.match(/data-fs="biz"/g) || []).length, 1);
+  assert.equal((open.match(/data-fs="layout"/g) || []).length, 1);
+  assert.match(open, /id="filtRvq"/);
+  assert.match(open, /読取内容/);
+  assert.equal((open.match(/class="result-filter-row/g) || []).length, 3);
+
+  /* 読取内容（OCR 項目値・修正値）で絞り込める */
+  run('state.filters = defaultFilters(); state.q = ""; state.tab = "all"; state.activeNode = { type: "all", id: "all" };');
+  const fid = JSON.parse(run('JSON.stringify(visibleFiles()[0].id)'));
+  run(`state.reviewDirty[${JSON.stringify(fid)}] = Object.assign({}, state.reviewDirty[${JSON.stringify(fid)}], { move_type: "ユニーク読取値" });`);
+  run('state.filters.rvq = "ユニーク読取値"; state.resultPage = 1');
+  assert.deepEqual(JSON.parse(run('JSON.stringify(visibleFiles().map((f) => f.id))')), [fid]);
+});

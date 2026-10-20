@@ -15,37 +15,41 @@ function app() {
   vm.runInContext(source.slice(0, source.lastIndexOf('\napplyHash();')), ctx);
   return (code) => vm.runInContext(code, ctx);
 }
-test('collapsed result filters show hierarchy row; expanded adds people and all dates', () => {
+test('collapsed result filters show one row (filename/status/type); expanded adds scene, people and dates', () => {
   const run = app();
   let html = run('state.filterOpen = false; renderFilters()');
   assert.match(html, /class="result-filters-body"/);
   assert.match(html, /class="result-filter-row result-search-row"/);
   assert.equal((html.match(/class="result-filter-row/g) || []).length, 1);
   for (const id of ['searchBtn', 'resetBtn']) assert.ok(html.includes(`id="${id}"`), id);
-  /* ファイル一覧の絞り込みは単一選択（複数選択ドロップダウンは使わない） */
+  /* 既定行は「ファイル名・ステータス・帳票タイプ」の 3 つ */
   assert.match(html, /<select class="fld fsel" data-fs="status"/);
-  assert.match(html, /<select class="fld fsel" data-fs="biz"/);
-  assert.match(html, /<select class="fld fsel" data-fs="layout"/);
-  assert.doesNotMatch(html, /data-msbtn|data-ms="|data-opt=/);
-  assert.match(html, /業務シーン/);
-  assert.match(html, /帳票タイプ/);
-  assert.match(html, /もっと見る/);
-  /* 折叠行：業務シーン → 帳票タイプ（上位類型・部署は削除） */
-  assert.ok(html.indexOf('data-fs="biz"') < html.indexOf('data-fs="layout"'));
+  assert.match(html, /id="filtName"/);
+  assert.match(html, /data-fs="layout"/);
+  assert.ok(html.indexOf('id="filtName"') < html.indexOf('data-fs="status"'));
+  assert.ok(html.indexOf('data-fs="status"') < html.indexOf('data-fs="layout"'));
+  assert.doesNotMatch(html, /data-fs="biz"/);
   assert.doesNotMatch(html, /data-fs="category"|data-fs="dept"/);
-  assert.doesNotMatch(html, /帳票カテゴリ|部署/);
-  assert.doesNotMatch(html, /id="fName"|ファイル名/);
+  assert.doesNotMatch(html, /業務シーン/);
+  assert.match(html, /もっと見る/);
+  assert.doesNotMatch(html, /data-msbtn|data-ms="|data-opt=/);
   assert.doesNotMatch(html, /id="createdFrom"|id="readFrom"/);
   assert.doesNotMatch(html, /data-fs="confirmedBy"|data-fs="approvedBy"|data-fs="createdBy"/);
   assert.doesNotMatch(html, /class="searchline"/);
+  assert.doesNotMatch(html, /id="filtRvq"|読取内容/);
 
   html = run('state.filterOpen = true; renderFilters()');
   assert.match(html, /result-filters is-open/);
   assert.equal((html.match(/class="result-filter-row/g) || []).length, 3);
   assert.doesNotMatch(html, /data-fs="dept"|部署/);
+  assert.match(html, /data-fs="biz"/);
+  assert.match(html, /業務シーン/);
+  assert.match(html, /data-fs="layout"/);
+  assert.match(html, /帳票タイプ/);
   assert.match(html, /data-fs="createdBy"/);
   assert.match(html, /data-fs="processedBy"/);
-  assert.match(html, /data-fs="exportPending"/);
+  /* ステータス・詳細条件とも「未出力／出力未済」は持たない */
+  assert.doesNotMatch(html, /data-fs="exportPending"|未出力|出力未済/);
   /* 5 状態に絞ったので確認者／承認者の絞り込みは持たない */
   assert.doesNotMatch(html, /data-fs="confirmedBy"|data-fs="approvedBy"|data-fs="operator"/);
   assert.doesNotMatch(html, /確認者|承認者|処理ユーザ|更新者/);
@@ -53,13 +57,19 @@ test('collapsed result filters show hierarchy row; expanded adds people and all 
   assert.match(html, /処理者/);
   assert.doesNotMatch(html, /id="resultQuery"|読取結果検索/);
   assert.match(html, /result-date-row/);
+  /* 既定行（ファイル名／ステータス／帳票タイプ）→ 詳細行（業務シーン／作成者／処理者）の順 */
+  assert.ok(html.indexOf('data-fs="layout"') < html.indexOf('data-fs="biz"'));
+  assert.ok(html.indexOf('data-fs="biz"') < html.indexOf('data-fs="createdBy"'));
   for (const id of ['createdFrom', 'createdTo', 'updatedFrom', 'updatedTo']) {
     assert.ok(html.includes(`id="${id}"`), id);
   }
   assert.match(html, /作成日時/);
   assert.match(html, /処理日時/);
   assert.match(html, /閉じる/);
-  assert.doesNotMatch(html, /id="fName"|ファイル名/);
+  assert.match(html, /id="filtName"/);
+  /* 読取内容（OCR 項目値）検索は詳細行に置く */
+  assert.match(html, /id="filtRvq"/);
+  assert.match(html, /読取内容/);
 });
 test('result table has thirteen columns, compact rows, four browse-only action slots and page jump', () => {
   const run = app();
@@ -95,6 +105,38 @@ test('result table has thirteen columns, compact rows, four browse-only action s
   assert.match(row, /i-download/);
   assert.doesNotMatch(row, /data-act="approve"|data-act="reapprove"/);
   assert.match(row, /class="fn link"/);
+});
+test('file tree shows no counts and the table has no scope-count line', () => {
+  const run = app();
+  const tree = run('renderTree()');
+  assert.doesNotMatch(tree, /class="cnt"/);
+  assert.doesNotMatch(tree, /<span class="cnt">\d+<\/span>/);
+  const table = run('renderTable()');
+  assert.doesNotMatch(table, /result-scope-head|直属 \d+ 件|配下含む \d+ 件/);
+});
+test('filename box filters by the displayed file name', () => {
+  const run = app();
+  const total = run('visibleFiles().length');
+  run('state.filters.name = "住民"; state.resultPage = 1');
+  const narrowed = JSON.parse(run('JSON.stringify(visibleFiles().map((f) => dispFileName(f.id)))'));
+  assert.ok(narrowed.length > 0 && narrowed.length < total);
+  assert.ok(narrowed.every((n) => n.includes('住民')));
+  run('state.filters.name = "";');
+  assert.equal(run('visibleFiles().length'), total);
+});
+test('read content box filters by OCR field values (including corrections)', () => {
+  const run = app();
+  const total = run('visibleFiles().length');
+  run('state.filters = defaultFilters(); state.q = ""; state.tab = "all"; state.activeNode = { type: "all", id: "all" };');
+  /* 表示中の 1 件だけに固有の修正値を入れ、その値で絞り込めることを見る */
+  const fid = JSON.parse(run('JSON.stringify(visibleFiles()[0].id)'));
+  run(`state.reviewDirty[${JSON.stringify(fid)}] = Object.assign({}, state.reviewDirty[${JSON.stringify(fid)}], { move_type: "ユニーク読取値" });`);
+  run('state.filters.rvq = "ユニーク読取値"; state.resultPage = 1');
+  assert.deepEqual(JSON.parse(run('JSON.stringify(visibleFiles().map((f) => f.id))')), [fid]);
+  run('state.filters.rvq = "存在しない読取値";');
+  assert.equal(run('visibleFiles().length'), 0);
+  run('state.filters.rvq = "";');
+  assert.equal(run('visibleFiles().length'), total);
 });
 test('tree builds from masters; files stay in the right pane; view mode and reorder', () => {
   const run = app();
@@ -1151,21 +1193,22 @@ test('ticket permission table gates confirm per layout', () => {
   assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });
 
-test('自動アップロード: 監視ルートと帳票タイプ別ルールの 6 セクションを描画する', () => {
+test('自動アップロード: 監視ルートと帳票タイプ別ルールの 5 セクションを描画する', () => {
   const run = app();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視ルート（テナント）', '帳票タイプ別ルール', '処理後のファイル', '二重取込防止', '失敗時の再実行', 'エラー通知']);
+  assert.deepEqual(heads, ['監視ルート（テナント）', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'エラー通知']);
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit/);
 
-  /* 監視ルート：1 行＝1 テナント。行ごとに有効／無効のトグルを持つ */
+  /* 監視ルート：1 行＝1 テナント。行ごとに有効／無効のトグルと処理後のファイルを持つ */
   assert.equal((html.match(/class="wr-root/g) || []).length, run('WATCH.roots.length'));
   assert.equal((html.match(/data-wrooton=/g) || []).length, run('WATCH.roots.length'));
   assert.match(html, /data-wrootadd/);
   assert.match(html, /data-wroot-tenant=/);
   assert.match(html, /data-wroot-path=/);
-  assert.match(html, /data-wroot-done=/);
+  assert.match(html, /data-wroot-after=/);
+  assert.match(html, /処理後のファイル/);
 
   /* 帳票タイプ別ルール：帳票設定の帳票タイプ 1 行。フォルダ名・ファイル名・処理開始・大小区別 */
   assert.equal(run('CATEGORY.length'), 9);
@@ -1188,24 +1231,40 @@ test('自動アップロード: 監視ルートと帳票タイプ別ルールの
   assert.match(html, /監視対象 <b>\d+<\/b> 本/);
   assert.equal(run('WATCH.roots.filter((r) => r.on).length * WATCH.rules.filter((r) => r.on).length'), 18);
 
-  /* 共通設定は従来どおり */
-  for (const t of ['取込成功時', '同一ファイルを除外', '再実行回数', '通知方法', '宛先メール']) {
+  /* 共通設定（メール通知・宛先メール・通知方法の選択は廃止。Webhook URL を直接入力） */
+  for (const t of ['同一ファイルを除外', '再実行回数', 'Webhook URL']) {
     assert.ok(html.includes(t), t);
   }
+  assert.doesNotMatch(html, /宛先メール|data-wf="notifyMail"|通知方法|data-wf-check/);
   /* ログ設定はログ設定ページへ移した */
   assert.doesNotMatch(html, /data-wf="logLevel"|data-wf="logPath"|ログ<\/h3>/);
 });
 
-test('自動アップロード: 処理済フォルダは「移動」を選んだときだけ入力できる', () => {
+test('自動アップロード: 監視ルートごとに処理後のファイル（削除／そのまま）を選べる', () => {
   const run = app();
-  let html = run('WATCH.after = "move"; renderWatch()');
-  assert.doesNotMatch(html, /data-wroot-done="[^"]*"[^>]*disabled/);
-  html = run('WATCH.after = "del"; renderWatch()');
-  assert.match(html, /data-wroot-done="[^"]*"[^>]*disabled/);
-  assert.equal((html.match(/class="watch-sec"/g) || []).length, 6);
+  const html = run('renderWatch()');
+  assert.equal((html.match(/data-wroot-after=/g) || []).length, run('WATCH.roots.length'));
+  assert.match(html, /<option value="del"[^>]*>削除<\/option>/);
+  assert.match(html, /<option value="keep"[^>]*>そのまま<\/option>/);
+  assert.doesNotMatch(html, /data-wroot-done=|処理済フォルダ|data-wf-radio/);
+  assert.equal((html.match(/class="watch-sec"/g) || []).length, 5);
+  /* 選択値は行ごとに保持される */
+  run('WATCH.roots[0].after = "del"; WATCH.roots[1].after = "keep";');
+  const h2 = run('renderWatch()');
+  assert.match(h2, /data-wroot-after="r1"[\s\S]*?<option value="del" selected/);
+  assert.match(h2, /data-wroot-after="r2"[\s\S]*?<option value="keep" selected/);
   /* 保存時にフォルダ名の重複を弾く */
-  run('WATCH.after = "move"; WATCH.rules[0].folder = WATCH.rules[1].folder;');
+  run('WATCH.rules[0].folder = WATCH.rules[1].folder;');
   assert.equal(run('WATCH.rules.filter((r) => r.on).map((r) => r.folder.trim().toLowerCase()).filter((n, i, a) => a.indexOf(n) !== i).length'), 1);
+});
+
+test('エラー通知: 通知方法の選択は持たず、Webhook URL を直接入力する', () => {
+  const run = app();
+  const html = run('renderWatch()');
+  assert.match(html, /Webhook URL/);
+  assert.match(html, /data-wf="notifyUrl"/);
+  assert.doesNotMatch(html, /通知方法|data-wf-check/);
+  assert.doesNotMatch(html, /data-wf="notifyMail"|宛先メール|>メール</);
 });
 
 test('ログ設定: 出力設定（詳細度・保存先）はログ画面に持つ', () => {
@@ -1323,21 +1382,6 @@ test('グループの権限が複数のとき、所属ユーザーの実効権�
   assert.deepEqual(JSON.parse(run('JSON.stringify(rolesOfUser("u6"))')), ['R4', 'R3']);
   /* R3 の確認が効く（R4 だけでは確認できない） */
   assert.equal(run('userHasOp("confirm","u6")'), true);
-});
-
-test('エラー通知: 通知方法を選んだときだけ宛先の入力欄が出る', () => {
-  const run = app();
-  let html = run('WATCH.notifyMailOn = true; WATCH.notifyWebOn = false; renderWatch()');
-  assert.match(html, /data-wf="notifyMail"/);
-  assert.doesNotMatch(html, /data-wf="notifyUrl"/);
-  html = run('WATCH.notifyMailOn = false; WATCH.notifyWebOn = true; renderWatch()');
-  assert.doesNotMatch(html, /data-wf="notifyMail"/);
-  assert.match(html, /data-wf="notifyUrl"/);
-  /* 両方選べる */
-  html = run('WATCH.notifyMailOn = true; WATCH.notifyWebOn = true; renderWatch()');
-  assert.match(html, /data-wf="notifyMail"/);
-  assert.match(html, /data-wf="notifyUrl"/);
-  assert.equal((html.match(/data-wf-check=/g) || []).length, 2);
 });
 
 test('帳票タイプ設定: 4 ステップ（出力設定は Step5 から外し、列は AI 読取設定・文字コードは実行時ダイアログ）', () => {

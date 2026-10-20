@@ -325,14 +325,14 @@ thead th{ background:#eef5fd !important; }
   -webkit-appearance:checkbox;
 }
 
-/* ══ 絞り込み欄のレイアウト：3 行で横幅を均等に使う（空きを減らす） ══ */
+/* ══ 絞り込み欄のレイアウト：1 行 3 項目（既定行は ファイル名／ステータス／帳票タイプ） ══ */
 .result-filter-row.result-search-row,
 .result-filter-row#resultAdvanced{
   display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important;
   gap:10px 18px !important; align-items:center !important;
 }
 .result-filter-row.result-date-row{
-  display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important;
   gap:10px 18px !important; align-items:center !important;
 }
 .result-filter-row .field{ display:flex !important; align-items:center !important; min-width:0 !important; gap:8px; }
@@ -488,16 +488,6 @@ thead th{ background:#eef5fd !important; }
 /* ══ 自動アップロード：監視ルート表の「テナント」列を非表示（客户） ══ */
 .watch-table.wr-roots th:nth-child(1), .watch-table.wr-roots td:nth-child(1){ display:none !important; }
 
+/* 監視ルートごとの「処理後のファイル」（削除／そのまま）は 3 列目に表示する */
 
-/* ══ 案 A の前段：監視ルート表の「処理済フォルダ」列は隠す（処理後セクションへ移す予定） ══ */
-.watch-table.wr-roots th:nth-child(3), .watch-table.wr-roots td:nth-child(3){ display:none !important; }
-
-/* ══ 「処理後のファイル」のラジオ（移動/削除/そのまま）と移動先は非表示（客户：移動を廃止し、監視パス単位の選択に統合） ══ */
-.watch-radios:has([data-wf-radio="after"]){ display:none !important; }
-[data-wf-done]{ display:none !important; }
-
-/* ══ 自動アップロード：通知チャネルの「メール」を非表示（客户） ══ */
-label:has(> [data-wf-check="notifyMailOn"]){ display:none !important; }
-
-/* ══ 自動アップロード：通知方法の選択は不要（客户） ══ */
-.watch-checks:has([data-wf-check="notifyWebOn"]){ display:none !important; }
+/* エラー通知は通知方法の選択を持たず、Webhook URL だけを入力する */

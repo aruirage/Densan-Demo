@@ -1629,21 +1629,8 @@ def apply_roles_9(src):
     src = src.replace("user: 'xiaoying'", "user: '佐藤 一郎'")
     # テナントは 1 つに固定（客户：既定は 1 つでよい）
     src = re.sub(r"const TENANTS = \[[\s\S]*?\];", "const TENANTS = [ { id: 'tenant1', name: '青葉市', note: '本番' } ];", src, count=1)
-    # 監視ルートは 1 つだけ（客户）
-    src = re.sub(r"roots: \[[\s\S]*?\],\n", "roots: [ { id: 'r1', tenant: 'tenant1', path: '\\\\\\\\filesv01\\取込', doneDir: '\\\\\\\\filesv01\\処理済', on: true }, ],\n", src, count=1)
-    # 案A：処理後のファイルに「移動先」を同じセクションへ（移動のときだけ有効）
-    _a_old = '<input type="radio" name="wafter" data-wf-radio="after" value="${v}" ${x.after === v ? \'checked\' : \'\'} />'
-    _a_new = ('<input type="radio" name="wafter" data-wf-radio="after" value="${v}" ${x.after === v ? \'checked\' : \'\'} '
-              'onclick="var d=document.querySelector(\'[data-wf-done]\');if(d){d.disabled=this.value!==\'move\';d.style.opacity=d.disabled?\'.5\':\'1\';}" />')
-    src = src.replace(_a_old, _a_new, 1)
-    _j_old = 'WATCH_AFTER[v]}</label>`).join(\'\')}'
-    _j_new = ('WATCH_AFTER[v]}</label>`).join(\'\')}'
-              '<div style="margin-top:6px"><input class="fld mono" data-wf-done placeholder="移動先（処理済フォルダ）" '
-              'value="${esc((WATCH.roots && WATCH.roots[0] && WATCH.roots[0].doneDir) || \'\')}" '
-              '${x.after === \'move\' ? \'\' : \'disabled\'} /></div>')
-    src = src.replace(_j_old, _j_new, 1)
-    # 通知方法の選択は不要（客户）：Webhook を既定で有効にし、検証を通す
-    src = src.replace("notifyWebOn: false", "notifyWebOn: true")
+    # 監視ルートは 1 つだけ（客户）。処理後のファイルはルート行ごとに持つ
+    src = re.sub(r"roots: \[[\s\S]*?\],\n", "roots: [ { id: 'r1', tenant: 'tenant1', path: '\\\\\\\\filesv01\\取込', on: true, after: 'keep' }, ],\n", src, count=1)
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
@@ -1675,16 +1662,18 @@ def apply_role_rename3(src):
 
 
 def apply_status_opts_fix(src):
-    """ファイル一覧のステータス絞り込み：読取待ちはアップロード画面専用なので除外し、出力未済を足す。"""
+    """ファイル一覧のステータス絞り込み：読取待ちはアップロード画面専用なので除外する。
+       「出力未済」は客户要望で削除した。"""
     # ステータス欄の「差分なし／差分あり」バッジは不要（客户指摘）→ 出力しない
     src = src.replace("${exportDiffBadge(f)}", "", 1)
     src = src.replace("${exportDiffBadge(f)}", "")
     old = "const statusOpts = STATUS_ORDER.map((k) => [k, STATUS[k].label, STATUS[k].unused]);"
     new = ("const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting')"
-           ".map((k) => [k, STATUS[k].label, STATUS[k].unused])"
-           ".concat([['notExported', '出力未済', false]]);")
+           ".map((k) => [k, STATUS[k].label, STATUS[k].unused]);")
     if old in src:
         src = src.replace(old, new, 1)
+    # 旧パッチが足していた「出力未済」の選択肢を取り除く
+    src = src.replace(".concat([['notExported', '出力未済', false]])", "")
     return src
 
 
@@ -1938,35 +1927,15 @@ function _histName(id) {
 }
 function downloadResultFile(id, fmt) {""", 1)
 
-    # ⑦ 絞り込み：通常行に「業務シーン」、詳細行に「更新者」を追加（客户 b2）
-    _st_field = """<div class="field"><span class="lbl">ステータス</span>${fselect('status', '選択してください', statusOpts, F.status)}</div>"""
-    _biz_field = _st_field + """
-          <div class="field"><span class="lbl">業務シーン</span>${fselect('biz', '選択してください', bizOpts, F.biz)}</div>"""
-    if _st_field in src:
-        src = src.replace(_st_field, _biz_field, 1)
+    # ⑦ 絞り込み：詳細行に「更新者」を追加（客户 b2）
+    #    業務シーン・帳票タイプは既定行に出さず、「もっと見る」の詳細行に置く（客户指示）。
     _cf_field = """<div class="field"><span class="lbl">確認者</span>${fselect('confirmedBy', '選択してください', confirmers, F.confirmedBy)}</div>"""
     _up_field = _cf_field + """
           <div class="field"><span class="lbl">更新者</span>${fselect('updatedBy', '選択してください', users, F.updatedBy)}</div>"""
     if _cf_field in src:
         src = src.replace(_cf_field, _up_field, 1)
-    # 更新者・読取結果検索での絞り込みを有効化（passesFilters の本文に足す）
-    _pf_head = "function passesFilters(f) {"
-    if _pf_head in src and 'rvq' not in src.split(_pf_head, 1)[1][:400]:
-        src = src.replace(_pf_head, _pf_head + """
-  var _rvq = String((state.filters && state.filters.rvq) || '').toLowerCase();
-  if (_rvq) {
-    var _p = [f.name, dispFileName(f.id), f.history];
-    try { (OCR_FIELDS.b6 || []).forEach(function (x) { _p.push(x.label || ''); _p.push((state.reviewDirty[f.id] || {})[x.key] || x.value || ''); }); } catch (_e4) {}
-    if (_p.join(' ').toLowerCase().indexOf(_rvq) < 0) return false;
-  }
-  if (state.filters.updatedBy && f.updatedBy !== state.filters.updatedBy) return false;""", 1)
 
-    # ⑦' 帳票タイプの絞り込みを追加（客户）／読取日の絞り込みを削除（客户）
-    _biz_field2 = """<div class="field"><span class="lbl">業務シーン</span>${fselect('biz', '選択してください', bizOpts, F.biz)}</div>"""
-    _biz_field3 = _biz_field2 + """
-          <div class="field"><span class="lbl">帳票タイプ</span>${fselect('layout', '選択してください', layouts, F.layout)}</div>"""
-    if _biz_field2 in src:
-        src = src.replace(_biz_field2, _biz_field3, 1)
+    # ⑦' 読取日の絞り込みを削除（客户）
     src = src.replace("""${range('読取日', 'readFrom', 'readTo')}""", "")
 
     # ⑧ 状態バッジの色（客户 d）：読取中／確認済み＝青、読取完了＝緑、読取失敗＝赤、出力済＝グレー
@@ -2020,13 +1989,6 @@ function downloadResultFile(id, fmt) {""", 1)
     if _fn_old in src:
         src = src.replace(_fn_old, _fn_new, 1)
 
-    # ⑩ 絞り込み：読取結果検索（客户）— 「確認日」の右に配置（全体を 3 行に保つ）
-    _ck = """${range('確認日', 'checkedFrom', 'checkedTo')}"""
-    _ck2 = _ck + """
-          <div class="field field-rvq"><span class="lbl">読取結果検索</span><input class="fld" data-rvq placeholder="読取結果を検索" value="${esc(F.rvq || '')}" /></div>"""
-    if _ck in src and 'field-rvq' not in src:
-        src = src.replace(_ck, _ck2, 1)
-
     # ⑨ モック補完（客户 c）：失敗理由・確認担当者・出力担当者を埋めて、操作・処理履歴に出す
     _seed = """
 /* ── デモ用モック補完：失敗理由・確認担当者・出力担当者 ───────────────── */
@@ -2055,35 +2017,6 @@ try {
     try { startReading(targets); } catch (_e5) { render(); }
     render();
   }, true);
-} catch (_e) { /* ignore */ }
-
-/* ── デモ用：読取結果検索（OCR 項目値・ファイル名・履歴を対象） ───────── */
-try {
-  document.addEventListener('input', (ev) => {
-    const t = ev.target;
-    if (t && t.hasAttribute && t.hasAttribute('data-rvq')) {
-      state.filters.rvq = t.value;
-      clearTimeout(window.__rvqTimer);
-      window.__rvqTimer = setTimeout(() => { try { render(); } catch (_e2) {} }, 250);
-    }
-  }, true);
-  if (typeof passesFilters === 'function' && !passesFilters.__rvqPatched) {
-    const _pf = passesFilters;
-    window.passesFilters = function (f) {
-      if (!_pf(f)) return false;
-      const q = String((state.filters && state.filters.rvq) || '').toLowerCase();
-      if (!q) return true;
-      const parts = [f.name, f.history, dispFileName(f.id)];
-      try {
-        (typeof OCR_FIELDS !== 'undefined' ? (OCR_FIELDS.b6 || []) : []).forEach((x) => {
-          parts.push(x.label || '');
-          parts.push((state.reviewDirty[f.id] || {})[x.key] || x.value || '');
-        });
-      } catch (_e3) { /* ignore */ }
-      return parts.join(' ').toLowerCase().indexOf(q) >= 0;
-    };
-    window.passesFilters.__rvqPatched = true;
-  }
 } catch (_e) { /* ignore */ }
 """
     if 'デモ用モック補完' not in src:
@@ -2347,28 +2280,20 @@ def apply_no_approval(src):
     sub('/* 原型どおり：详情／再読取／ダウンロード／削除（確認・承認はマイタスク） */', '/* 行アクション：詳細／確認／ダウンロード／削除 */')
     sub("      if (act === 'redo') { startReRead(id); return; }\n      if (act === 'confirm' || act === 'approve' || act === 'return') {\n        toast('確認・承認はマイタスクから行ってください');\n        openTab('myTasks');\n        return;\n      }",
         "      if (act === 'confirm') { openReview(id, { returnPage: 'result' }); return; }")
-    # 業務シーン・帳票タイプの絞り込み（左ツリーと重複）を外す
-    sub('<div class="field"><span class="lbl">業務シーン</span>${fselect(\'biz\', \'選択してください\', bizOpts, F.biz)}</div>', "")
-    sub('<div class="field"><span class="lbl">帳票タイプ</span>${fselect(\'layout\', \'選択してください\', layouts, F.layout)}</div>', "")
+    # 業務シーン・帳票タイプは詳細行（もっと見る）に残す（既定行はファイル名・ステータスのみ）
     # ⑨ 権限一覧から承認者ロールを外す
     sub("{ id: 'R4', name: '承認者', code: 'approver', desc: '確認済み帳票の承認・再承認。マイタスクの承認作業', created: '2025-10-01 00:00:00', status: '有効' },\n", "")
     return src, rep
 
 
 def apply_export_pending_filter(src):
-    """ファイル一覧のステータス絞り込みに「出力未済」を追加する（客户要件）。"""
-    # ① 絞り込み述語：出力未済＝まだ出力していない（出力済以外）
-    old_pred = "  if (!one(F.status, f.status)) return false;"
-    new_pred = ("  if (F.status === 'notExported') { if (f.status === 'exported') return false; }\n"
-                "  else if (!one(F.status, f.status)) return false;")
-    if old_pred in src:
-        src = src.replace(old_pred, new_pred, 1)
-    # ② 選択肢に「出力未済」を足す
-    old_opt = "const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting').map((k) => [k, STATUS[k].label, STATUS[k].unused]);"
-    new_opt = ("const statusOpts = STATUS_ORDER.filter((k) => k !== 'waiting').map((k) => [k, STATUS[k].label, STATUS[k].unused])"
-               ".concat([['notExported', '出力未済', false]]);")
-    if old_opt in src:
-        src = src.replace(old_opt, new_opt, 1)
+    """（客户）「出力未済」の絞り込みは廃止した。
+       旧パッチの判定・選択肢が残っていれば取り除く。"""
+    src = src.replace(
+        "  if (F.status === 'notExported') { if (f.status === 'exported') return false; }\n"
+        "  else if (!one(F.status, f.status)) return false;",
+        "  if (!one(F.status, f.status)) return false;")
+    src = src.replace(".concat([['notExported', '出力未済', false]])", "")
     return src
 
 
