@@ -495,3 +495,6 @@ thead th{ background:#eef5fd !important; }
 /* ══ 「処理後のファイル」のラジオ（移動/削除/そのまま）と移動先は非表示（客户：移動を廃止し、監視パス単位の選択に統合） ══ */
 .watch-radios:has([data-wf-radio="after"]){ display:none !important; }
 [data-wf-done]{ display:none !important; }
+
+/* ══ 自動アップロード：通知チャネルの「メール」を非表示（客户） ══ */
+label:has(> [data-wf-check="notifyMailOn"]){ display:none !important; }
