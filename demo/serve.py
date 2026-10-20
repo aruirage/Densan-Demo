@@ -2852,6 +2852,25 @@ try {
             init = ("HISTORY_DEPTS = [...new Set(HISTORY.map(function (h) { return h.dept; })"
                     ".filter(Boolean))];\n")
             patched = patched[:m.end()] + init + patched[m.end():]
+    # renderRulePane がスコープ外で参照できないため、トップレベルに複製する（暫定・最小）
+    try:
+        _key = "function renderRulePane() {"
+        _i = patched.find(_key)
+        if _i > 0 and patched.count(_key) == 1:
+            _k = patched.find("{", _i)
+            _depth, _end = 0, _k
+            while _end < len(patched):
+                if patched[_end] == "{":
+                    _depth += 1
+                elif patched[_end] == "}":
+                    _depth -= 1
+                    if _depth == 0:
+                        break
+                _end += 1
+            _fn = patched[_i:_end + 1]
+            patched = patched + "\n" + _fn + "\n"
+    except Exception:
+        pass
     return patched.encode('utf-8')
 
 

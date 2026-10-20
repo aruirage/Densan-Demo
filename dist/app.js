@@ -10655,3 +10655,42 @@ try {
   MENU_PERMS.R10 = _biz.concat(['op-export']);
   MENU_PERMS.R11 = _biz.concat(['op-fix']);
 } catch (_e) { /* ignore */ }
+
+function renderRulePane() {
+  const tab = state.typeRuleTab === 'text' ? 'text' : 'table';
+  const src = tab === 'text' ? RULE_TEXT_ROWS : RULE_TABLE_ROWS;
+  if (!state.typeRulePick) state.typeRulePick = {};
+  if (!state.typeRuleConf) state.typeRuleConf = {};
+  const rows = src.map(([name, fallback], i) => {
+    const id = tab + ':' + i;
+    const cur = state.typeRulePick[id] != null ? state.typeRulePick[id] : fallback;
+    const confRaw = state.typeRuleConf[id];
+    const conf = confRaw != null && !Number.isNaN(Number(confRaw)) ? Number(confRaw) : 95;
+    const opts = ['<option value="">選択してください</option>']
+      .concat(RULE_KINDS.map((k) => `<option value="${esc(k)}" ${cur === k ? 'selected' : ''}>${esc(k)}</option>`))
+      .join('');
+    return `<tr>
+      <td class="tp2-no">${i + 1}</td>
+      <td class="rule-name">${esc(name)}</td>
+      <td><select class="fld rule-select" data-rule="${esc(id)}">${opts}</select></td>
+      <td class="rule-conf"><label class="rule-conf-wrap"><input type="number" class="fld rule-conf-input" data-ruleconf="${esc(id)}" min="0" max="100" step="0.1" value="${conf.toFixed(1)}" aria-label="${esc(name)}の自信度" /><span class="rule-conf-unit">%</span></label></td>
+    </tr>`;
+  }).join('');
+  return `<div class="tp2-pane rule-pane">
+    <div class="tp2-head">
+      <div class="tp2-tabs">
+        <button type="button" class="tp2-tab ${tab === 'text' ? 'on' : ''}" data-ruletab="text">テキスト読取</button>
+        <button type="button" class="tp2-tab ${tab === 'table' ? 'on' : ''}" data-ruletab="table">テーブル情報読取</button>
+      </div>
+      <div class="tp2-tools">
+        <button type="button" class="btn primary sm" data-rule-ai="1">AIマッチング</button>
+      </div>
+    </div>
+    <div class="tp2-tablewrap rule-tablewrap">
+      <table class="tp2-table rule-table">
+        <thead><tr><th>番号</th><th>項目名</th><th>処理ルール</th><th class="rule-conf">自信度</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
