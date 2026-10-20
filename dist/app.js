@@ -6025,11 +6025,7 @@ function renderDictDialogs() {
  *  業務シーンは選ばせない（カテゴリ→業務シーンは従属なので導出できる）。 */
 let WATCH = {
   on: true,
-  roots: [
-    { id: 'r1', tenant: 'tenant1', path: '\\\\filesv01\\取込', doneDir: '\\\\filesv01\\処理済', on: true },
-    { id: 'r2', tenant: 'tenant2', path: '\\\\filesv02\\取込', doneDir: '\\\\filesv02\\処理済', on: true },
-    { id: 'r3', tenant: 'tenant3', path: '\\\\filesv03\\取込', doneDir: '\\\\filesv03\\処理済', on: false },
-  ],
+  roots: [ { id: 'r1', tenant: 'tenant1', path: '\\filesv01\取込', doneDir: '\\filesv01\処理済', on: true }, ],
   /* カテゴリ 1 行。フォルダ名はルート直下の名前（全テナント共通） */
   rules: [],
   after: 'move',
