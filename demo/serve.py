@@ -1631,6 +1631,17 @@ def apply_roles_9(src):
     src = re.sub(r"const TENANTS = \[[\s\S]*?\];", "const TENANTS = [ { id: 'tenant1', name: '青葉市', note: '本番' } ];", src, count=1)
     # 監視ルートは 1 つだけ（客户）
     src = re.sub(r"roots: \[[\s\S]*?\],\n", "roots: [ { id: 'r1', tenant: 'tenant1', path: '\\\\\\\\filesv01\\取込', doneDir: '\\\\\\\\filesv01\\処理済', on: true }, ],\n", src, count=1)
+    # 案A：処理後のファイルに「移動先」を同じセクションへ（移動のときだけ有効）
+    _a_old = '<input type="radio" name="wafter" data-wf-radio="after" value="${v}" ${x.after === v ? \'checked\' : \'\'} />'
+    _a_new = ('<input type="radio" name="wafter" data-wf-radio="after" value="${v}" ${x.after === v ? \'checked\' : \'\'} '
+              'onclick="var d=document.querySelector(\'[data-wf-done]\');if(d){d.disabled=this.value!==\'move\';d.style.opacity=d.disabled?\'.5\':\'1\';}" />')
+    src = src.replace(_a_old, _a_new, 1)
+    _j_old = 'WATCH_AFTER[v]}</label>`).join(\'\')}'
+    _j_new = ('WATCH_AFTER[v]}</label>`).join(\'\')}'
+              '<div style="margin-top:6px"><input class="fld mono" data-wf-done placeholder="移動先（処理済フォルダ）" '
+              'value="${esc((WATCH.roots && WATCH.roots[0] && WATCH.roots[0].doneDir) || \'\')}" '
+              '${x.after === \'move\' ? \'\' : \'disabled\'} /></div>')
+    src = src.replace(_j_old, _j_new, 1)
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {

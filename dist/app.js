@@ -6161,7 +6161,7 @@ function renderWatch() {
         <div class="watch-fields">
           <div class="wf"><span class="wf-label">取込成功時</span>
             <div class="wf-ctl wide"><div class="watch-radios">
-              ${['move', 'del', 'keep'].map((v) => `<label><input type="radio" name="wafter" data-wf-radio="after" value="${v}" ${x.after === v ? 'checked' : ''} />${WATCH_AFTER[v]}</label>`).join('')}
+              ${['move', 'del', 'keep'].map((v) => `<label><input type="radio" name="wafter" data-wf-radio="after" value="${v}" ${x.after === v ? 'checked' : ''} onclick="var d=document.querySelector('[data-wf-done]');if(d){d.disabled=this.value!=='move';d.style.opacity=d.disabled?'.5':'1';}" />${WATCH_AFTER[v]}</label>`).join('')}<div style="margin-top:6px"><input class="fld mono" data-wf-done placeholder="移動先（処理済フォルダ）" value="${esc((WATCH.roots && WATCH.roots[0] && WATCH.roots[0].doneDir) || '')}" ${x.after === 'move' ? '' : 'disabled'} /></div>
             </div>
             </div>
           </div>
