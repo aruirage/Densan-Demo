@@ -5991,33 +5991,36 @@ function renderDictDialogs() {
 
 /* ══════════════════════════════════════════════════════════════════════════
    11. 自動アップロード
-   設定画面のみ（監視コンソールは作らない）。API 連動もしない。
-   監視で取り込んだファイルも、手動アップロードと同じく「新規アップロード」の
+   設定画面のみ（監視コンソール・API 連動は持たない）。
+   監視で取り込んだファイルは、手動アップロードと同じく「新規アップロード」の
    未処理テーブルに溜まり、「選択帳票読取」で初めて読取結果一覧へ入る。
    ══════════════════════════════════════════════════════════════════════════ */
 
 /** 自動アップロードの設定。
- *  ① 監視ルート＝テナントごとの UNC パス（1 テナント 1 本。VM が増えれば行を足す）
- *  ② その直下に「帳票カテゴリ」名のフォルダがあり、カテゴリごとにファイル名パターンを持つ
- *  業務シーンは選ばせない（カテゴリ→業務シーンは従属なので導出できる）。 */
+ *  ① 監視ルート＝テナントごとの UNC パス。行ごとに有効／無効と、
+ *     取り込み成功後のファイルの扱い（削除／そのまま）を持つ
+ *  ② ルート直下の帳票タイプ別フォルダごとに、ファイル名パターン・
+ *     処理開始ファイル・大小区別・自動取込の ON/OFF を持つ
+ *  ③ 二重取込防止・失敗時の再実行・エラー通知（Webhook）は全ルート共通
+ *  業務シーンは選ばせない（帳票タイプ→業務シーンは従属なので導出できる）。 */
 let WATCH = {
   on: true,
-  /* 監視ルートごとに、取り込み成功後のファイルの扱い（削除／そのまま）を持つ */
+  /* ① 監視ルート。after は取り込み成功後の扱い（del=削除 / keep=そのまま） */
   roots: [ { id: 'r1', tenant: 'tenant1', path: '\\filesv01\取込', on: true, after: 'keep' }, ],
-  /* カテゴリ 1 行。フォルダ名はルート直下の名前（全テナント共通） */
+  /* ② 帳票タイプ 1 行。フォルダ名はルート直下の名前（全テナント共通） */
   rules: [],
+  /* ③ 共通設定。エラー通知は Webhook URL のみ（メール通知は廃止） */
   dupGuard: true, dupMethod: 'meta',
   retry: 3, retryGap: 5,
-  /* エラー通知：メール通知は廃止。通知方法は Webhook 固定（URL を入力する） */
   notify: true, notifyOn: 'fail',
   notifyUrl: '',
   updatedAt: '2026-10-16 09:12:30',
 };
-/* 帳票カテゴリの数だけルール行を作る（カテゴリを増やしたら行も増える） */
+/* 帳票タイプの数だけルール行を作る（帳票タイプを増やしたら行も増える） */
 WATCH.rules = CATEGORY.map((c) => ({
   cat: c.id, folder: c.name, pattern: '*.pdf', startFile: '*.trg', caseSensitive: false, on: true,
 }));
-/** カテゴリ ID → ルール。カテゴリを後から足した場合も既定値で作る */
+/** 帳票タイプ ID → ルール。後から追加した帳票タイプも既定値で作る */
 function watchRuleOf(catId) {
   let r = WATCH.rules.find((q) => q.cat === catId);
   if (!r) {
@@ -6028,8 +6031,11 @@ function watchRuleOf(catId) {
   return r;
 }
 
+/** 監視ルートごとの処理後（del=削除 / keep=そのまま） */
 const WATCH_ROOT_AFTER = { del: '削除', keep: 'そのまま' };
+/** 二重取込の判定方法 */
 const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容ハッシュ（SHA-256）' };
+/** エラー通知の条件 */
 const WATCH_NOTIFY_ON = { fail: '失敗したときだけ', always: '毎回' };
 /** 対象ファイルは glob ではなく定型から選ぶ（現場が拡張子を書かないため） */
 const WATCH_PATTERNS = [
@@ -6046,8 +6052,9 @@ const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' 
 const watchRow = (label, inner, wide) => `<div class="wf"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
 
 /** 自動アップロード設定。
- *  ① 監視ルート（テナント）② カテゴリ別ルール ③ 共通設定 の 3 段で見せる。
- *  監視する実パスは「ルート × カテゴリ」で決まる。 */
+ *  ① 監視ルート（テナント）② 帳票タイプ別ルール ③ 共通設定 の 3 段で見せる。
+ *  監視する実パスは「ルート × 帳票タイプのフォルダ」で決まる。
+ *  取り込み成功後のファイルは、監視ルート行ごとの「削除 / そのまま」に従う。 */
 function renderWatch() {
   const x = WATCH;
   const row = watchRow;
@@ -6079,7 +6086,7 @@ function renderWatch() {
       </tr>`;
   }).join('');
 
-  /* 実際に監視する本数＝有効ルート × 有効カテゴリ */
+  /* 実際に監視する本数＝有効ルート × 有効な帳票タイプ */
   const liveRoots = x.roots.filter((r) => r.on && String(r.path || '').trim());
   const liveRules = x.rules.filter((r) => r.on && String(r.folder || '').trim());
   const combos = liveRoots.length * liveRules.length;
@@ -9154,7 +9161,7 @@ function bindCfgPages() {
       WATCH.roots.push({ id: `r${Date.now()}`, tenant: t.id, path: '', on: true, after: 'keep' });
       render();
     };
-    /* カテゴリ別ルール：入力は即時反映（描き直すとフォーカスが飛ぶ）、トグル類は描き直す */
+    /* 帳票タイプ別ルール：入力は即時反映（描き直すとフォーカスが飛ぶ）、トグル類は描き直す */
     document.querySelectorAll('[data-wrule-folder]').forEach((el) => {
       el.oninput = () => { watchRuleOf(el.dataset.wruleFolder).folder = el.value; };
     });
