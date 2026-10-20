@@ -1130,11 +1130,7 @@ const HOME_TO = (() => {
 })();
 
 /* ── マルチテナント（客户回答：データ分離・GPU共有。デモではテナントで表示データを切替） ── */
-const TENANTS = [
-  { id: 'tenant1', name: '青葉市', note: '本番' },
-  { id: 'tenant2', name: '緑ヶ丘町', note: '本番' },
-  { id: 'tenant3', name: '白川村', note: '検証' },
-];
+const TENANTS = [ { id: 'tenant1', name: '青葉市', note: '本番' } ];
 
 /* ── 承認フロー設定（帳票タイプ単位。ここは「承認を使うか」だけを持つ） ──
  * 承認段数とフロー担当は 帳票タイプ側の権限表（TICKET_PERMS）から導出する。

@@ -1627,6 +1627,8 @@ def apply_roles_9(src):
     # フォルダ単位の操作権限：ツリーの名前変更を権限で制御（op-rename）
     src = src.replace("{ id: 'op-export', label: '出力' }", "{ id: 'op-export', label: '出力' }, { id: 'op-rename', label: 'フォルダ名変更（ツリー）' }", 1)
     src = src.replace("user: 'xiaoying'", "user: '佐藤 一郎'")
+    # テナントは 1 つに固定（客户：既定は 1 つでよい）
+    src = re.sub(r"const TENANTS = \[[\s\S]*?\];", "const TENANTS = [ { id: 'tenant1', name: '青葉市', note: '本番' } ];", src, count=1)
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
