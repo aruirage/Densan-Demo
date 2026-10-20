@@ -161,13 +161,13 @@ test('served bundle: ステータス・詳細条件とも「未出力／出力�
   assert.doesNotMatch(html, /data-fs="exportPending"|未出力|出力未済/);
 });
 
-test('served bundle: 自動アップロードは監視ルートごとの処理後と Webhook URL 直接入力', () => {
+test('served bundle: 自動アップロードは監視パスごとの処理後と Webhook URL 直接入力', () => {
   const run = servedApp();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視ルート（テナント）', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'エラー通知']);
+  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'エラー通知']);
   assert.equal((html.match(/data-wroot-after=/g) || []).length, run('WATCH.roots.length'));
-  assert.doesNotMatch(html, /data-wroot-done=|宛先メール|data-wf="notifyMail"/);
+  assert.doesNotMatch(html, /data-wroot-tenant=|data-wroot-done=|宛先メール|data-wf="notifyMail"/);
   assert.doesNotMatch(html, /通知方法|data-wf-check/);
   assert.match(html, /Webhook URL/);
   assert.match(html, /data-wf="notifyUrl"/);

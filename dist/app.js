@@ -5997,17 +5997,18 @@ function renderDictDialogs() {
    ══════════════════════════════════════════════════════════════════════════ */
 
 /** 自動アップロードの設定。
- *  ① 監視ルート＝テナントごとの UNC パス。行ごとに有効／無効と、
+ *  ① 監視パス＝共有フォルダの UNC パス。1 行＝1 パス。行ごとに有効／無効と、
  *     取り込み成功後のファイルの扱い（削除／そのまま）を持つ
- *  ② ルート直下の帳票タイプ別フォルダごとに、ファイル名パターン・
+ *     （tenant は取り込み先の紐付け属性で、行の単位ではない）
+ *  ② パス直下の帳票タイプ別フォルダごとに、ファイル名パターン・
  *     処理開始ファイル・大小区別・自動取込の ON/OFF を持つ
- *  ③ 二重取込防止・失敗時の再実行・エラー通知（Webhook）は全ルート共通
+ *  ③ 二重取込防止・失敗時の再実行・エラー通知（Webhook）は全パス共通
  *  業務シーンは選ばせない（帳票タイプ→業務シーンは従属なので導出できる）。 */
 let WATCH = {
   on: true,
-  /* ① 監視ルート。after は取り込み成功後の扱い（del=削除 / keep=そのまま） */
+  /* ① 監視パス。after は取り込み成功後の扱い（del=削除 / keep=そのまま） */
   roots: [ { id: 'r1', tenant: 'tenant1', path: '\\filesv01\取込', on: true, after: 'keep' }, ],
-  /* ② 帳票タイプ 1 行。フォルダ名はルート直下の名前（全テナント共通） */
+  /* ② 帳票タイプ 1 行。フォルダ名はパス直下の名前（全パス共通） */
   rules: [],
   /* ③ 共通設定。エラー通知は Webhook URL のみ（メール通知は廃止） */
   dupGuard: true, dupMethod: 'meta',
@@ -6031,7 +6032,7 @@ function watchRuleOf(catId) {
   return r;
 }
 
-/** 監視ルートごとの処理後（del=削除 / keep=そのまま） */
+/** 監視パスごとの処理後（del=削除 / keep=そのまま） */
 const WATCH_ROOT_AFTER = { del: '削除', keep: 'そのまま' };
 /** 二重取込の判定方法 */
 const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容ハッシュ（SHA-256）' };
@@ -6052,19 +6053,18 @@ const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' 
 const watchRow = (label, inner, wide) => `<div class="wf"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
 
 /** 自動アップロード設定。
- *  ① 監視ルート（テナント）② 帳票タイプ別ルール ③ 共通設定 の 3 段で見せる。
- *  監視する実パスは「ルート × 帳票タイプのフォルダ」で決まる。
- *  取り込み成功後のファイルは、監視ルート行ごとの「削除 / そのまま」に従う。 */
+ *  ① 監視パス ② 帳票タイプ別ルール ③ 共通設定 の 3 段で見せる。
+ *  監視する実パスは「監視パス × 帳票タイプのフォルダ」で決まる。
+ *  取り込み成功後のファイルは、監視パス行ごとの「削除 / そのまま」に従う。 */
 function renderWatch() {
   const x = WATCH;
   const row = watchRow;
 
-  const rootRows = x.roots.map((r) => `<tr class="wr-root${r.on ? '' : ' off'}">
-        <td><select class="fld" data-wroot-tenant="${r.id}" aria-label="テナント">${TENANTS.map((t) => `<option value="${t.id}" ${t.id === r.tenant ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></td>
-        <td><input class="fld mono" data-wroot-path="${r.id}" value="${esc(r.path)}" placeholder="\\\\filesv01\\取込" aria-label="ルートパス" /></td>
+  const pathRows = x.roots.map((r) => `<tr class="wr-root${r.on ? '' : ' off'}">
+        <td><input class="fld mono" data-wroot-path="${r.id}" value="${esc(r.path)}" placeholder="\\\\filesv01\\取込" aria-label="監視パス" /></td>
         <td><select class="fld" data-wroot-after="${r.id}" aria-label="処理後のファイル">${Object.keys(WATCH_ROOT_AFTER).map((v) => `<option value="${v}" ${(r.after || 'keep') === v ? 'selected' : ''}>${WATCH_ROOT_AFTER[v]}</option>`).join('')}</select></td>
-        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wrooton="${r.id}" role="switch" aria-checked="${r.on}" aria-label="このルートを有効にする"><span class="tgl-knob"></span></button></td>
-        <td class="c"><button type="button" class="wp-del" data-wrootdel="${r.id}" aria-label="このルートを削除"${x.roots.length > 1 ? '' : ' disabled'}>×</button></td>
+        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wrooton="${r.id}" role="switch" aria-checked="${r.on}" aria-label="この監視パスを有効にする"><span class="tgl-knob"></span></button></td>
+        <td class="c"><button type="button" class="wp-del" data-wrootdel="${r.id}" aria-label="この監視パスを削除"${x.roots.length > 1 ? '' : ' disabled'}>×</button></td>
       </tr>`).join('');
 
   /* 帳票設定に登録されている帳票タイプをそのまま並べる（業務シーンの階層は作らない）。
@@ -6086,37 +6086,36 @@ function renderWatch() {
       </tr>`;
   }).join('');
 
-  /* 実際に監視する本数＝有効ルート × 有効な帳票タイプ */
-  const liveRoots = x.roots.filter((r) => r.on && String(r.path || '').trim());
+  /* 実際に監視する本数＝有効な監視パス × 有効な帳票タイプ */
+  const livePaths = x.roots.filter((r) => r.on && String(r.path || '').trim());
   const liveRules = x.rules.filter((r) => r.on && String(r.folder || '').trim());
-  const combos = liveRoots.length * liveRules.length;
-  const sample = (liveRoots[0] && liveRules[0])
-    ? `${String(liveRoots[0].path).replace(/[\\/]+$/, '')}\\${liveRules[0].folder}\\${liveRules[0].pattern}`
+  const combos = livePaths.length * liveRules.length;
+  const sample = (livePaths[0] && liveRules[0])
+    ? `${String(livePaths[0].path).replace(/[\\/]+$/, '')}\\${liveRules[0].folder}\\${liveRules[0].pattern}`
     : '';
 
   return `<div class="cfg-head">
-    <h1 class="cfg-title">自動アップロード <span class="info-i" data-tip="監視ルート（テナント）の直下にある帳票タイプ別フォルダを見張り、条件に合うファイルを自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。">i</span></h1>
+    <h1 class="cfg-title">自動アップロード <span class="info-i" data-tip="監視パス（共有フォルダ）の直下にある帳票タイプ別フォルダを見張り、条件に合うファイルを自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。">i</span></h1>
     <span class="spacer"></span>
     <span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>
   </div>
   <div class="watch-body">
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">監視ルート（テナント）<span class="info-i" data-tip="1 行＝1 テナント（1 台の仮想マシン上の共有フォルダ）です。帳票タイプのフォルダはこのパスの直下に置きます。行ごとに有効／無効と、取り込み成功後のファイルの扱い（削除／そのまま）を選べます。">i</span></h3>
+        <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="1 行＝1 監視パス（1 台の仮想マシン上の共有フォルダ）です。帳票タイプのフォルダはこのパスの直下に置きます。行ごとに有効／無効と、取り込み成功後のファイルの扱い（削除／そのまま）を選べます。">i</span></h3>
         <div class="watch-tablewrap">
           <table class="watch-table wr-roots">
             <thead><tr>
-              <th style="width:140px">テナント</th>
-              <th>ルートパス</th>
+              <th>パス</th>
               <th style="width:150px">処理後のファイル</th>
               <th class="c" style="width:52px">有効</th>
               <th class="c" style="width:40px"></th>
             </tr></thead>
-            <tbody>${rootRows}</tbody>
+            <tbody>${pathRows}</tbody>
           </table>
         </div>
         <div class="watch-sec-foot">
-          <button type="button" class="btn wp-add" data-wrootadd="1"><span class="ico i-add"></span>監視ルートを追加</button>
+          <button type="button" class="btn wp-add" data-wrootadd="1"><span class="ico i-add"></span>監視パスを追加</button>
         </div>
       </section>
 
@@ -6137,7 +6136,7 @@ function renderWatch() {
         </div>
         <datalist id="watchPatternList">${WATCH_PATTERNS.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</datalist>
         <div class="watch-sec-foot">
-          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本（有効なルート ${liveRoots.length} × 帳票タイプ ${liveRules.length}）${sample ? `<span class="mono">${esc(sample)}</span>` : ''}</p>
+          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本（有効な監視パス ${livePaths.length} × 帳票タイプ ${liveRules.length}）${sample ? `<span class="mono">${esc(sample)}</span>` : ''}</p>
         </div>
       </section>
 
@@ -9109,7 +9108,7 @@ function bindCfgPages() {
   if (state.page === 'watch') {
     document.querySelectorAll('[data-watchsave]').forEach((b) => {
       b.onclick = () => {
-        if (!WATCH.roots.some((r) => String(r.path || '').trim())) { toast('監視ルートを入力してください'); return; }
+        if (!WATCH.roots.some((r) => String(r.path || '').trim())) { toast('監視パスを入力してください'); return; }
         /* 無効行も含めて重複を見る（あとで有効にしたときに二重取込になるため） */
         const folders = WATCH.rules.map((r) => String(r.folder || '').trim());
         if (folders.some((n) => !n)) { toast('フォルダ名を入力してください'); return; }
@@ -9119,14 +9118,7 @@ function bindCfgPages() {
         WATCH.updatedAt = nowStamp(); render(); toast('設定を保存しました');
       };
     });
-    /* 監視ルート：テナント・パス・処理後のファイル（削除／そのまま）・有効切替・追加・削除 */
-    document.querySelectorAll('[data-wroot-tenant]').forEach((el) => {
-      el.onchange = () => {
-        const r = WATCH.roots.find((q) => q.id === el.dataset.wrootTenant);
-        if (r) r.tenant = el.value;
-        render();
-      };
-    });
+    /* 監視パス：パス・処理後のファイル（削除／そのまま）・有効切替・追加・削除 */
     document.querySelectorAll('[data-wroot-path]').forEach((el) => {
       el.oninput = () => {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootPath);
@@ -9156,9 +9148,9 @@ function bindCfgPages() {
     });
     const addRoot = document.querySelector('[data-wrootadd]');
     if (addRoot) addRoot.onclick = () => {
-      const used = WATCH.roots.map((r) => r.tenant);
-      const t = TENANTS.find((q) => !used.includes(q.id)) || TENANTS[0];
-      WATCH.roots.push({ id: `r${Date.now()}`, tenant: t.id, path: '', on: true, after: 'keep' });
+      /* 1 行＝1 監視パス。テナントは既存行の紐付けを引き継ぐ */
+      const t = (WATCH.roots[0] && WATCH.roots[0].tenant) || (TENANTS[0] || {}).id || 'tenant1';
+      WATCH.roots.push({ id: `r${Date.now()}`, tenant: t, path: '', on: true, after: 'keep' });
       render();
     };
     /* 帳票タイプ別ルール：入力は即時反映（描き直すとフォーカスが飛ぶ）、トグル類は描き直す */

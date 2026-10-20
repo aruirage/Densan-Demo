@@ -1193,19 +1193,21 @@ test('ticket permission table gates confirm per layout', () => {
   assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });
 
-test('自動アップロード: 監視ルートと帳票タイプ別ルールの 5 セクションを描画する', () => {
+test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 セクションを描画する', () => {
   const run = app();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視ルート（テナント）', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'エラー通知']);
+  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'エラー通知']);
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit/);
 
-  /* 監視ルート：1 行＝1 テナント。行ごとに有効／無効のトグルと処理後のファイルを持つ */
+  /* 監視パス：1 行＝1 パス。行ごとに有効／無効のトグルと処理後のファイルを持つ */
   assert.equal((html.match(/class="wr-root/g) || []).length, run('WATCH.roots.length'));
   assert.equal((html.match(/data-wrooton=/g) || []).length, run('WATCH.roots.length'));
+  assert.equal((html.match(/data-wroot-path=/g) || []).length, run('WATCH.roots.length'));
   assert.match(html, /data-wrootadd/);
-  assert.match(html, /data-wroot-tenant=/);
+  assert.match(html, /監視パスを追加/);
+  assert.doesNotMatch(html, /data-wroot-tenant=|>テナント</);
   assert.match(html, /data-wroot-path=/);
   assert.match(html, /data-wroot-after=/);
   assert.match(html, /処理後のファイル/);
@@ -1240,7 +1242,7 @@ test('自動アップロード: 監視ルートと帳票タイプ別ルールの
   assert.doesNotMatch(html, /data-wf="logLevel"|data-wf="logPath"|ログ<\/h3>/);
 });
 
-test('自動アップロード: 監視ルートごとに処理後のファイル（削除／そのまま）を選べる', () => {
+test('自動アップロード: 監視パスごとに処理後のファイル（削除／そのまま）を選べる', () => {
   const run = app();
   const html = run('renderWatch()');
   assert.equal((html.match(/data-wroot-after=/g) || []).length, run('WATCH.roots.length'));

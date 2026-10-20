@@ -1629,7 +1629,7 @@ def apply_roles_9(src):
     src = src.replace("user: 'xiaoying'", "user: '佐藤 一郎'")
     # テナントは 1 つに固定（客户：既定は 1 つでよい）
     src = re.sub(r"const TENANTS = \[[\s\S]*?\];", "const TENANTS = [ { id: 'tenant1', name: '青葉市', note: '本番' } ];", src, count=1)
-    # 監視ルートは 1 つだけ（客户）。処理後のファイルはルート行ごとに持つ
+    # 監視パスは 1 つだけ（客户）。処理後のファイルはパス行ごとに持つ
     src = re.sub(r"roots: \[[\s\S]*?\],\n", "roots: [ { id: 'r1', tenant: 'tenant1', path: '\\\\\\\\filesv01\\取込', on: true, after: 'keep' }, ],\n", src, count=1)
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */

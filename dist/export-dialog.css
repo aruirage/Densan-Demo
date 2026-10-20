@@ -485,9 +485,6 @@ thead th{ background:#eef5fd !important; }
   display:none !important;
 }
 
-/* ══ 自動アップロード：監視ルート表の「テナント」列を非表示（客户） ══ */
-.watch-table.wr-roots th:nth-child(1), .watch-table.wr-roots td:nth-child(1){ display:none !important; }
-
-/* 監視ルートごとの「処理後のファイル」（削除／そのまま）は 3 列目に表示する */
+/* 監視パス 1 行＝1 パス。2 列目に「処理後のファイル」（削除／そのまま）を表示する */
 
 /* エラー通知は通知方法の選択を持たず、Webhook URL だけを入力する */
