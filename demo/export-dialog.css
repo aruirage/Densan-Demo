@@ -477,3 +477,10 @@ thead th{ background:#eef5fd !important; }
 .exp-src-k { color: var(--text-3); }
 .exp-src-line b { color: var(--accent); font-weight: 700; }
 .exp-warn { padding: 7px 10px; border-radius: var(--radius); background: #fdf1e2; color: #a8621a; font-size: 11.5px; line-height: 1.5; }
+
+/* ══ 自動アップロード：帳票タイプ別ルールの「ファイル名／処理開始／大小区別」列を非表示（客户） ══ */
+.watch-table.wr-rules th:nth-child(2), .watch-table.wr-rules td:nth-child(2),
+.watch-table.wr-rules th:nth-child(3), .watch-table.wr-rules td:nth-child(3),
+.watch-table.wr-rules th:nth-child(4), .watch-table.wr-rules td:nth-child(4){
+  display:none !important;
+}
