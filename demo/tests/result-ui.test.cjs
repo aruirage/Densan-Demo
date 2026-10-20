@@ -1212,17 +1212,19 @@ test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 
   assert.match(html, /data-wroot-after=/);
   assert.match(html, /処理後のファイル/);
 
-  /* 帳票タイプ別ルール：帳票タイプ（ツリー第2階層）1 行。フォルダ名・ファイル名・処理開始・大小区別 */
+  /* 帳票タイプ別ルール：帳票タイプ（ツリー第2階層）1 行。フォルダ名・ファイル名・自動取込 */
   assert.equal(run('CATEGORY.length'), 9);
   assert.equal((html.match(/class="wr-rule/g) || []).length, run('CATEGORY.length'));
   assert.equal((html.match(/data-wruleon=/g) || []).length, run('CATEGORY.length'));
-  for (const t of ['帳票タイプ', 'フォルダ名', 'ファイル名', '処理開始', '大小区別', '監視対象']) {
+  for (const t of ['帳票タイプ', 'フォルダ名', 'ファイル名', '監視対象']) {
     assert.ok(html.includes(t), t);
   }
   assert.match(html, /data-wrule-folder=/);
   assert.match(html, /data-wrule-pattern=/);
-  assert.match(html, /data-wrule-start=/);
-  assert.match(html, /data-wrule-case=/);
+  /* 処理開始・大小区別は削除済み */
+  assert.doesNotMatch(html, /処理開始|大小区別|data-wrule-start|data-wrule-case/);
+  const ruleRow = (html.match(/<tr class="wr-rule[\s\S]*?<\/tr>/) || [])[0] || '';
+  assert.equal((ruleRow.match(/<td/g) || []).length, 4);
 
   /* 業務シーンの階層は作らない（帳票タイプをそのまま並べる） */
   assert.doesNotMatch(html, /data-wf="biz"|data-wf="pattern"|data-wf="startFile"|data-wf="afterDir"/);

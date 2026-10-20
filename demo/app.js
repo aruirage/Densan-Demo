@@ -5454,8 +5454,8 @@ function renderDictDialogs() {
  *  ① 監視パス＝共有フォルダの UNC パス。1 行＝1 パス。行ごとに有効／無効と、
  *     取り込み成功後のファイルの扱い（削除／そのまま）を持つ
  *     （tenant は取り込み先の紐付け属性で、行の単位ではない）
- *  ② パス直下の帳票タイプ別フォルダごとに、ファイル名パターン・
- *     処理開始ファイル・大小区別・自動取込の ON/OFF を持つ
+ *  ② パス直下の帳票タイプ別フォルダごとに、フォルダ名・ファイル名パターン・
+ *     自動取込の ON/OFF を持つ
  *  ③ 二重取込防止・失敗時の再実行・エラー通知（Webhook）は全パス共通
  *  業務シーンは選ばせない（帳票タイプ→業務シーンは従属なので導出できる）。 */
 let WATCH = {
@@ -5477,14 +5477,14 @@ let WATCH = {
 };
 /* 帳票タイプの数だけルール行を作る（帳票タイプを増やしたら行も増える） */
 WATCH.rules = CATEGORY.map((c) => ({
-  cat: c.id, folder: c.name, pattern: '*.pdf', startFile: '*.trg', caseSensitive: false, on: true,
+  cat: c.id, folder: c.name, pattern: '*.pdf', on: true,
 }));
 /** 帳票タイプ ID → ルール。後から追加した帳票タイプも既定値で作る */
 function watchRuleOf(catId) {
   let r = WATCH.rules.find((q) => q.cat === catId);
   if (!r) {
     const c = byId(CATEGORY, catId) || {};
-    r = { cat: catId, folder: c.name || catId, pattern: '*.pdf', startFile: '', caseSensitive: false, on: true };
+    r = { cat: catId, folder: c.name || catId, pattern: '*.pdf', on: true };
     WATCH.rules.push(r);
   }
   return r;
@@ -5538,8 +5538,6 @@ function renderWatch() {
         <td class="wr-cat">${esc(c.name)}</td>
         <td><input class="fld mono" data-wrule-folder="${c.id}" value="${esc(r.folder)}" placeholder="フォルダ名" aria-label="フォルダ名" /></td>
         <td><input class="fld mono" data-wrule-pattern="${c.id}" value="${esc(r.pattern)}" list="watchPatternList" aria-label="ファイル名パターン" /></td>
-        <td><input class="fld mono" data-wrule-start="${c.id}" value="${esc(r.startFile || '')}" placeholder="未設定なら即時" aria-label="処理開始ファイル" /></td>
-        <td class="c"><input type="checkbox" class="cb" data-wrule-case="${c.id}" ${r.caseSensitive ? 'checked' : ''} aria-label="大文字小文字を区別" /></td>
         <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wruleon="${c.id}" role="switch" aria-checked="${r.on}" aria-label="この帳票タイプを自動で取り込む"><span class="tgl-knob"></span></button></td>
       </tr>`;
   }).join('');
@@ -5578,15 +5576,13 @@ function renderWatch() {
       </section>
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">帳票タイプ別ルール<span class="info-i" data-tip="帳票タイプ（ツリー第2階層）をそのまま並べています。フォルダ名は全監視パスで共通です。自動取込が不要な帳票タイプは「自動取込」を切ってください。処理開始が未設定なら、ファイルが現れた時点で取り込みます。大小区別は「ファイル名」と「処理開始」の両方に効きます。">i</span></h3>
+        <h3 class="watch-sec-head">帳票タイプ別ルール<span class="info-i" data-tip="帳票タイプ（ツリー第2階層）をそのまま並べています。フォルダ名は全監視パスで共通です。自動取込が不要な帳票タイプは「自動取込」を切ってください。">i</span></h3>
         <div class="watch-tablewrap">
           <table class="watch-table wr-rules">
             <thead><tr>
               <th style="width:180px">帳票タイプ</th>
               <th style="width:190px">フォルダ名</th>
               <th style="width:140px">ファイル名</th>
-              <th style="width:130px">処理開始</th>
-              <th class="c" style="width:64px">大小区別</th>
               <th class="c" style="width:64px">自動取込</th>
             </tr></thead>
             <tbody>${ruleRows}</tbody>
@@ -8615,12 +8611,6 @@ function bindCfgPages() {
     });
     document.querySelectorAll('[data-wrule-pattern]').forEach((el) => {
       el.oninput = () => { watchRuleOf(el.dataset.wrulePattern).pattern = el.value; };
-    });
-    document.querySelectorAll('[data-wrule-start]').forEach((el) => {
-      el.oninput = () => { watchRuleOf(el.dataset.wruleStart).startFile = el.value; };
-    });
-    document.querySelectorAll('[data-wrule-case]').forEach((cb) => {
-      cb.onchange = () => { watchRuleOf(cb.dataset.wruleCase).caseSensitive = cb.checked; };
     });
     document.querySelectorAll('[data-wruleon]').forEach((btn) => {
       btn.onclick = () => {

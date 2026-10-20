@@ -448,7 +448,7 @@
 .wf-ctl { min-width: 0; max-width: 560px; }
 .wf-ctl.wide { max-width: 920px; }
 
-/* 入力の下に添える補足（処理開始ファイルの説明など）
+/* 入力の下に添える補足（監視対象の説明など）
    注：`.wf-note` は serve.py が説明文として HTML コメント化するので使わない。 */
 .wf-help {
   margin: 6px 0 0;
