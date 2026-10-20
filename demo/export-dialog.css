@@ -484,3 +484,6 @@ thead th{ background:#eef5fd !important; }
 .watch-table.wr-rules th:nth-child(4), .watch-table.wr-rules td:nth-child(4){
   display:none !important;
 }
+
+/* ══ 自動アップロード：監視ルート表の「テナント」列を非表示（客户） ══ */
+.watch-table.wr-roots th:nth-child(1), .watch-table.wr-roots td:nth-child(1){ display:none !important; }
