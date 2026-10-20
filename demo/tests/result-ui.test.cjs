@@ -1212,7 +1212,7 @@ test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 
   assert.match(html, /data-wroot-after=/);
   assert.match(html, /処理後のファイル/);
 
-  /* 帳票タイプ別ルール：帳票設定の帳票タイプ 1 行。フォルダ名・ファイル名・処理開始・大小区別 */
+  /* 帳票タイプ別ルール：帳票タイプ（ツリー第2階層）1 行。フォルダ名・ファイル名・処理開始・大小区別 */
   assert.equal(run('CATEGORY.length'), 9);
   assert.equal((html.match(/class="wr-rule/g) || []).length, run('CATEGORY.length'));
   assert.equal((html.match(/data-wruleon=/g) || []).length, run('CATEGORY.length'));

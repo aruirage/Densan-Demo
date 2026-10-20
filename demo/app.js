@@ -5525,8 +5525,8 @@ function renderWatch() {
         <td class="c"><button type="button" class="wp-del" data-wrootdel="${r.id}" aria-label="この監視パスを削除"${x.roots.length > 1 ? '' : ' disabled'}>×</button></td>
       </tr>`).join('');
 
-  /* 帳票設定に登録されている帳票タイプをそのまま並べる（業務シーンの階層は作らない）。
-     並び順だけ業務シーンの順に揃える。 */
+  /* 帳票タイプ（ツリー第2階層）をそのまま並べる。業務シーンの階層は作らず、
+     並び順だけ業務シーンの順に揃える。フォルダ名は全監視パスで共通。 */
   const orderedCats = CATEGORY.slice().sort((a, b) => {
     const ba = (byId(BUSINESS, a.business) || {}).order || 0;
     const bb = (byId(BUSINESS, b.business) || {}).order || 0;
@@ -5578,7 +5578,7 @@ function renderWatch() {
       </section>
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">帳票タイプ別ルール<span class="info-i" data-tip="帳票設定に登録されている帳票タイプをそのまま並べています。フォルダ名は全テナント共通です。自動取込が不要な帳票タイプは「自動取込」を切ってください。処理開始が未設定なら、ファイルが現れた時点で取り込みます。大小区別は「ファイル名」と「処理開始」の両方に効きます。">i</span></h3>
+        <h3 class="watch-sec-head">帳票タイプ別ルール<span class="info-i" data-tip="帳票タイプ（ツリー第2階層）をそのまま並べています。フォルダ名は全監視パスで共通です。自動取込が不要な帳票タイプは「自動取込」を切ってください。処理開始が未設定なら、ファイルが現れた時点で取り込みます。大小区別は「ファイル名」と「処理開始」の両方に効きます。">i</span></h3>
         <div class="watch-tablewrap">
           <table class="watch-table wr-rules">
             <thead><tr>
