@@ -760,7 +760,7 @@ const MENU_TREE = [
       { id: 'op-redo', label: '再読取' },
       { id: 'op-fix', label: '修正' },
       { id: 'op-confirm', label: '確認' },
-      { id: 'op-download', label: 'ダウンロード' },
+      { id: 'op-download', label: 'ダウンロード' } , { id: 'op-export', label: '出力' } , { id: 'op-rename', label: 'フォルダ名変更' } , { id: 'op-move', label: 'フォルダ移動' },
       { id: 'op-delete', label: '削除' },
     ] },
     { id: 'settings', label: '帳票設定', children: [
@@ -829,10 +829,7 @@ let MENU_PERMS = {
   /* 読取＝読取実行・再読取・削除（アップロード済ファイルの後始末まで担う） */
   R8: BIZ_MENU_BASE.concat(['op-read', 'op-redo', 'op-delete']),
   /* 出力＝ダウンロード／一括ダウンロード */
-  R10: BIZ_MENU_BASE.concat(['op-export']),
-  /* OCR結果修正＝修正だけ（確認は不可） */
-  R11: BIZ_MENU_BASE.concat(['op-fix']),
-};
+  R
 
 /* 万能角色：メニューもユーザー権限もすべて許可（serve.py 注入）
    ※ SUPER_ROLE_ID は R1（システム管理者）に寄せる＝重複ロールを作らない */
@@ -859,7 +856,10 @@ var ROLE_OPS = {
   var leaves = (typeof MENU_LEAVES !== 'undefined' && MENU_LEAVES) || null;
   if (perms && leaves) perms[SUPER_ROLE_ID] = leaves.slice();
 })();
-
+10: BIZ_MENU_BASE.concat(['op-export']),
+  /* OCR結果修正＝修正だけ（確認は不可） */
+  R11: BIZ_MENU_BASE.concat(['op-fix']),
+};
 
 /* ── 帳票設定系のモック（実機の一覧列に合わせる） ── */
 let TICKET_TYPES = [
@@ -10575,6 +10575,31 @@ try {
   ['R6', 'R7', 'R8', 'R10', 'R11'].forEach((id) => {
     if (!MENU_PERMS[id]) MENU_PERMS[id] = ['home', 'result'];
   });
+} catch (_e) { /* ignore */ }
+/* ── 案A：処理後のファイルに「移動先」を統合 ───────────── */
+try {
+  function __syncAfter(i2, v2) { if (!i2) return; var d2 = v2 !== 'move'; i2.disabled = d2; i2.style.opacity = d2 ? '0.5' : '1'; }
+  function __applyAfterUI() {
+    var rs = document.querySelectorAll('[data-wf-radio="after"]');
+    if (!rs.length) return;
+    var sec = rs[0].closest('.watch-sec');
+    if (!sec || sec.querySelector('[data-wf-done]')) return;
+    var ck = document.querySelector('[data-wf-radio="after"]:checked');
+    var cur = (ck && ck.value) || 'move';
+    var rt = (typeof WATCH !== 'undefined' && WATCH.roots && WATCH.roots[0]) || {};
+    var wr = document.createElement('div');
+    wr.className = 'wf';
+    wr.innerHTML = '<span class="wf-label">移動先（処理済フォルダ）</span><div class="wf-ctl wide"><input class="fld mono" data-wf-done placeholder="処理済フォルダのパス" value="' + (rt.doneDir || '') + '"></div>';
+    sec.appendChild(wr);
+    var i2 = wr.querySelector('[data-wf-done]');
+    __syncAfter(i2, cur);
+    i2.addEventListener('input', function () { if (typeof WATCH !== 'undefined' && WATCH.roots[0]) WATCH.roots[0].doneDir = i2.value; });
+  }
+  document.addEventListener('change', function (ev) {
+    var t2 = ev.target;
+    if (t2 && t2.getAttribute && t2.getAttribute('data-wf-radio') === 'after') __syncAfter(document.querySelector('[data-wf-done]'), t2.value);
+  }, true);
+  setInterval(__applyAfterUI, 800);
 } catch (_e) { /* ignore */ }
 
 /* ── デモ用モック補完：失敗理由・確認担当者・出力担当者 ───────────────── */
