@@ -485,3 +485,6 @@ thead th{ background:#eef5fd !important; }
 
 /* ══ 自動アップロード：監視ルート表の「テナント」列を非表示（客户） ══ */
 .watch-table.wr-roots th:nth-child(1), .watch-table.wr-roots td:nth-child(1){ display:none !important; }
+
+/* ══ 自動アップロード：「監視ルートを追加」は既定 1 つで十分（客户） ══ */
+.btn.wp-add[data-wrootadd]{ display:none !important; }
