@@ -197,3 +197,16 @@ test('served bundle: 絞り込みは既定 1 行（ファイル名・ステー�
   run('state.filters.rvq = "ユニーク読取値"; state.resultPage = 1');
   assert.deepEqual(JSON.parse(run('JSON.stringify(visibleFiles().map((f) => f.id))')), [fid]);
 });
+
+test('served bundle: ホームに自動アップロードのダッシュボードタブ', () => {
+  const run = servedApp();
+  const html = run('state.homeTab = "dashboard"; renderHome()');
+  assert.match(html, /class="home-tabs"/);
+  assert.match(html, /data-hometab="dashboard"/);
+  assert.match(html, /class="auto-dash"/);
+  assert.match(html, /自動アップロードのエラー/);
+  assert.match(html, /data-werr-handle=/);
+  const history = run('state.homeTab = "history"; renderHome()');
+  assert.match(history, /data-hopt="hBiz"/);
+  assert.doesNotMatch(history, /class="auto-dash"/);
+});

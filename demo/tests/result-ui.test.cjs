@@ -1495,3 +1495,32 @@ test('CSV 出力: 列の表示/非表示・列順がヘッダに反映される'
   const head2 = run('(function(){var r=buildExportCsv([' + JSON.stringify(fid) + ']); return r.text.split("\\r\\n")[0];})()');
   assert.ok(head2.startsWith('提出日,'));
 });
+
+test('ホーム: ご利用履歴と自動アップロードのダッシュボードをタブで切り替える', () => {
+  const run = app();
+  let html = run('state.homeTab = "history"; renderHome()');
+  assert.match(html, /class="home-tabs"/);
+  assert.match(html, /data-hometab="history"/);
+  assert.match(html, /data-hometab="dashboard"/);
+  assert.match(html, /ご利用履歴/);
+  assert.match(html, /ダッシュボード/);
+  assert.match(html, /data-hopt="hBiz"/);
+  assert.doesNotMatch(html, /class="auto-dash"/);
+
+  html = run('state.homeTab = "dashboard"; renderHome()');
+  assert.match(html, /class="auto-dash"/);
+  assert.match(html, /直近7日の取込/);
+  assert.match(html, /取込成功率/);
+  assert.match(html, /未対応エラー/);
+  assert.match(html, /自動アップロードのエラー/);
+  assert.match(html, /data-werr-handle=/);
+  assert.match(html, /class="auto-chart"/);
+  assert.match(html, /10\/20/);
+  assert.doesNotMatch(html, /data-hopt="hBiz"/);
+
+  /* エラーの対応状態を切り替えると、状態チップとボタンが変わる */
+  run('WATCH_ERRORS[0].handled = true;');
+  html = run('renderAutoDashboard()');
+  assert.match(html, /対応済み/);
+  assert.match(html, /未対応に戻す/);
+});

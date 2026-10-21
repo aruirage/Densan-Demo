@@ -1684,6 +1684,7 @@ const state = {
   tenantOpen: false,
   tabs: ['home', 'upload', 'result'], // 開いているタブ。×で閉じられる
   resultPage: 1,                  // 読取結果一覧のページ番号
+  homeTab: 'history',             // ホーム：'history'（ご利用履歴） / 'dashboard'（自動アップロード）
   hFilters: { from: HOME_FROM, to: HOME_TO, layout: [], user: '', biz: [] },
   hPage: 1,
   hPerPage: 10,
@@ -6032,6 +6033,27 @@ function watchRuleOf(catId) {
   return r;
 }
 
+/* ── ホームのダッシュボード用モック（自動アップロード） ────────────────
+ *  実際の取込ログの代わりに、直近のエラーと日別実績を固定データで持つ。 */
+const WATCH_ERRORS = [
+  { id: 'we1', at: '2026-10-20 09:12:30', path: '\\\\filesv01\\取込', cat: '個人住民税申告', file: '01_令和8年度分市民税・県民税申告書（兼・国保税申告書）.pdf', reason: '文字が薄く読み取れませんでした', handled: false },
+  { id: 'we2', at: '2026-10-20 08:45:10', path: '\\\\filesv01\\取込', cat: '児童手当認定請求', file: '01_児童手当 認定請求書.pdf', reason: '帳票の傾きが大きく読み取れませんでした', handled: false },
+  { id: 'we3', at: '2026-10-19 17:30:02', path: '\\\\filesv01\\取込', cat: '利用申込', file: '02_令和8年度保育所等利用申込書.pdf', reason: '一部項目の認識に失敗しました', handled: true },
+  { id: 'we4', at: '2026-10-19 15:11:48', path: '\\\\filesv02\\取込', cat: '介護保険認定申請', file: '01_介護保険認定申請書（新規・更新）.pdf', reason: '対象外の拡張子（.xlsx）', handled: true },
+  { id: 'we5', at: '2026-10-18 11:02:19', path: '\\\\filesv01\\取込', cat: '特別徴収', file: '02_特別徴収関係一式.pdf', reason: 'パスワード保護された PDF のため読み取れません', handled: false },
+  { id: 'we6', at: '2026-10-18 09:40:55', path: '\\\\filesv02\\取込', cat: '実態調査票', file: '高齢者等実態調査票.pdf', reason: 'ページの一部が欠けています', handled: true },
+];
+/** 直近 7 日の取込実績（成功／失敗） */
+const WATCH_DAILY = [
+  { day: '10/14', ok: 142, ng: 2 },
+  { day: '10/15', ok: 168, ng: 4 },
+  { day: '10/16', ok: 155, ng: 3 },
+  { day: '10/17', ok: 121, ng: 1 },
+  { day: '10/18', ok: 96, ng: 5 },
+  { day: '10/19', ok: 178, ng: 3 },
+  { day: '10/20', ok: 84, ng: 2 },
+];
+
 /** 監視パスごとの処理後（del=削除 / keep=そのまま） */
 const WATCH_ROOT_AFTER = { del: '削除', keep: 'そのまま' };
 /** 二重取込の判定方法 */
@@ -7567,7 +7589,75 @@ function historyRows() {
     && (!uq || String(h.user || '').toLowerCase().includes(uq)));
 }
 
+/** ホームのサブタブ（ご利用履歴 / 自動アップロードのダッシュボード） */
+function homeTabsHtml(active) {
+  const items = [['history', 'ご利用履歴'], ['dashboard', 'ダッシュボード']];
+  return `<div class="home-tabs" role="tablist" aria-label="ホーム">
+    ${items.map(([id, label]) => `<button type="button" class="home-tab${active === id ? ' on' : ''}" data-hometab="${id}" role="tab" aria-selected="${active === id}">${label}</button>`).join('')}
+  </div>`;
+}
+
+/** ホーム：自動アップロードのダッシュボード（サマリー＋エラー一覧） */
+function renderAutoDashboard() {
+  const ok = WATCH_DAILY.reduce((s, d) => s + d.ok, 0);
+  const ng = WATCH_DAILY.reduce((s, d) => s + d.ng, 0);
+  const total = ok + ng;
+  const rate = total ? (ok / total * 100) : 0;
+  const open = WATCH_ERRORS.filter((e) => !e.handled).length;
+  const livePaths = WATCH.roots.filter((r) => r.on && String(r.path || '').trim()).length;
+  const liveRules = WATCH.rules.filter((r) => r.on).length;
+  const combos = livePaths * liveRules;
+  const maxDay = Math.max(1, ...WATCH_DAILY.map((d) => d.ok + d.ng));
+  const bars = WATCH_DAILY.map((d) => {
+    const okPct = (d.ok / maxDay) * 100;
+    const ngPct = (d.ng / maxDay) * 100;
+    return `<div class="auto-bar-col" title="${d.day}：成功 ${d.ok} 件 / 失敗 ${d.ng} 件">
+      <div class="auto-bar-stack">
+        <div class="auto-bar ng" style="height:${ngPct}%"></div>
+        <div class="auto-bar ok" style="height:${okPct}%"></div>
+      </div>
+      <span class="auto-bar-day">${d.day}</span>
+    </div>`;
+  }).join('');
+  const errRows = WATCH_ERRORS.map((e) => `<tr>
+    <td class="nowrap">${esc(e.at)}</td>
+    <td class="mono">${esc(e.path)}</td>
+    <td>${esc(e.cat)}</td>
+    <td class="auto-file" title="${esc(e.file)}">${esc(e.file)}</td>
+    <td class="auto-reason">${esc(e.reason)}</td>
+    <td><span class="auto-status ${e.handled ? 'done' : 'open'}">${e.handled ? '対応済み' : '未対応'}</span></td>
+    <td class="auto-op"><button type="button" class="btn sm" data-werr-handle="${e.id}">${e.handled ? '未対応に戻す' : '対応済みにする'}</button></td>
+  </tr>`).join('');
+  return `
+  <div class="auto-dash">
+    <div class="auto-kpis">
+      <div class="auto-kpi"><div class="k">直近7日の取込</div><div class="v">${total}<small>件</small></div><div class="sub">成功 ${ok} 件 / 失敗 ${ng} 件</div></div>
+      <div class="auto-kpi"><div class="k">取込成功率</div><div class="v">${rate.toFixed(1)}<small>%</small></div><div class="sub">対象 ${total} 件</div></div>
+      <div class="auto-kpi"><div class="k">未対応エラー</div><div class="v auto-ng">${open}<small>件</small></div><div class="sub">全 ${WATCH_ERRORS.length} 件</div></div>
+      <div class="auto-kpi"><div class="k">監視設定</div><div class="v">${combos}<small>本</small></div><div class="sub">監視パス ${livePaths} × 帳票タイプ ${liveRules}</div></div>
+    </div>
+
+    <section class="auto-card">
+      <div class="auto-card-head"><h3>直近7日の取込状況</h3><span class="auto-legend"><span class="ok"></span>成功 <span class="ng"></span>失敗</span></div>
+      <div class="auto-chart">${bars}</div>
+    </section>
+
+    <section class="auto-card">
+      <div class="auto-card-head"><h3>自動アップロードのエラー</h3><span class="muted">未対応 ${open} 件 / 全 ${WATCH_ERRORS.length} 件</span></div>
+      <div class="tablewrap">
+        <table class="auto-table">
+          <thead><tr><th style="width:140px">発生日時</th><th style="width:150px">監視パス</th><th style="width:130px">帳票タイプ</th><th>ファイル名</th><th>エラー内容</th><th style="width:84px">状態</th><th style="width:120px"></th></tr></thead>
+          <tbody>${errRows}</tbody>
+        </table>
+      </div>
+    </section>
+  </div>`;
+}
+
 function renderHome() {
+  if (state.homeTab === 'dashboard') {
+    return `<div class="homepanel">${homeTabsHtml('dashboard')}${renderAutoDashboard()}</div>`;
+  }
   const F = state.hFilters;
   const rows = historyRows();
   const pages = Math.max(1, Math.ceil(rows.length / state.hPerPage));
@@ -7601,7 +7691,7 @@ function renderHome() {
 
   return `
   <div class="homepanel">
-    <div class="section-tab">ご利用履歴</div>
+    ${homeTabsHtml('history')}
     <div class="homefilter">
       <div class="home-filter-row">
         <div class="home-field">
@@ -10057,8 +10147,25 @@ function bindPreviewModal() {
   };
 }
 
-/** ホーム（ご利用履歴） */
+/** ホーム（ご利用履歴 / ダッシュボード） */
 function bindHomePanel() {
+  /* ホームのサブタブ */
+  document.querySelectorAll('[data-hometab]').forEach((b) => {
+    b.onclick = () => {
+      state.homeTab = b.dataset.hometab === 'dashboard' ? 'dashboard' : 'history';
+      render();
+    };
+  });
+  /* ダッシュボード：自動アップロードのエラーを対応済み／未対応に切り替える */
+  document.querySelectorAll('[data-werr-handle]').forEach((b) => {
+    b.onclick = () => {
+      const e = WATCH_ERRORS.find((x) => x.id === b.dataset.werrHandle);
+      if (!e) return;
+      e.handled = !e.handled;
+      render();
+      toast(e.handled ? 'エラーを対応済みにしました' : 'エラーを未対応に戻しました');
+    };
+  });
   const openDatePicker = (el) => {
     if (!el || typeof el.showPicker !== 'function') return;
     try { el.showPicker(); } catch (_) { /* 既に開いている／未対応 */ }
@@ -10397,6 +10504,7 @@ function applyHash() {
     const k = i < 0 ? kv : kv.slice(0, i);
     const val = i < 0 ? '' : decodeURIComponent(kv.slice(i + 1));
     if (k === 'tab') state.tab = val;
+    else if (k === 'htab') state.homeTab = val === 'dashboard' ? 'dashboard' : 'history';
     else if (k === 'node') { const [type, id] = val.split(':'); state.activeNode = { type, id }; }
     else if (k === 'ms') state.dd = val;
     else if (k === 'q') state.q = val;
