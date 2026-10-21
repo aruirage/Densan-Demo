@@ -1513,13 +1513,11 @@ test('ホーム: ご利用履歴と自動アップロードのダッシュボー
   assert.match(html, /取込成功率/);
   assert.match(html, /未対応エラー/);
   assert.match(html, /自動アップロードのエラー/);
-  assert.match(html, /data-werr-handle=/);
+  /* エラーは記録表示のみ（操作ボタンは置かない） */
+  assert.match(html, /class="auto-status/);
+  assert.match(html, /未対応/);
+  assert.match(html, /対応済み/);
+  assert.doesNotMatch(html, /data-werr-handle=|未対応に戻す|対応済みにする/);
   assert.doesNotMatch(html, /class="auto-chart"|class="auto-legend"/);
   assert.doesNotMatch(html, /data-hopt="hBiz"/);
-
-  /* エラーの対応状態を切り替えると、状態チップとボタンが変わる */
-  run('WATCH_ERRORS[0].handled = true;');
-  html = run('renderAutoDashboard()');
-  assert.match(html, /対応済み/);
-  assert.match(html, /未対応に戻す/);
 });

@@ -7606,7 +7606,6 @@ function renderAutoDashboard() {
     <td class="auto-file" title="${esc(e.file)}">${esc(e.file)}</td>
     <td class="auto-reason">${esc(e.reason)}</td>
     <td><span class="auto-status ${e.handled ? 'done' : 'open'}">${e.handled ? '対応済み' : '未対応'}</span></td>
-    <td class="auto-op"><button type="button" class="btn sm" data-werr-handle="${e.id}">${e.handled ? '未対応に戻す' : '対応済みにする'}</button></td>
   </tr>`).join('');
   return `
   <div class="auto-dash">
@@ -7621,7 +7620,7 @@ function renderAutoDashboard() {
       <div class="auto-card-head"><h3>自動アップロードのエラー</h3><span class="muted">未対応 ${open} 件 / 全 ${WATCH_ERRORS.length} 件</span></div>
       <div class="tablewrap">
         <table class="auto-table">
-          <thead><tr><th style="width:140px">発生日時</th><th style="width:150px">監視パス</th><th style="width:130px">帳票タイプ</th><th>ファイル名</th><th>エラー内容</th><th style="width:84px">状態</th><th style="width:120px"></th></tr></thead>
+          <thead><tr><th style="width:140px">発生日時</th><th style="width:150px">監視パス</th><th style="width:130px">帳票タイプ</th><th>ファイル名</th><th>エラー内容</th><th style="width:84px">状態</th></tr></thead>
           <tbody>${errRows}</tbody>
         </table>
       </div>
@@ -10129,16 +10128,6 @@ function bindHomePanel() {
     b.onclick = () => {
       state.homeTab = b.dataset.hometab === 'dashboard' ? 'dashboard' : 'history';
       render();
-    };
-  });
-  /* ダッシュボード：自動アップロードのエラーを対応済み／未対応に切り替える */
-  document.querySelectorAll('[data-werr-handle]').forEach((b) => {
-    b.onclick = () => {
-      const e = WATCH_ERRORS.find((x) => x.id === b.dataset.werrHandle);
-      if (!e) return;
-      e.handled = !e.handled;
-      render();
-      toast(e.handled ? 'エラーを対応済みにしました' : 'エラーを未対応に戻しました');
     };
   });
   const openDatePicker = (el) => {
