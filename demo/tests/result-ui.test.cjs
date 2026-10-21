@@ -1514,8 +1514,7 @@ test('ホーム: ご利用履歴と自動アップロードのダッシュボー
   assert.match(html, /未対応エラー/);
   assert.match(html, /自動アップロードのエラー/);
   assert.match(html, /data-werr-handle=/);
-  assert.match(html, /class="auto-chart"/);
-  assert.match(html, /10\/20/);
+  assert.doesNotMatch(html, /class="auto-chart"|class="auto-legend"/);
   assert.doesNotMatch(html, /data-hopt="hBiz"/);
 
   /* エラーの対応状態を切り替えると、状態チップとボタンが変わる */

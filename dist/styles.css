@@ -327,17 +327,6 @@ input:focus,select:focus,button:focus-visible{
 .auto-card{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:14px 16px}
 .auto-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .auto-card-head h3{font-size:14px;margin:0;color:var(--text)}
-.auto-legend{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-3)}
-.auto-legend .ok,.auto-legend .ng{width:10px;height:10px;border-radius:2px;display:inline-block;margin-left:8px}
-.auto-legend .ok{background:var(--accent-2)}
-.auto-legend .ng{background:var(--red)}
-.auto-chart{display:flex;align-items:stretch;gap:18px;height:210px;padding:6px 4px 0;border-bottom:1px solid var(--line)}
-.auto-bar-col{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-width:0}
-.auto-bar-stack{width:100%;max-width:54px;flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-end;min-height:0}
-.auto-bar{width:100%;background:var(--accent-2);border-radius:2px 2px 0 0;min-height:1px}
-.auto-bar.ng{background:var(--red)}
-.auto-bar.ok{border-radius:0 0 2px 2px}
-.auto-bar-day{font-size:11px;color:var(--text-3);white-space:nowrap;padding-bottom:6px}
 .auto-table{width:100%;border-collapse:collapse;font-size:12px}
 .auto-table th{background:#eef5fd;color:#4a637c;font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
 .auto-table td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}

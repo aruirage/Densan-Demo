@@ -5501,16 +5501,8 @@ const WATCH_ERRORS = [
   { id: 'we5', at: '2026-10-18 11:02:19', path: '\\\\filesv01\\取込', cat: '特別徴収', file: '02_特別徴収関係一式.pdf', reason: 'パスワード保護された PDF のため読み取れません', handled: false },
   { id: 'we6', at: '2026-10-18 09:40:55', path: '\\\\filesv02\\取込', cat: '実態調査票', file: '高齢者等実態調査票.pdf', reason: 'ページの一部が欠けています', handled: true },
 ];
-/** 直近 7 日の取込実績（成功／失敗） */
-const WATCH_DAILY = [
-  { day: '10/14', ok: 142, ng: 2 },
-  { day: '10/15', ok: 168, ng: 4 },
-  { day: '10/16', ok: 155, ng: 3 },
-  { day: '10/17', ok: 121, ng: 1 },
-  { day: '10/18', ok: 96, ng: 5 },
-  { day: '10/19', ok: 178, ng: 3 },
-  { day: '10/20', ok: 84, ng: 2 },
-];
+/** 直近 7 日の取込実績（成功／失敗の合計） */
+const WATCH_SUMMARY = { ok: 944, ng: 20 };
 
 /** 監視パスごとの処理後（del=削除 / keep=そのまま） */
 const WATCH_ROOT_AFTER = { del: '削除', keep: 'そのまま' };
@@ -7056,26 +7048,14 @@ function homeTabsHtml(active) {
 
 /** ホーム：自動アップロードのダッシュボード（サマリー＋エラー一覧） */
 function renderAutoDashboard() {
-  const ok = WATCH_DAILY.reduce((s, d) => s + d.ok, 0);
-  const ng = WATCH_DAILY.reduce((s, d) => s + d.ng, 0);
+  const ok = WATCH_SUMMARY.ok;
+  const ng = WATCH_SUMMARY.ng;
   const total = ok + ng;
   const rate = total ? (ok / total * 100) : 0;
   const open = WATCH_ERRORS.filter((e) => !e.handled).length;
   const livePaths = WATCH.roots.filter((r) => r.on && String(r.path || '').trim()).length;
   const liveRules = WATCH.rules.filter((r) => r.on).length;
   const combos = livePaths * liveRules;
-  const maxDay = Math.max(1, ...WATCH_DAILY.map((d) => d.ok + d.ng));
-  const bars = WATCH_DAILY.map((d) => {
-    const okPct = (d.ok / maxDay) * 100;
-    const ngPct = (d.ng / maxDay) * 100;
-    return `<div class="auto-bar-col" title="${d.day}：成功 ${d.ok} 件 / 失敗 ${d.ng} 件">
-      <div class="auto-bar-stack">
-        <div class="auto-bar ng" style="height:${ngPct}%"></div>
-        <div class="auto-bar ok" style="height:${okPct}%"></div>
-      </div>
-      <span class="auto-bar-day">${d.day}</span>
-    </div>`;
-  }).join('');
   const errRows = WATCH_ERRORS.map((e) => `<tr>
     <td class="nowrap">${esc(e.at)}</td>
     <td class="mono">${esc(e.path)}</td>
@@ -7093,11 +7073,6 @@ function renderAutoDashboard() {
       <div class="auto-kpi"><div class="k">未対応エラー</div><div class="v auto-ng">${open}<small>件</small></div><div class="sub">全 ${WATCH_ERRORS.length} 件</div></div>
       <div class="auto-kpi"><div class="k">監視設定</div><div class="v">${combos}<small>本</small></div><div class="sub">監視パス ${livePaths} × 帳票タイプ ${liveRules}</div></div>
     </div>
-
-    <section class="auto-card">
-      <div class="auto-card-head"><h3>直近7日の取込状況</h3><span class="auto-legend"><span class="ok"></span>成功 <span class="ng"></span>失敗</span></div>
-      <div class="auto-chart">${bars}</div>
-    </section>
 
     <section class="auto-card">
       <div class="auto-card-head"><h3>自動アップロードのエラー</h3><span class="muted">未対応 ${open} 件 / 全 ${WATCH_ERRORS.length} 件</span></div>
