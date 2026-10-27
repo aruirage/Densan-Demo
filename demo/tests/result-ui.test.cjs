@@ -1548,7 +1548,7 @@ test('システム通知: 入力エラー・権限エラーは赤、完了・案
   }
 });
 
-test('帳票タイプ設定: 各テーブルに横展開の上限を設定できる', () => {
+test('帳票タイプ設定: 各テーブルに最大列数を設定できる', () => {
   const run = app();
   const html = run('state.typeStep = 2; state.typeReadTab = "table"; renderTicketDetail()');
   const tables = JSON.parse(run('JSON.stringify(ensureTypeTables().map((t) => ({ id: t.id, max: t.exportMax })))'));
@@ -1557,7 +1557,7 @@ test('帳票タイプ設定: 各テーブルに横展開の上限を設定でき
   for (const t of tables) {
     assert.match(html, new RegExp(`data-tb-limit="${t.id}"[^>]*value="${t.max || 3}"`), t.id);
   }
-  assert.match(html, /横展開の上限/);
+  assert.match(html, /最大列数/);
 });
 
 test('CSV 出力: テーブル列を上限まで横展開し、複数ファイルを 1 行ずつ出力', () => {

@@ -6202,8 +6202,8 @@ function renderTypeTablePane() {
         <input class="tb-title" data-tb-name="${esc(tb.id)}" value="${esc(tb.name)}" aria-label="テーブル名" />
         <span class="spacer"></span>
         <label class="tb-limit" title="このテーブルの各列を最大何列まで横に展開するか（1〜20）。超えた分は出力されません">
-          <span>横展開の上限</span>
-          <input class="fld" type="number" min="1" max="20" step="1" data-tb-limit="${esc(tb.id)}" value="${tb.exportMax || 3}" aria-label="横展開の上限" />
+          <span>最大列数</span>
+          <input class="fld" type="number" min="1" max="20" step="1" data-tb-limit="${esc(tb.id)}" value="${tb.exportMax || 3}" aria-label="最大列数" />
         </label>
         <button type="button" class="tb-icon" data-tb-del="${esc(tb.id)}" title="削除" aria-label="テーブルを削除"><span class="ico i-delete" aria-hidden="true"></span></button>
         <button type="button" class="tb-icon" data-tb-toggle="${esc(tb.id)}" title="${tb.open ? '折りたたむ' : '展開'}" aria-label="${tb.open ? '折りたたむ' : '展開'}"><span class="ico ${tb.open ? 'i-caret-up' : 'i-caret-down'}"></span></button>
