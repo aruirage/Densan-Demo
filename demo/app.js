@@ -7626,8 +7626,7 @@ function render() {
   ${renderReviewConfirmLockDialog()}
   ${renderReviewRequiredDialog()}
   ${renderSaveHistoryDialog()}
-  ${renderExportDialog()}
-  <div class="toast" id="toast"></div>`;
+  ${renderExportDialog()}`;
   /* 同じ画面のままの再描画なら、退避したスクロール位置へ戻す */
   if (route === prevDomPage) {
     const mainEl = app.querySelector('.maincol');
