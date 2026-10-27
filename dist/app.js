@@ -4197,12 +4197,43 @@ function seedExportSnapshots() {
     const delim = tcfg.delimiter === 'タブ' ? '\t' : (tcfg.delimiter === 'セミコロン' ? ';' : ',');
     const newline = tcfg.newline === 'LF' ? '\n' : '\r\n';
     const withHeader = tcfg.header !== false;
-    const withFileCol = !!C.fileNameFromInput;
+    const withFileCol = C.fileNameFromInput !== false;
     const emptyMode = tcfg.empty === 'NULL' ? 'NULL' : '';
     const dateFmt = tcfg.dateFormat || 'YYYY-MM-DD';
     const cols = exportColsOf(files[0]);
-    const labels = cols ? cols.map((c) => c.label) : OCR_FIELDS.b6.map((x) => x.label);
-    const cellsFor = (f) => (cols ? cols.map((c, i) => exportCellValue(f.id, i)) : OCR_FIELDS.b6.map((x, i) => exportCellValue(f.id, i)))
+    /* 列 → テーブルの対応。テーブル列は「テーブル名_列名_1..上限」に横展開する。 */
+    const tableOfCol = (c) => {
+      const tables = ensureTypeTables();
+      if (c.tableId) return tables.find((t) => t.id === c.tableId) || null;
+      if (c.table) return tables.find((t) => t.name === c.table) || null;
+      return tables.find((t) => (t.cols || []).some((x) => x.id === c.src)) || null;
+    };
+    const parts = (cols || defaultExportCols().filter((c) => c.on)).map((c) => {
+      const tb = tableOfCol(c);
+      if (!tb) return { c, tb: null };
+      const tc = (tb.cols || []).find((x) => x.id === c.src) || { id: c.src, name: c.label };
+      const max = Math.max(1, Math.min(20, Math.trunc(Number(tb.exportMax)) || 3));
+      return { c, tb, tc, max };
+    });
+    const generalParts = parts.filter((p) => !p.tb);
+    const labels = generalParts.map((p) => p.c.label);
+    function generalCellValue(f, c, fallbackIdx) {
+      const tfs = ensureTypeFields();
+      const pos = tfs.findIndex((x) => x.id === c.src);
+      return exportCellValue(f.id, pos >= 0 ? pos : fallbackIdx);
+    }
+    function tableCellValue(tb, c, rowIdx) {
+      if (tb.rows) {
+        const row = tb.rows[rowIdx] || {};
+        return String(row[c.id] != null ? row[c.id] : '');
+      }
+      /* 行データを持たないテーブルは、デモの抽出テーブルから決定的に値を割り当てる */
+      const src = OCR_TABLES.default;
+      const ci = Math.max(0, (tb.cols || []).indexOf(c));
+      const idx = (rowIdx * Math.max(1, (tb.cols || []).length) + ci) % src.length;
+      return String(src[idx] && src[idx].value || '');
+    }
+    const cellsFor = (f) => generalParts.map((p, i) => generalCellValue(f, p.c, i))
       .map((v) => formatDateValue(v, dateFmt))
       .map((v) => (v === '' ? emptyMode : v));
     /* 結合出力：一般項目 ＋ 全テーブルの列を Left Join（モック：テーブル行は sample 値を 2 行生成） */
@@ -4238,9 +4269,28 @@ function seedExportSnapshots() {
       const text = all.map((r) => r.map((cell) => csvEscape(cell, delim)).join(delim)).join(newline);
       return { text, enc, delim };
     }
-    /* 横向出力（既定）：1 帳票 1 行 */
-    const headerCells = (withFileCol ? ['入力ファイル名'] : []).concat(labels);
-    const rows = files.map((f) => (withFileCol ? [dispFileName(f.id)] : []).concat(cellsFor(f)));
+    /* 横向出力（既定）：1 帳票 1 行。一般項目の後ろにテーブル列を上限まで横展開する。 */
+    const headerCells = (withFileCol ? ['入力ファイル名'] : []);
+    parts.forEach((p) => {
+      if (p.tb) {
+        for (let i = 1; i <= p.max; i++) headerCells.push(`${p.tb.name}_${p.tc.name}_${i}`);
+      } else {
+        headerCells.push(p.c.label);
+      }
+    });
+    const rows = files.map((f) => {
+      const out = withFileCol ? [dispFileName(f.id)] : [];
+      let gi = 0;
+      parts.forEach((p) => {
+        if (p.tb) {
+          for (let i = 0; i < p.max; i++) out.push(tableCellValue(p.tb, p.tc, i));
+        } else {
+          out.push(generalCellValue(f, p.c, gi));
+          gi += 1;
+        }
+      });
+      return out.map((v) => formatDateValue(v, dateFmt)).map((v) => (v === '' ? emptyMode : v));
+    });
     const all = withHeader ? [headerCells].concat(rows) : rows;
     const text = all.map((r) => r.map((cell) => csvEscape(cell, delim)).join(delim)).join(newline);
     return { text, enc, delim };
@@ -6553,12 +6603,12 @@ function exportCfgOf(t) {
   if (!t.exportCfg.cols || !t.exportCfg.cols.length) t.exportCfg.cols = defaultExportCols();
   return t.exportCfg;
 }
-/** 出力項目の初期値：AI 読取の項目＋テーブル列（テーブル列は既定で出力しない） */
+/** 出力項目の初期値：AI 読取の項目＋テーブル列（世帯員テーブルは既定で ON） */
 function defaultExportCols() {
   const cols = [];
   ensureTypeFields().forEach((f) => cols.push({ id: 'x' + f.id, src: f.id, label: f.name, on: true }));
   ensureTypeTables().forEach((tb) => (tb.cols || []).forEach((c) => {
-    cols.push({ id: 'x' + c.id, src: c.id, label: `${tb.name} / ${c.name}`, on: false, table: tb.name });
+    cols.push({ id: 'x' + c.id, src: c.id, label: `${tb.name} / ${c.name}`, on: tb.id === 'tb4', table: tb.name, tableId: tb.id });
   }));
   return cols;
 }
@@ -6615,7 +6665,7 @@ function ensureTypeTables() {
   const col = (id, name, prompt, sample) => ({ id, name, prompt: prompt || '', sample: sample || '', required: false });
   state.typeTables = [
     {
-      id: 'tb1', name: '商品明細テーブル', cond: '', open: true,
+      id: 'tb1', name: '商品明細テーブル', cond: '', open: true, exportMax: 3,
       cols: [
         col('c1', 'No.', '', '1'),
         col('c2', '商品コード', '', 'A-001'),
@@ -6627,7 +6677,7 @@ function ensureTypeTables() {
       ],
     },
     {
-      id: 'tb2', name: '税率内訳テーブル', cond: '', open: false,
+      id: 'tb2', name: '税率内訳テーブル', cond: '', open: false, exportMax: 3,
       cols: [
         col('c8', '税率', '', '10%'),
         col('c9', '税抜金額', '', '2,560'),
@@ -6635,8 +6685,23 @@ function ensureTypeTables() {
       ],
     },
     {
-      id: 'tb3', name: '備考テーブル', cond: '', open: false,
+      id: 'tb3', name: '備考テーブル', cond: '', open: false, exportMax: 1,
       cols: [col('c11', '備考', '', '')],
+    },
+    {
+      id: 'tb4', name: '世帯員テーブル', cond: '', open: false, exportMax: 3,
+      cols: [
+        col('c12', '氏名', '', '小林 陸'),
+        col('c13', '続柄', '', '父'),
+        col('c14', '生年月日', '', '1980年3月1日'),
+        col('c15', '個人番号', '', '987654321'),
+      ],
+      /* 複数行のサンプル（出力時に 氏名_1／氏名_2… と横展開される） */
+      rows: [
+        { c12: '小林 陸', c13: '父', c14: '1980年3月1日', c15: '987654321' },
+        { c12: '小林 早苗', c13: '母', c14: '1983年9月20日', c15: '1212334495' },
+        { c12: '小林 望', c13: '妹', c14: '2014年10月17日', c15: '989879665' },
+      ],
     },
   ];
   return state.typeTables;
@@ -6678,6 +6743,10 @@ function renderTypeTablePane() {
       <div class="tb-card-head">
         <input class="tb-title" data-tb-name="${esc(tb.id)}" value="${esc(tb.name)}" aria-label="テーブル名" />
         <span class="spacer"></span>
+        <label class="tb-limit" title="このテーブルの各列を最大何列まで横展開するか（1〜20）。超えた分は出力されません">
+          <span>出力上限</span>
+          <input class="fld" type="number" min="1" max="20" step="1" data-tb-limit="${esc(tb.id)}" value="${tb.exportMax || 3}" aria-label="出力上限" />
+        </label>
         <button type="button" class="tb-icon" data-tb-del="${esc(tb.id)}" title="削除" aria-label="テーブルを削除"><span class="ico i-delete" aria-hidden="true"></span></button>
         <button type="button" class="tb-icon" data-tb-toggle="${esc(tb.id)}" title="${tb.open ? '折りたたむ' : '展開'}" aria-label="${tb.open ? '折りたたむ' : '展開'}"><span class="ico ${tb.open ? 'i-caret-up' : 'i-caret-down'}"></span></button>
       </div>
@@ -7368,6 +7437,17 @@ function bindTicketDetail() {
       if (tb) tb.cond = el.value;
     };
   });
+  document.querySelectorAll('[data-tb-limit]').forEach((el) => {
+    const apply = () => {
+      const tb = ensureTypeTables().find((t) => t.id === el.dataset.tbLimit);
+      if (!tb) return;
+      const n = Math.max(1, Math.min(20, Math.trunc(Number(el.value)) || 3));
+      tb.exportMax = n;
+      el.value = n;
+    };
+    el.onchange = apply;
+    el.onblur = apply;
+  });
   document.querySelectorAll('[data-tb-toggle]').forEach((b) => {
     b.onclick = () => {
       const tb = ensureTypeTables().find((t) => t.id === b.dataset.tbToggle);
@@ -7412,6 +7492,7 @@ function bindTicketDetail() {
       name: '新規テーブル',
       cond: '',
       open: true,
+      exportMax: 3,
       cols: [{ id: 'c' + Date.now(), name: '', prompt: '', sample: '', required: false }],
     });
     render();
@@ -10353,9 +10434,8 @@ function bindUploadPanel() {
       const fmt = b.dataset.batchdl;
       const ids = Object.keys(state.picked).filter((id) => state.picked[id]);
       if (!ids.length) { toast('ダウンロードするファイルを選択してください'); return; }
-      const C = state.exportCfg || {};
-      /* まとめて出力（同一帳票タイプ）なら、複数ファイルを 1 つの CSV に統合して 1 回でダウンロード */
-      if (fmt === 'csv' && C.combineFiles) {
+      /* 横向固定：同一帳票タイプの複数ファイルは 1 つの CSV にまとめる（1 ファイル 1 行） */
+      if (fmt === 'csv' && ids.length > 1) {
         const files = ids.map((id) => byId(FILES_DATA, id)).filter(Boolean);
         const layouts = [...new Set(files.map((f) => f.layout))];
         if (layouts.length > 1) { toast('選択したファイルの帳票タイプが異なるため、まとめて出力できません'); return; }

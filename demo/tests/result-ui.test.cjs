@@ -1419,10 +1419,11 @@ test('帳票タイプ設定: 4 ステップ（出力設定は Step5 から外し
   const dlg = run('state.exportOpen = true; renderExportDialog()');
   assert.match(dlg, /UTF-8/);
   assert.match(dlg, /Shift_JIS/);
-  /* 出力項目の初期値は従来どおり：AI 読取項目は on、テーブル列は既定 off */
+  /* 出力項目の初期値：AI 読取項目 8 件＋世帯員テーブル 4 列が on、他のテーブル列は既定 off */
   const cols = JSON.parse(run('JSON.stringify(exportCfgOf(TICKET_TYPES[0]).cols)'));
-  assert.equal(cols.filter((c) => c.on).length, 8);
-  assert.ok(cols.filter((c) => c.table).every((c) => !c.on));
+  assert.equal(cols.filter((c) => c.on).length, 12);
+  assert.equal(cols.filter((c) => c.table && c.on).length, 4);
+  assert.ok(cols.filter((c) => c.table && c.tableId !== 'tb4').every((c) => !c.on));
   /* 既定は「1 帳票＝1 行」、同一帳票タイプのまとめが有効 */
   const cfg = JSON.parse(run('JSON.stringify(exportCfgOf(TICKET_TYPES[0]))'));
   assert.equal(cfg.record, 'perTicket');
@@ -1545,4 +1546,33 @@ test('システム通知: 入力エラー・権限エラーは赤、完了・案
   ]) {
     assert.equal(run(`isErrorToast(${JSON.stringify(msg)})`), false, msg);
   }
+});
+
+test('帳票タイプ設定: 各テーブルに出力列数上限を設定できる', () => {
+  const run = app();
+  const html = run('state.typeStep = 2; state.typeReadTab = "table"; renderTicketDetail()');
+  const tables = JSON.parse(run('JSON.stringify(ensureTypeTables().map((t) => ({ id: t.id, max: t.exportMax })))'));
+  assert.ok(tables.length >= 1);
+  assert.equal((html.match(/data-tb-limit="/g) || []).length, tables.length);
+  for (const t of tables) {
+    assert.match(html, new RegExp(`data-tb-limit="${t.id}"[^>]*value="${t.max || 3}"`), t.id);
+  }
+  assert.match(html, /出力上限/);
+});
+
+test('CSV 出力: テーブル列を上限まで横展開し、複数ファイルを 1 行ずつ出力', () => {
+  const run = app();
+  const ids = JSON.parse(run('JSON.stringify(FILES_DATA.filter((f) => f.layout === "l4").slice(0, 2).map((f) => f.id))'));
+  assert.equal(ids.length, 2);
+  run('state.exportCfg = { fileNameFromInput: false, encoding: "UTF-8" };');
+  run('(function(){ var t = TICKET_TYPES.find((x) => layoutIdOfTicketType(x) === "l4"); var cs = exportCfgOf(t).cols; cs.forEach((c) => { c.on = true; }); ensureTypeTables().find((tb) => tb.id === "tb4").exportMax = 2; })()');
+  const out = JSON.parse(run(`(function(){ var r = buildExportCsv(${JSON.stringify(ids)}); var lines = r.text.split("\\r\\n"); return JSON.stringify({ head: lines[0], rows: lines.length - 1, first: lines[1] }); })()`));
+  /* 氏名_1／氏名_2 まで横展開し、上限 2 を超える 氏名_3 は出さない */
+  assert.match(out.head, /世帯員テーブル_氏名_1/);
+  assert.match(out.head, /世帯員テーブル_氏名_2/);
+  assert.doesNotMatch(out.head, /世帯員テーブル_氏名_3/);
+  assert.equal(out.rows, 2);
+  assert.match(out.first, /小林 陸/);
+  assert.match(out.first, /小林 早苗/);
+  assert.doesNotMatch(out.first, /小林 望/);
 });
