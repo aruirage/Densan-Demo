@@ -1454,7 +1454,6 @@ const state = {
   reviewRequiredOpen: false,      // 必須項目が空のときの注意ダイアログ
   reviewConfirmLockOpen: false,   // 確認ボタン：以後修正できなくなる旨の確認
   saveHistoryOpen: false,         // 保存履历ダイアログ
-  saveHistView: null,             // 履歴「表示」でプレビュー中の履歴 ID
   flowDialog: null,               // { fileId, action } 承認・確認・差戻のダイアログ
   myTaskTab: 'pending',           // マイタスク：pending(未対応) | done(対応済)
   myTaskFilters: { name: '', biz: '', cat: '', updatedFrom: '', updatedTo: '', createdFrom: '', createdTo: '', assignee: '' },
@@ -3331,7 +3330,6 @@ function openReview(fileId, opts) {
   state.reviewFocusKey = null;
   state.reviewPos = false;
   state.saveHistoryOpen = false;
-  state.saveHistView = null;
   /* マイタスク／一覧から開いた确认は独立タブとして前面化 */
   const tid = reviewTabId(fileId);
   if (!isTabOpen(tid)) state.tabs.push(tid);
@@ -3552,7 +3550,7 @@ function bindReview() {
   });
   const guide = $('#rvGuide'); if (guide) guide.onclick = () => toast('操作ガイド（Demo）');
   const hist = $('#rvHistory');
-  if (hist) hist.onclick = () => { state.saveHistoryOpen = true; state.saveHistView = null; render(); };
+  if (hist) hist.onclick = () => { state.saveHistoryOpen = true; render(); };
   const leaveReviewToMyTasks = (fileId, myTab) => {
     const tid = reviewTabId(fileId);
     if (isTabOpen(tid)) {
@@ -3675,7 +3673,7 @@ function bindSaveHistoryDialog() {
   if (!state.saveHistoryOpen) return;
   const back = $('#saveHistBack');
   const panel = $('#saveHistPanel');
-  const close = () => { state.saveHistoryOpen = false; state.saveHistView = null; render(); };
+  const close = () => { state.saveHistoryOpen = false; render(); };
   if (back) back.onclick = (e) => { if (e.target === back) close(); };
   if (panel) panel.onclick = (e) => e.stopPropagation();
   const x = $('#saveHistClose'); if (x) x.onclick = close;
@@ -3685,8 +3683,9 @@ function bindSaveHistoryDialog() {
       if (!f || !f.saveHistory) return;
       const rec = f.saveHistory.find((h) => h.id === b.dataset.shShow);
       if (!rec) return;
-      /* 表示は内容のプレビューのみ。編集内容（reviewDirty）には反映しない */
-      state.saveHistView = state.saveHistView === rec.id ? null : rec.id;
+      state.reviewDirty[f.id] = Object.assign({}, rec.fields);
+      toast('履歴を編集内容に反映しました。保存するまで、これらの変更は適用されません。');
+      state.saveHistoryOpen = false;
       render();
     };
   });
@@ -3715,26 +3714,17 @@ function renderSaveHistoryDialog() {
   ensureSaveHistory(f);
   const rows = (f.saveHistory || []).map((h) => {
     const parts = splitSaveHistAt(h.at);
-    const open = state.saveHistView === h.id;
-    const detail = open ? `
-    <div class="savehist-detail">
-      <div class="savehist-detail-head">この時点の内容</div>
-      <table class="savehist-table">
-        <thead><tr><th>項目</th><th>値</th></tr></thead>
-        <tbody>${OCR_FIELDS.b6.map((x) => `<tr><td>${esc(x.label)}</td><td>${esc(h.fields[x.key] || '')}</td></tr>`).join('')}</tbody>
-      </table>
-    </div>` : '';
     return `
-    <div class="savehist-row${open ? ' is-open' : ''}">
+    <div class="savehist-row">
       <div class="savehist-meta">
         <div class="savehist-at"><span class="savehist-date">${esc(parts.date)}</span>${parts.time ? `<span class="savehist-time">${esc(parts.time)}</span>` : ''}</div>
         <div class="savehist-user">操作 : ${esc(h.user)}</div>
       </div>
       <div class="savehist-acts">
-        <button type="button" class="btn" data-sh-show="${esc(h.id)}" aria-expanded="${open}"><span class="ico ${open ? 'i-caret-up' : 'i-refresh'}"></span>${open ? '閉じる' : '表示'}</button>
+        <button type="button" class="btn" data-sh-show="${esc(h.id)}"><span class="ico i-refresh"></span>表示</button>
         <button type="button" class="btn savehist-dl" data-sh-dl="${esc(h.id)}">ダウンロード</button>
       </div>
-    </div>${detail}`;
+    </div>`;
   }).join('');
   return `
   <div class="savehist-drawer-back" id="saveHistBack" role="presentation">
