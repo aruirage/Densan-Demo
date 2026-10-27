@@ -1440,31 +1440,23 @@ test('出力設定は帳票タイプごとに独立している', () => {
   assert.equal(run('exportCfgOf(TICKET_TYPES[1]).record'), 'perTicket');
 });
 
-test('エクスポートダイアログ: 管理者は出力形式（横向/竖向/結合）と列設定を編集できる', () => {
+test('エクスポートダイアログ: 管理者は列設定を編集できる（出力形式は廃止）', () => {
   const run = app();
   run('var window={DEMO_FULL_ADMIN:true}; state.exportOpen=true; state.picked={}; state.picked[FILES_DATA[0].id]=true; visibleFiles=function(){ return FILES_DATA; };');
   const html = run('renderExportDialog()');
-  /* 出力形式：3 つのラジオ（横向／竖向／結合） */
-  assert.equal((html.match(/data-exprecord="/g) || []).length, 3);
-  assert.ok(html.includes('出力形式'));
-  assert.ok(html.includes('横向（1 帳票 = 1 行）'));
-  assert.ok(html.includes('竖向（項目名／項目値）'));
-  assert.ok(html.includes('結合（一般＋テーブル Left Join）'));
+  /* 出力形式（横向／竖向／結合）は廃止 */
+  assert.doesNotMatch(html, /data-exprecord|出力形式|横向（1 帳票 = 1 行）|竖向（項目名／項目値）|結合（一般＋テーブル Left Join）/);
   /* 列設定：出力項目（一般 8 件）のトグル行＋初期化ボタン */
   assert.ok(html.includes('列設定（出力項目・列順）'));
   assert.ok(html.includes('id="expColReset"'));
   assert.ok((html.match(/data-colact="on"/g) || []).length >= 8);
-  /* 管理者は disabled にならない */
-  assert.doesNotMatch(html, /data-exprecord="perTicket"[^>]*disabled/);
 });
 
-test('エクスポートダイアログ: 管理者以外は出力形式・列設定は変更不可', () => {
+test('エクスポートダイアログ: 管理者以外は列設定を変更できない', () => {
   const run = app();
   run('state.currentUser="u7"; state.exportOpen=true; state.picked={}; state.picked[FILES_DATA[0].id]=true; visibleFiles=function(){ return FILES_DATA; };');
   const html = run('renderExportDialog()');
-  /* 出力形式は選択肢だけ表示・無効、編集不可の注記 */
-  assert.ok(html.includes('出力形式の変更は管理者のみ可能です'));
-  assert.match(html, /data-exprecord="perTicket"[^>]*disabled/);
+  assert.doesNotMatch(html, /data-exprecord|出力形式/);
   /* 列設定ブロックは管理者以外には出ない（設定変更は管理者のみ：機能確認表 No.15） */
   assert.doesNotMatch(html, /列設定（出力項目・列順）/);
   assert.doesNotMatch(html, /id="expColReset"/);

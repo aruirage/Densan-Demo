@@ -1,32 +1,8 @@
 /**
- * エクスポート設定ダイアログ：出力形式（横向／竖向／結合）と列設定（出力項目・列順）
- * 帳票タイプごとの CSV 出力レイアウトと列名・列順を設定（管理者のみ編集可）。
+ * エクスポート設定ダイアログ：列設定（出力項目・列順）
+ * 帳票タイプごとの CSV 列名・列順を設定（管理者のみ編集可）。
  * styles.css / export-dialog.css が再生成されても効くように別ファイル（末尾寄りに読込）。
  */
-
-/* ── 出力形式：ラジオ行 ── */
-.exp-records {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.exp-record {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 9px 12px;
-  border: 1px solid var(--line, #d7d7d7);
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  transition: border-color .15s, background-color .15s;
-}
-.exp-record:hover { border-color: #2a5dd8; background: #f4f9ff; }
-.exp-record.on { border-color: #2448a0; background: #e4f3ff; }
-.exp-record input { margin: 2px 0 0; flex: none; }
-.exp-record span { font-size: 12.5px; color: #333; line-height: 1.45; }
-.exp-record input:disabled { cursor: not-allowed; }
-.exp-note { margin-top: 7px; font-size: 11px; color: #8a94a6; }
 
 /* ── 列設定（出力項目・列順） ── */
 .exp-cols-wrap {

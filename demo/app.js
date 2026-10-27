@@ -4225,17 +4225,6 @@ function renderExportDialog() {
           <span class="exp-field-label"><i class="req">*</i>変換方式</span>
           <select class="fld exp-control" data-expcfg="encoding">${encodings.map((o) => `<option ${enc === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
         </label>
-        <label class="exp-stack-field">
-          <span class="exp-field-label">出力形式</span>
-          <div class="exp-records">
-            ${['perTicket', 'perRow', 'combine'].map((rec) => `
-              <label class="exp-record${expRecord === rec ? ' on' : ''}">
-                <input type="radio" name="expRecord" data-exprecord="${rec}" ${expRecord === rec ? 'checked' : ''} ${admin ? '' : 'disabled'} />
-                <span>${rec === 'perTicket' ? '横向（1 帳票 = 1 行）' : rec === 'perRow' ? '竖向（項目名／項目値）' : '結合（一般＋テーブル Left Join）'}</span>
-              </label>`).join('')}
-          </div>
-          ${admin ? '' : '<div class="exp-note">出力形式の変更は管理者のみ可能です</div>'}
-        </label>
         <div class="exp-switches">
           ${mixedTypes
             ? '<div class="exp-warn">選択したファイルの帳票タイプが異なるため、まとめて出力できません。</div>'
@@ -8074,19 +8063,12 @@ function bindFlowDialogs() {
         render();
       };
     });
-    /* 出力形式（横向／竖向／結合）と列設定（表示・列名・順番・初期化）のバインド。
+    /* 列設定（表示・列名・順番・初期化）のバインド。
        選択中帳票タイプの exportCfg を直接書き換える（管理者のみ）。 */
     const expPicked = (typeof visibleFiles === 'function' ? visibleFiles() : [])
       .filter((f) => state.picked && state.picked[f.id]);
     const expType = TICKET_TYPES.find((x) => layoutIdOfTicketType(x) === (expPicked[0] && expPicked[0].layout));
     const isAdmin = isTenantAdmin(state.currentUser);
-    document.querySelectorAll('[data-exprecord]').forEach((el) => {
-      el.onchange = () => {
-        if (!isAdmin || !expType || !el.checked) return;
-        exportCfgOf(expType).record = el.dataset.exprecord;
-        render();
-      };
-    });
     const applyCol = (cfg, colId, act, val) => {
       const cols = cfg.cols || [];
       const i = cols.findIndex((c) => c.id === colId);
