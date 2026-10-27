@@ -102,6 +102,8 @@ test('result table has thirteen columns, compact rows, four action slots and pag
   assert.doesNotMatch(row, /data-act="fix"/);
   assert.doesNotMatch(row, /data-act="download"/);
   assert.match(row, /data-dlmenu="[^"]+"/);
+  /* ダウンロードは hover でメニューを出すため、ツールチップ用の data-tip は付けない */
+  assert.doesNotMatch(row, /data-dlmenu="[^"]+"[^>]*data-tip=/);
   assert.match(row, /aria-haspopup="menu"/);
   assert.match(row, /i-download/);
   /* 並び順：再読取 → 確認 → ダウンロード → 削除 */
@@ -772,7 +774,7 @@ test('hover tooltips are swept from body before rebinding so they never stack up
     globalThis.document = {
       body: { appendChild: (el) => globalThis.made.push(el) },
       createElement: () => ({ className: '', style: { setProperty() {} }, textContent: '', removed: false, remove() { this.removed = true; }, getBoundingClientRect: () => ({ width: 80, height: 20 }) }),
-      querySelectorAll: (s) => (s === 'body > .tip' ? [globalThis.stale] : (s === '[data-tip]' ? [globalThis.hovered] : [])),
+      querySelectorAll: (s) => (s === 'body > .tip' ? [globalThis.stale] : (s === '[data-tip]:not([data-dlmenu])' ? [globalThis.hovered] : [])),
     };
     globalThis.window = { innerWidth: 1200, innerHeight: 800 };
     try { bindTips(); } catch (e) { globalThis.err = String(e && e.stack || e); }

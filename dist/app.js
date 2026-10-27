@@ -3273,7 +3273,7 @@ function resultActionsCell(f) {
   if (userHasOp('redo') && canRedo) parts.push(btn('redo', '再読取', 'i-scan'));
   if (userHasOp('confirm') && canMutate) parts.push(btn('confirm', '確認', 'i-check'));
   if (userHasOp('export') && canDownload) {
-    parts.push(`<button class="act" data-dlmenu="${f.id}" aria-haspopup="menu" data-tip="ダウンロード" aria-label="ダウンロード"><span class="ico i-download" aria-hidden="true"></span></button>`);
+    parts.push(`<button class="act" data-dlmenu="${f.id}" aria-haspopup="menu" aria-label="ダウンロード"><span class="ico i-download" aria-hidden="true"></span></button>`);
   }
   if (userHasOp('delete')) parts.push(`<button class="act danger" data-act="delete" data-file="${f.id}" data-tip="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>`);
   return `<td class="result-actions-cell col-actions"><div class="acts act-icons">${parts.join('')}</div></td>`;
@@ -8211,7 +8211,9 @@ function bindTips(root) {
   /* 再描画でホバー中の要素ごと DOM から消えると mouseleave が飛ばず、
      ツールチップが body に残り続ける（次のホバーと二重に重なって見える）。毎回掃除する。 */
   document.querySelectorAll('body > .tip').forEach((t) => t.remove());
-  scope.querySelectorAll('[data-tip]').forEach((el) => {
+  /* data-dlmenu のボタンは hover でダウンロードメニューを開くため、
+     ツールチップは付けない（onmouseenter の上書きを防ぐ）。 */
+  scope.querySelectorAll('[data-tip]:not([data-dlmenu])').forEach((el) => {
     el.onmouseenter = () => {
       const tip = document.createElement('div');
       tip.className = 'tip';
