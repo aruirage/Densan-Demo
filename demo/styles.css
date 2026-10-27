@@ -275,6 +275,12 @@ td.name .meta{color:var(--text-3);font-size:11px;margin-top:2px}
   width:16px;height:16px;border-radius:50%;background:#52c41a;color:#fff;
   font-size:11px;font-weight:700;flex:none;
 }
+/* 入力エラー・権限エラーなどは赤系で表示 */
+.toast.error{
+  background:#fff1f0;color:#c0392b;border-color:#f3b7b2;
+  box-shadow:0 4px 12px rgba(192,57,43,.14);
+}
+.toast.error::before{content:"!";background:#e5484d}
 .toast.on{opacity:1}
 @media(max-width:1100px){.layout{grid-template-columns:1fr}.side{position:static}}
 

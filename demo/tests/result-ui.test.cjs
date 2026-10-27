@@ -1529,3 +1529,26 @@ test('ホーム: ご利用履歴と自動アップロードのダッシュボー
   assert.doesNotMatch(html, /class="auto-chart"|class="auto-legend"/);
   assert.doesNotMatch(html, /data-hopt="hBiz"/);
 });
+
+test('システム通知: 入力エラー・権限エラーは赤、完了・案内は緑', () => {
+  const run = app();
+  for (const msg of [
+    '監視ルートを入力してください',
+    'この画面を開く権限がありません',
+    '再読取に失敗しました',
+    '承認担当は1名以上必要です',
+    'フォルダ名が重複しています：個人住民税申告',
+    '読取できる帳票が選択されていません',
+  ]) {
+    assert.equal(run(`isErrorToast(${JSON.stringify(msg)})`), true, msg);
+  }
+  for (const msg of [
+    '設定を保存しました',
+    '読取リストに追加成功',
+    'エラー箇所を一括で修正済みにしました',
+    '読取が完了しました：成功 10 件 ／ 失敗 2 件',
+    'この帳票タイプは承認機能を使用しません',
+  ]) {
+    assert.equal(run(`isErrorToast(${JSON.stringify(msg)})`), false, msg);
+  }
+});

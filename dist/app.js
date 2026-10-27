@@ -1971,10 +1971,17 @@ function addUploadedFiles(items) {
   startClassifying(created);
 }
 
-function toast(msg) {
+/** 入力エラー・権限エラーなどは赤、通常の完了・案内は緑で表示する */
+function isErrorToast(msg) {
+  return /権限がありません|できません|してください|必要です|失敗しました|選択されていません|重複しています|最大.*です|未入力|不足しています|エラーが発生|読み取れません|見つかりません|閉じられません|対象外/.test(String(msg || ''));
+}
+
+function toast(msg, type) {
   if (typeof document === 'undefined') return;
   let t = $('#toast');
   if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; document.body.appendChild(t); }
+  const isError = type === 'error' || (type !== 'success' && isErrorToast(msg));
+  t.className = 'toast' + (isError ? ' error' : '');
   t.textContent = msg; t.classList.add('on');
   clearTimeout(t._tm); t._tm = setTimeout(() => t.classList.remove('on'), 1900);
 }
