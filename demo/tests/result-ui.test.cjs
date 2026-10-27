@@ -1204,7 +1204,7 @@ test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 
   const run = app();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行']);
+  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', '通知設定']);
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit/);
 
@@ -1258,7 +1258,7 @@ test('自動アップロード: 監視パスごとに処理後のファイル（
   assert.match(html, /<option value="del"[^>]*>削除<\/option>/);
   assert.match(html, /<option value="keep"[^>]*>そのまま<\/option>/);
   assert.doesNotMatch(html, /data-wroot-done=|処理済フォルダ|data-wf-radio/);
-  assert.equal((html.match(/class="watch-sec"/g) || []).length, 4);
+  assert.equal((html.match(/class="watch-sec"/g) || []).length, 5);
   /* 選択値は行ごとに保持される */
   run('WATCH.roots[0].after = "del"; WATCH.roots[1].after = "keep";');
   const h2 = run('renderWatch()');
@@ -1610,4 +1610,15 @@ test('auto upload exposes destination column only when moving files', () => {
   assert.match(html, /移動先パス/);
   assert.match(html, /data-wroot-move=/);
   assert.match(html, /archive\/path/);
+});
+
+test('upload notices require enabled switch and matching notification condition', () => {
+  const run = app();
+  assert.equal(run('WATCH.notify = false; shouldNotifyUpload(false)'), false);
+  assert.equal(run('WATCH.notify = true; WATCH.notifyOn = "fail"; shouldNotifyUpload(false)'), true);
+  assert.equal(run('shouldNotifyUpload(true)'), false);
+  assert.equal(run('WATCH.notifyOn = "always"; shouldNotifyUpload(true)'), true);
+  assert.match(run('renderWatch()'), /data-wf-toggle="notify"/);
+  assert.match(run('renderWatch()'), /data-wf="notifyOn"/);
+  assert.doesNotMatch(run('renderWatch()'), /Webhook URL/);
 });

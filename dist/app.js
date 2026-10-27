@@ -6181,11 +6181,15 @@ function renderNotices() {
   const page = state.noticePage = Math.min(pages, Math.max(1, state.noticePage || 1));
   const rows = errors.slice((page-1)*per, page*per);
   return `<section class="notice-page"><h2>お知らせ</h2>
-    <div class="notice-tablewrap"><table class="auto-table"><thead><tr><th>発生日時</th><th>ファイル名</th><th>監視パス</th><th>失敗理由</th></tr></thead><tbody>${rows.map(e=>`<tr><td>${esc(e.at)}</td><td>${esc(e.file)}</td><td class="mono">${esc(e.path)}</td><td>${esc(e.reason)}</td></tr>`).join('') || '<tr><td colspan="4">お知らせはありません</td></tr>'}</tbody></table></div>
+    <div class="notice-tablewrap"><table class="auto-table"><thead><tr><th>発生日時</th><th>ファイル名</th><th>監視パス</th><th>通知内容・失敗理由</th></tr></thead><tbody>${rows.map(e=>`<tr><td>${esc(e.at)}</td><td>${esc(e.file)}</td><td class="mono">${esc(e.path)}</td><td>${esc(e.reason)}</td></tr>`).join('') || '<tr><td colspan="4">お知らせはありません</td></tr>'}</tbody></table></div>
     <div class="pager"><span>全 ${errors.length} 件</span><select id="noticePerPage" aria-label="表示件数">${[10,20,50].map(n=>`<option value="${n}" ${n===per?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-noticepage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-noticepage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="noticeGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>
   </section>`;
 }
+function shouldNotifyUpload(success) {
+  return !!WATCH.notify && (!success || WATCH.notifyOn === 'always');
+}
 function addUploadFailure(error) {
+  if (!shouldNotifyUpload(false)) return;
   WATCH_ERRORS.unshift({...error, id: error.id || 'we' + Date.now(), at: error.at || nowStamp()});
   noticeHasNew = true;
   toast('自動アップロードに失敗しました：' + (error.file || error.path || ''), 'error');
@@ -6315,6 +6319,14 @@ function renderWatch() {
         <div class="watch-fields">
           ${row('再実行回数', `<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span class="muted">回</span></div>`)}
           ${row('実行間隔', `<div class="watch-inline"><input class="fld" type="number" min="1" max="120" data-wf="retryGap" value="${esc(x.retryGap)}" /><span class="muted">分</span></div>`)}
+        </div>
+      </section>
+
+      <section class="watch-sec">
+        <h3 class="watch-sec-head">通知設定<span class="info-i" data-tip="通知を有効にすると、条件に一致した自動アップロードの結果を「お知らせ」に表示します。">i</span></h3>
+        <div class="watch-fields">
+          ${row('通知する', watchToggle('notify', x.notify))}
+          ${row('通知条件', `<select class="fld" data-wf="notifyOn" ${x.notify ? '' : 'disabled'}>${Object.entries(WATCH_NOTIFY_ON).map(([v,label]) => `<option value="${v}" ${x.notifyOn === v ? 'selected' : ''}>${label}</option>`).join('')}</select>`, true)}
         </div>
       </section>
 
