@@ -1558,6 +1558,7 @@ test('帳票タイプ設定: 各テーブルに最大列数を設定できる', 
     assert.match(html, new RegExp(`data-tb-limit="${t.id}"[^>]*value="${t.max || 3}"`), t.id);
   }
   assert.match(html, /最大列数/);
+  assert.match(html, /class="info-i" data-tip="このテーブルの各列を最大何列まで横に展開するか/);
 });
 
 test('CSV 出力: テーブル列を上限まで横展開し、複数ファイルを 1 行ずつ出力', () => {
