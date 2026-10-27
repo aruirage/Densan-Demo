@@ -1122,7 +1122,7 @@ th .ico{font-size:11px;color:var(--accent)}
 .result-table col.col-hist{width:212px}
 .result-table col.col-user{width:100px}
 .result-table col.col-dt{width:148px}
-.result-table col.col-actions{width:128px}
+.result-table col.col-actions{width:156px}
 .result-table .col-pick{width:48px;min-width:48px;max-width:48px;text-align:center;padding:0 8px}
 .result-table .col-name{width:280px;max-width:280px;overflow:hidden;text-align:left}
 .result-table .col-biz,.result-table .col-type,.result-table .col-size,.result-table .col-status,.result-table .col-intake{text-align:center}
@@ -1236,7 +1236,7 @@ th .ico{font-size:11px;color:var(--accent)}
 .tip{position:fixed;z-index:400;background:#3b4047;color:#fff;font-size:11px;line-height:1.5;padding:6px 10px;border-radius:3px;max-width:min(480px,92vw);white-space:normal;word-break:break-word;text-align:left;pointer-events:none;box-shadow:0 2px 8px rgba(30,35,45,.25)}
 .tip::after{content:"";position:absolute;left:var(--tip-arrow, 50%);top:100%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#3b4047}
 .result-table thead th.result-actions-cell,
-.result-table td.result-actions-cell{width:128px !important;min-width:128px !important;overflow:visible}
+.result-table td.result-actions-cell{width:156px !important;min-width:156px !important;overflow:visible}
 
 /* ══ OA 風承認進捗バー ══ */
 .oa-progress{display:flex;flex-direction:column;gap:10px;width:100%}
