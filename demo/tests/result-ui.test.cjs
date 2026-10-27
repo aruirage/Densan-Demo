@@ -71,7 +71,7 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   assert.match(html, /id="filtRvq"/);
   assert.match(html, /読取内容/);
 });
-test('result table has thirteen columns, compact rows, four browse-only action slots and page jump', () => {
+test('result table has thirteen columns, compact rows, four action slots and page jump', () => {
   const run = app();
   const html = run('renderTable()');
   assert.match(html, /result-tablewrap/);
@@ -96,13 +96,18 @@ test('result table has thirteen columns, compact rows, four browse-only action s
   assert.match(html, /JSONをダウンロード/);
   assert.match(html, /PDFをダウンロード/);
   const row = html.match(/<tr[^>]*data-row="[^"]+"[\s\S]*?<\/tr>/)[0];
-  /* 行アクション：再読取／修正／確認／削除。ダウンロードは hover メニュー（data-dlmenu）なので data-act は4つ */
-  assert.equal((row.match(/data-act="/g) || []).length, 4);
-  for (const act of ['redo', 'fix', 'confirm', 'delete']) assert.match(row, new RegExp(`data-act="${act}"`), act);
+  /* 行アクション：再読取／確認／削除。ダウンロードは hover メニュー（data-dlmenu）なので data-act は3つ */
+  assert.equal((row.match(/data-act="/g) || []).length, 3);
+  for (const act of ['redo', 'confirm', 'delete']) assert.match(row, new RegExp(`data-act="${act}"`), act);
+  assert.doesNotMatch(row, /data-act="fix"/);
   assert.doesNotMatch(row, /data-act="download"/);
   assert.match(row, /data-dlmenu="[^"]+"/);
   assert.match(row, /aria-haspopup="menu"/);
   assert.match(row, /i-download/);
+  /* 並び順：再読取 → 確認 → ダウンロード → 削除 */
+  assert.ok(row.indexOf('data-act="redo"') < row.indexOf('data-act="confirm"'));
+  assert.ok(row.indexOf('data-act="confirm"') < row.indexOf('data-dlmenu='));
+  assert.ok(row.indexOf('data-dlmenu=') < row.indexOf('data-act="delete"'));
   assert.doesNotMatch(row, /data-act="approve"|data-act="reapprove"/);
   assert.match(row, /class="fn link"/);
 });

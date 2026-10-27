@@ -3260,11 +3260,10 @@ function renderFilters() {
   </section>`;
 }
 
-/** 行の操作セル（再読取 → 修正 → 確認 → ダウンロード → 削除）
+/** 行の操作セル（再読取 → 確認 → ダウンロード → 削除）
  *  権限が無い、または状態上不可のボタンは描かない。 */
 function resultActionsCell(f) {
-  /* 再読取＝読取完了／読取失敗のみ、修正・確認＝読取完了／読取失敗のみ
-     （確認済み以降は「以後の修正ができなくなります」のとおり触らせない）、
+  /* 再読取・確認＝読取完了／読取失敗のみ（確認済み以降は触らせない）、
      ダウンロード＝読取中のものは出さない。 */
   const canRedo = ['done', 'failed'].includes(f.status);
   const canMutate = ['done', 'failed'].includes(f.status);
@@ -3272,7 +3271,6 @@ function resultActionsCell(f) {
   const btn = (act, tip, ico) => `<button class="act" data-act="${act}" data-file="${f.id}" data-tip="${tip}" aria-label="${tip}"><span class="ico ${ico}" aria-hidden="true"></span></button>`;
   const parts = [];
   if (userHasOp('redo') && canRedo) parts.push(btn('redo', '再読取', 'i-scan'));
-  if (userHasOp('fix') && canMutate) parts.push(btn('fix', '修正', 'i-edit'));
   if (userHasOp('confirm') && canMutate) parts.push(btn('confirm', '確認', 'i-check'));
   if (userHasOp('export') && canDownload) {
     parts.push(`<button class="act" data-dlmenu="${f.id}" aria-haspopup="menu" data-tip="ダウンロード" aria-label="ダウンロード"><span class="ico i-download" aria-hidden="true"></span></button>`);
@@ -3288,7 +3286,7 @@ function renderTable() {
   if (state.resultPage > pages) state.resultPage = pages;
   const rows = all.slice((state.resultPage - 1) * state.perPage, state.resultPage * state.perPage);
   /* 業務ボタンが一つも無いユーザーは操作列そのものを描かない（画面は開ける） */
-  const showOps = ['redo', 'fix', 'confirm', 'export', 'delete'].some((k) => userHasOp(k));
+  const showOps = ['redo', 'confirm', 'export', 'delete'].some((k) => userHasOp(k));
   const arrow = (k) => (state.sort.key === k ? ` <span class="ico ${state.sort.dir === 'asc' ? 'i-caret-up' : 'i-caret-down'}"></span>` : '');
   const th = (k, label, extra = '') => `<th data-sort="${k}" style="cursor:pointer" ${extra}>${label}${arrow(k)}</th>`;
 
