@@ -90,15 +90,15 @@ const USERS = [
 /** デモ用：権限の違いを見せるための切替候補。
  *  9 ロール設計（R1/R2/R3/R5/R6/R7/R8/R10/R11）に 1 人ずつ対応させる。 */
 const DEMO_ACTORS = [
-  { id: 'u1', role: 'システム管理者', email: 'ichiro.sato@itso.co.jp', hint: '全メニュー・全帳票・全操作' },
-  { id: 'u3', role: '業務管理者', email: 'kenta.yamada@itso.co.jp', hint: '「設定」の 2 メニュー（帳票設定・利用設定）だけ。一覧・アップロード・読取は不可' },
-  { id: 'u8', role: 'OCR結果確認', email: 'ryo.nakamura@itso.co.jp', hint: '閲覧・修正・確認（アップロードと設定は不可）' },
-  { id: 'u7', role: 'アップロード', email: 'aya.yamamoto@itso.co.jp', hint: 'アップロードのみ（閲覧・読取・確認・出力・削除は不可）' },
-  { id: 'u6', role: '読取', email: 'osamu.watanabe@itso.co.jp', hint: '閲覧・読取（再読取／一括読取）・削除（確認と出力は不可）' },
-  { id: 'u5', role: 'OCR結果修正', email: 'yumi.ito@itso.co.jp', hint: '閲覧と修正のみ（確認・出力は不可）' },
-  { id: 'u2', role: 'AI分類結果修正', email: 'hanako.suzuki@itso.co.jp', hint: '閲覧と AI 分類結果の修正のみ' },
-  { id: 'u10', role: '出力', email: 'naoko.kobayashi@itso.co.jp', hint: '閲覧と出力（CSV／JSON／PDF）のみ' },
-  { id: 'u4', role: '閲覧', email: 'minoru.tanaka@itso.co.jp', hint: '一覧の閲覧のみ（操作ボタンは出ない）' },
+  { id: 'u1', role: 'システム管理者', email: 'ichiro.sato', hint: '全メニュー・全帳票・全操作' },
+  { id: 'u3', role: '業務管理者', email: 'kenta.yamada', hint: '「設定」の 2 メニュー（帳票設定・利用設定）だけ。一覧・アップロード・読取は不可' },
+  { id: 'u8', role: 'OCR結果確認', email: 'ryo.nakamura', hint: '閲覧・修正・確認（アップロードと設定は不可）' },
+  { id: 'u7', role: 'アップロード', email: 'aya.yamamoto', hint: 'アップロードのみ（閲覧・読取・確認・出力・削除は不可）' },
+  { id: 'u6', role: '読取', email: 'osamu.watanabe', hint: '閲覧・読取（再読取／一括読取）・削除（確認と出力は不可）' },
+  { id: 'u5', role: 'OCR結果修正', email: 'yumi.ito', hint: '閲覧と修正のみ（確認・出力は不可）' },
+  { id: 'u2', role: 'AI分類結果修正', email: 'hanako.suzuki', hint: '閲覧と AI 分類結果の修正のみ' },
+  { id: 'u10', role: '出力', email: 'naoko.kobayashi', hint: '閲覧と出力（CSV／JSON／PDF）のみ' },
+  { id: 'u4', role: '閲覧', email: 'minoru.tanaka', hint: '一覧の閲覧のみ（操作ボタンは出ない）' },
 ];
 
 /** 右上に表示するログイン中ユーザ（state.currentUser から導出） */
@@ -347,17 +347,17 @@ const OCR_ORIGINAL = {
 /* dataPerm：自身のみ＝自分に割当／自分が処理したタスクだけ。全件参照＝同権限プール内の他人の待办／已办も見える。
  * 操作権限・所属はユーザーグループ側で付与（ユーザー個別では持たない）。システム管理者は全操作。 */
 const ENT_USERS = [
-  { id: 'U1', uid: 'u1', name: '佐藤 美子', email: 'miko.sato@itso.co.jp', role: 'システム管理者', dataPerm: '全件参照', created: '2026-09-30 10:12:00', status: '有効' },
-  { id: 'U2', uid: 'u2', name: '鈴木 太郎', email: 'taro.suzuki@itso.co.jp', role: '確認者', dataPerm: '自身のみ', created: '2026-10-01 09:02:11', status: '有効' },
-  { id: 'U3', uid: 'u3', name: '山田 健太', email: 'kenta.yamada@itso.co.jp', role: '運用管理者', dataPerm: '全件参照', created: '2026-10-02 14:20:31', status: '有効' },
+  { id: 'U1', uid: 'u1', name: '佐藤 美子', email: 'miko.sato', role: 'システム管理者', dataPerm: '全件参照', created: '2026-09-30 10:12:00', status: '有効' },
+  { id: 'U2', uid: 'u2', name: '鈴木 太郎', email: 'taro.suzuki', role: '確認者', dataPerm: '自身のみ', created: '2026-10-01 09:02:11', status: '有効' },
+  { id: 'U3', uid: 'u3', name: '山田 健太', email: 'kenta.yamada', role: '運用管理者', dataPerm: '全件参照', created: '2026-10-02 14:20:31', status: '有効' },
   /* uid は USERS と対応。u4＝田中（確認＋承認兼務）、u5＝承認専任 → 操作は所属グループの役割で決まる */
-  { id: 'U4', uid: 'u4', name: '田中 実', email: 'minoru.tanaka@itso.co.jp', role: '承認者', dataPerm: '自身のみ', created: '2026-10-03 11:45:02', status: '有効' },
-  { id: 'U5', uid: 'u5', name: '伊藤 由美', email: 'yumi.ito@itso.co.jp', role: '承認者', dataPerm: '自身のみ', created: '2026-10-05 08:31:10', status: '有効' },
-  { id: 'U6', uid: 'u6', name: '渡辺 修', email: 'osamu.watanabe@itso.co.jp', role: '確認者', dataPerm: '自身のみ', created: '2026-10-06 10:05:44', status: '有効' },
-  { id: 'U7', uid: 'u7', name: '山本 彩', email: 'aya.yamamoto@itso.co.jp', role: 'アップロード者', dataPerm: '自身のみ', created: '2026-10-07 13:22:09', status: '有効', soloPermIds: ['R5'] },
-  { id: 'U8', uid: 'u8', name: '中村 亮', email: 'ryo.nakamura@itso.co.jp', role: '確認者', dataPerm: '自身のみ', created: '2026-10-08 09:41:30', status: '有効' },
+  { id: 'U4', uid: 'u4', name: '田中 実', email: 'minoru.tanaka', role: '承認者', dataPerm: '自身のみ', created: '2026-10-03 11:45:02', status: '有効' },
+  { id: 'U5', uid: 'u5', name: '伊藤 由美', email: 'yumi.ito', role: '承認者', dataPerm: '自身のみ', created: '2026-10-05 08:31:10', status: '有効' },
+  { id: 'U6', uid: 'u6', name: '渡辺 修', email: 'osamu.watanabe', role: '確認者', dataPerm: '自身のみ', created: '2026-10-06 10:05:44', status: '有効' },
+  { id: 'U7', uid: 'u7', name: '山本 彩', email: 'aya.yamamoto', role: 'アップロード者', dataPerm: '自身のみ', created: '2026-10-07 13:22:09', status: '有効', soloPermIds: ['R5'] },
+  { id: 'U8', uid: 'u8', name: '中村 亮', email: 'ryo.nakamura', role: '確認者', dataPerm: '自身のみ', created: '2026-10-08 09:41:30', status: '有効' },
   /* 出力専任。グループ未所属で、個人の権限（R10）だけを持つ */
-  { id: 'U10', uid: 'u10', name: '小林 直子', email: 'naoko.kobayashi@itso.co.jp', role: '出力者', dataPerm: '自身のみ', created: '2026-10-09 09:15:00', status: '有効', soloPermIds: ['R10'] },
+  { id: 'U10', uid: 'u10', name: '小林 直子', email: 'naoko.kobayashi', role: '出力者', dataPerm: '自身のみ', created: '2026-10-09 09:15:00', status: '有効', soloPermIds: ['R10'] },
 ];
 /** システム権限（メニュー到達）。業務の操作権限はユーザーグループの役割で付与する */
 let ROLES = [
@@ -509,15 +509,15 @@ const SECURITY = {
   ipEnabled: '無効',        // 無効 / 有効
   idle: '制限なし',         // 15分 / 30分 / 60分 / 2時間 / 制限なし
   logs: [
-    { at: '2026-10-14 20:51:32', user: 'miko.sato@itso.co.jp', type: '帳票読取', ip: '172.16.51.8', result: '成功', note: '—' },
-    { at: '2026-10-14 20:19:45', user: 'miko.sato@itso.co.jp', type: 'ダウンロード', ip: '172.16.51.8', result: '成功', note: 'CSV 12件' },
-    { at: '2026-10-14 19:02:48', user: 'taro.suzuki@itso.co.jp', type: '確認', ip: '172.16.51.20', result: '成功', note: '確認担当者: 山田 健太' },
-    { at: '2026-10-14 17:44:02', user: 'misaki.nakamura@itso.co.jp', type: 'ログイン', ip: '172.16.51.33', result: '失敗', note: 'パスワード誤り' },
-    { at: '2026-10-14 15:10:40', user: 'minoru.tanaka@itso.co.jp', type: '設定変更', ip: '172.16.51.44', result: '成功', note: 'エクスポート設定' },
-    { at: '2026-10-14 09:12:00', user: 'miko.sato@itso.co.jp', type: 'アップロード', ip: '172.16.51.8', result: '成功', note: '3ファイル' },
+    { at: '2026-10-14 20:51:32', user: 'miko.sato', type: '帳票読取', ip: '172.16.51.8', result: '成功', note: '—' },
+    { at: '2026-10-14 20:19:45', user: 'miko.sato', type: 'ダウンロード', ip: '172.16.51.8', result: '成功', note: 'CSV 12件' },
+    { at: '2026-10-14 19:02:48', user: 'taro.suzuki', type: '確認', ip: '172.16.51.20', result: '成功', note: '確認担当者: 山田 健太' },
+    { at: '2026-10-14 17:44:02', user: 'misaki.nakamura', type: 'ログイン', ip: '172.16.51.33', result: '失敗', note: 'パスワード誤り' },
+    { at: '2026-10-14 15:10:40', user: 'minoru.tanaka', type: '設定変更', ip: '172.16.51.44', result: '成功', note: 'エクスポート設定' },
+    { at: '2026-10-14 09:12:00', user: 'miko.sato', type: 'アップロード', ip: '172.16.51.8', result: '成功', note: '3ファイル' },
     { at: '2026-10-15 08:02:11', user: 'システム', type: '自動取込', ip: '—', result: '成功', note: '監視「窓口共有」 2件 / 10_住民異動関係' },
     { at: '2026-10-15 08:04:40', user: 'システム', type: '自動取込失敗', ip: '—', result: '失敗', note: '対象外の拡張子' },
-    { at: '2026-10-15 09:10:00', user: 'miko.sato@itso.co.jp', type: '監視設定変更', ip: '172.16.51.8', result: '成功', note: '分類順を変更' },
+    { at: '2026-10-15 09:10:00', user: 'miko.sato', type: '監視設定変更', ip: '172.16.51.8', result: '成功', note: '分類順を変更' },
     { at: '2026-10-15 09:11:20', user: 'システム', type: 'エラー通知', ip: '—', result: '成功', note: 'Webhook へ通知' },
   ],
 };
@@ -1163,9 +1163,9 @@ GROUPS.forEach((g) => {
   if (!g.permId) g.permId = KIND_PERM[g.kind] || 'R4';
 });
 /** グループ ID → 所属ユーザー ID の配列 */
-const groupMemberIds = (gid) => (byId(GROUPS, gid) || {}).userIds || [];
+const groupMemberIds = (gid) => [...new Set([gid, ...groupDescendantIds(gid)].flatMap((id) => (byId(GROUPS, id) || {}).userIds || []))];
 /** ユーザー ID → 所属グループの配列（多対多） */
-const groupsOfUser = (uid) => GROUPS.filter((g) => (g.userIds || []).includes(uid));
+const groupsOfUser = (uid) => GROUPS.filter((g) => groupMemberIds(g.id).includes(uid));
 /** グループ ID → グループ名（見つからなければそのまま） */
 const groupName = (gid) => (byId(GROUPS, gid) || {}).name || gid;
 /** このグループが関与している帳票タイプと操作の一覧（帳票権限表の転置） */
@@ -3072,6 +3072,7 @@ function renderTable() {
 /* ===================== 5-b2. タブ（ホーム／新規アップロード／ファイル一覧／マイタスク） ===================== */
 
 const TABS_DEF = {
+  notices: { id: 'notices', label: 'お知らせ', route: 'notices' },
   home: { id: 'home', label: 'ホーム', route: 'home' },
   upload: { id: 'upload', label: '新規アップロード', route: 'upload' },
   result: { id: 'result', label: '読取結果一覧', route: 'result' },
@@ -4012,6 +4013,83 @@ function seedExportSnapshots() {
     return base + '_結合';
   }
 
+  // ZIP (UTF-8 filenames, STORE): offline, no external dependency.
+  function downloadZip(entries) {
+    const encoder = new TextEncoder();
+    const chunks = [], central = [];
+    let offset = 0, centralSize = 0;
+    const header = (size) => new DataView(new ArrayBuffer(size));
+    entries.forEach((entry) => {
+      const name = encoder.encode(entry.name);
+      const data = encoder.encode(entry.enc === 'UTF-8' ? '\ufeff' + entry.text : entry.text);
+      let crc = 0xffffffff;
+      for (const byte of data) {
+        crc ^= byte;
+        for (let b = 0; b < 8; b++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+      }
+      crc = (crc ^ 0xffffffff) >>> 0;
+      const local = header(30);
+      local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true);
+      local.setUint16(6, 0x800, true); local.setUint16(12, 33, true);
+      local.setUint32(14, crc, true); local.setUint32(18, data.length, true);
+      local.setUint32(22, data.length, true); local.setUint16(26, name.length, true);
+      chunks.push(local.buffer, name, data);
+      const dir = header(46);
+      dir.setUint32(0, 0x02014b50, true); dir.setUint16(4, 20, true); dir.setUint16(6, 20, true);
+      dir.setUint16(8, 0x800, true); dir.setUint16(14, 33, true);
+      dir.setUint32(16, crc, true); dir.setUint32(20, data.length, true);
+      dir.setUint32(24, data.length, true); dir.setUint16(28, name.length, true);
+      dir.setUint32(42, offset, true); central.push(dir.buffer, name);
+      offset += 30 + name.length + data.length; centralSize += 46 + name.length;
+    });
+    const end = header(22);
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true);
+    end.setUint16(10, entries.length, true); end.setUint32(12, centralSize, true);
+    end.setUint32(16, offset, true);
+    const blob = new Blob(chunks.concat(central, [end.buffer]), {type:'application/zip'});
+    const a = document.createElement('a');
+    const url = URL.createObjectURL(blob); a.href = url; a.download = '読取結果.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  /** 選択ファイルを帳票タイプごとにまとめ、各タイプの列設定で出力する。 */
+  function downloadGroupedCsv(ids) {
+    const groups = new Map();
+    ids.forEach((id) => {
+      const f = byId(FILES_DATA, id);
+      if (!f) return;
+      const key = f.layout || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(f);
+    });
+    let count = 0;
+    const entries = [];
+    const usedNames = new Set();
+    groups.forEach((files) => {
+      const built = buildExportCsv(files.map((f) => f.id));
+      if (!built) return;
+      const type = ticketTypeOfFile(files[0]);
+      const label = String(type && type.name || files[0].layout || '未分類').replace(/[\\/:*?"<>|]/g, '_');
+      const base = exportMergedFileName(files) + (groups.size > 1 ? '_' + label : '');
+      let name = base;
+      let n = 2;
+      while (usedNames.has(name)) name = base + '_' + n++;
+      usedNames.add(name);
+      entries.push({name: name + '.csv', text: built.text, enc: built.enc});
+      files.forEach((f) => {
+        f.status = 'exported';
+        f.exportedAt = nowStamp();
+        f.exportSnapshot = JSON.stringify(exportValueMap(f.id));
+        f.history = '出力済み（CSV）';
+      });
+      count += 1;
+    });
+    if (entries.length > 1) downloadZip(entries);
+    else if (entries.length) csvDownload(entries[0].name, entries[0].text, entries[0].enc);
+    return count;
+  }
+
   /** 読取結果を指定形式でダウンロードする。前回出力と同一なら出さない。 */
 function downloadResultFile(id, fmt) {
   commitExport(id, fmt);
@@ -4496,8 +4574,8 @@ function renderUserAddDialog() {
           <input class="fld" id="userAddName" value="${esc(d.name)}" placeholder="ユーザー名を入力してください" />
         </label>
         <label class="user-add-field">
-          <span class="user-add-label"><i class="req">*</i>メールアドレス</span>
-          <input class="fld" id="userAddEmail" value="${esc(d.email)}" placeholder="メールアドレスを入力してください" />
+          <span class="user-add-label"><i class="req">*</i>ログインユーザー名</span>
+          <input class="fld" id="userAddEmail" autocomplete="username" value="${esc(d.email)}" placeholder="ログインユーザー名を入力してください" />
         </label>
         <div class="user-add-field is-top">
           <span class="user-add-label"><i class="req">*</i>権限</span>
@@ -4600,6 +4678,20 @@ function groupDescendantIds(gid) {
   return out;
 }
 
+/** 親の選択は全子孫を含む。子を解除したら祖先の全選択も解除する。 */
+function toggleGroupSelection(ids, gid, checked) {
+  const affected = [gid, ...groupDescendantIds(gid)];
+  const selected = new Set(ids);
+  affected.forEach((id) => checked ? selected.add(id) : selected.delete(id));
+  if (!checked) GROUPS.forEach((g) => {
+    if (groupDescendantIds(g.id).includes(gid)) selected.delete(g.id);
+  });
+  return [...selected];
+}
+function expandGroupSelection(ids) {
+  return [...new Set(ids.flatMap((id) => [id, ...groupDescendantIds(id)]))];
+}
+
 /** 同一親のグループ並べ替え（左ツリーのドラッグ） */
 function reorderGroupSiblings(dragId, targetId) {
   const a = byId(GROUPS, dragId);
@@ -4690,7 +4782,7 @@ function renderUsers() {
     return `<tr>
     <td class="col-no" style="color:var(--text-2)">${start + i + 1}</td>
     <td title="${esc(u.name)}">${esc(u.name)}</td>
-    <td title="${esc(u.email)}">${esc(u.email)}</td>
+    <td title="${esc(String(u.email || '').split('@')[0])}">${esc(String(u.email || '').split('@')[0])}</td>
     <td><div class="grp-members">${roleHtml}</div></td>
     <td><div class="grp-members user-grp-cell">${userGroupsCellHtml(u, focus)}</div></td>
     <td style="white-space:nowrap;color:var(--text-2)">${esc(u.created || '—')}</td>
@@ -4730,7 +4822,7 @@ function renderUsers() {
 
       <div class="cfg-filters users-filters">
         <div class="field"><span class="lbl">ユーザー名</span><input class="fld" id="ugQ" placeholder="ユーザー名" value="${esc(ug.q)}" /></div>
-        <div class="field"><span class="lbl">メールアドレス</span><input class="fld" id="ugEmail" placeholder="メールアドレス" value="${esc(ug.email)}" /></div>
+        <div class="field"><span class="lbl">ログインユーザー名</span><input class="fld" id="ugEmail" placeholder="ログインユーザー名" value="${esc(ug.email)}" /></div>
         <div class="field"><span class="lbl">権限</span><select class="fld" id="ugRole"><option value="">選択してください</option>${ROLES.map((r) => `<option value="${esc(r.name)}" ${ug.role === r.name ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>
         <div class="field"><span class="lbl">ステータス</span><select class="fld" id="ugStatus"><option value="">選択してください</option><option value="有効" ${ug.status === '有効' ? 'selected' : ''}>有効</option><option value="無効" ${ug.status === '無効' ? 'selected' : ''}>無効</option></select></div>
         <div class="cfg-filter-acts">
@@ -4743,7 +4835,7 @@ function renderUsers() {
 
       <div class="tablewrap users-tablewrap" title="横にドラッグして列を表示できます">
       <table class="result-table users-table"><thead><tr>
-        <th class="col-no">番号</th><th>ユーザー名</th><th>メールアドレス</th><th>権限</th><th>所属グループ</th><th>作成時間</th><th>ステータス</th><th>操作・処理</th>
+        <th class="col-no">番号</th><th>ユーザー名</th><th>ログインユーザー名</th><th>権限</th><th>所属グループ</th><th>作成時間</th><th>ステータス</th><th>操作・処理</th>
       </tr></thead><tbody>${body}</tbody></table>
       </div>
 
@@ -4791,7 +4883,7 @@ function renderUserList() {
       return `<tr>
       <td style="color:var(--text-2)">${i + 1}</td>
       <td>${esc(u.name)}</td>
-      <td>${esc(u.email)}</td>
+      <td>${esc(String(u.email || '').split('@')[0])}</td>
       <td><span class="pill">${esc(u.role)}</span></td>
       <td><div class="grp-members">${gHtml}</div></td>
       <td style="white-space:nowrap;color:var(--text-2)">${esc(u.created)}</td>
@@ -4803,7 +4895,7 @@ function renderUserList() {
     }).join('');
   return `<div class="cfg-filters">
     <div class="field"><span class="lbl">ユーザー名</span><input class="fld" id="cfgUserQ" placeholder="キーワードを入力" value="${esc(cfgState.userQ)}" /></div>
-    <div class="field"><span class="lbl">メールアドレス</span><input class="fld" placeholder="入力してください" /></div>
+    <div class="field"><span class="lbl">ログインユーザー名</span><input class="fld" placeholder="入力してください" /></div>
     <div class="field"><span class="lbl">権限</span><select class="fld"><option>選択してください</option>${ROLES.map((r) => `<option>${esc(r.name)}</option>`).join('')}</select></div>
     <div class="field"><span class="lbl">所属グループ</span><select class="fld" id="cfgUserGroup"><option value="">選択してください</option>${groupOptsWithDepth().map(([gid, gname, , depth]) => `<option value="${esc(gid)}" ${gid === gsel ? 'selected' : ''}>${esc('　'.repeat(depth) + gname)}</option>`).join('')}</select></div>
     <div class="field"><span class="lbl">ステータス</span><select class="fld"><option>選択してください</option><option>有効</option><option>無効</option></select></div>
@@ -4812,7 +4904,7 @@ function renderUserList() {
     <button class="btn" id="cfgUserReset"><span class="ico i-refresh"></span>リセット</button>
   </div>
   <div class="tablewrap"><table>
-    <thead><tr><th style="width:56px">番号</th><th>ユーザー名</th><th>メールアドレス</th><th style="width:110px">権限</th>
+    <thead><tr><th style="width:56px">番号</th><th>ユーザー名</th><th>ログインユーザー名</th><th style="width:110px">権限</th>
       <th style="width:230px">所属グループ</th><th style="width:160px">作成時間</th><th style="width:90px">ステータス</th><th style="width:150px;text-align:right">操作</th></tr></thead>
     <tbody>${body}</tbody></table></div>`;
 }
@@ -5207,7 +5299,7 @@ function renderLogs() {
   </div>
   <div class="cfg-filters">
     <div class="field"><span class="lbl">期間</span><div class="di"><input class="fld date" type="date" value="2026-10-01" /><span class="sep">-</span><input class="fld date" type="date" value="2026-10-14" /></div></div>
-    <div class="field"><span class="lbl">メールアドレス</span><input class="fld" placeholder="入力してください" /></div>
+    <div class="field"><span class="lbl">ログインユーザー名</span><input class="fld" placeholder="入力してください" /></div>
     <div class="field"><span class="lbl">イベント</span><select class="fld"><option>選択してください</option>${[...new Set(SECURITY.logs.map((l) => l.type))].map((t) => `<option>${esc(t)}</option>`).join('')}</select></div>
     <div class="field"><span class="lbl">操作結果</span><select class="fld"><option>選択してください</option><option>成功</option><option>失敗</option></select></div>
     <span class="spacer"></span>
@@ -5215,7 +5307,7 @@ function renderLogs() {
     <button class="btn"><span class="ico i-refresh"></span>リセット</button>
   </div>
   <div class="tablewrap"><table>
-    <thead><tr><th style="width:170px">操作日時</th><th>メールアドレス</th><th style="width:120px">イベント種別</th><th style="width:140px">IPアドレス</th><th style="width:100px">操作結果</th><th>備考</th></tr></thead>
+    <thead><tr><th style="width:170px">操作日時</th><th>ログインユーザー名</th><th style="width:120px">イベント種別</th><th style="width:140px">IPアドレス</th><th style="width:100px">操作結果</th><th>備考</th></tr></thead>
     <tbody>${body}</tbody></table></div>`;
 }
 
@@ -5539,11 +5631,30 @@ const WATCH_ERRORS = [
   { id: 'we5', at: '2026-10-18 11:02:19', path: '\\\\filesv01\\取込', cat: '特別徴収', file: '02_特別徴収関係一式.pdf', reason: 'パスワード保護された PDF のため読み取れません', handled: false },
   { id: 'we6', at: '2026-10-18 09:40:55', path: '\\\\filesv02\\取込', cat: '実態調査票', file: '高齢者等実態調査票.pdf', reason: 'ページの一部が欠けています', handled: true },
 ];
+let noticeHasNew = true;
+function renderNotices() {
+  const per = state.noticePerPage || 10;
+  const errors = WATCH_ERRORS.slice().sort((a,b)=>b.at.localeCompare(a.at));
+  const pages = Math.max(1, Math.ceil(errors.length / per));
+  const page = state.noticePage = Math.min(pages, Math.max(1, state.noticePage || 1));
+  const rows = errors.slice((page-1)*per, page*per);
+  return `<section class="notice-page"><h2>お知らせ</h2>
+    <div class="notice-tablewrap"><table class="auto-table"><thead><tr><th>発生日時</th><th>ファイル名</th><th>監視パス</th><th>失敗理由</th></tr></thead><tbody>${rows.map(e=>`<tr><td>${esc(e.at)}</td><td>${esc(e.file)}</td><td class="mono">${esc(e.path)}</td><td>${esc(e.reason)}</td></tr>`).join('') || '<tr><td colspan="4">お知らせはありません</td></tr>'}</tbody></table></div>
+    <div class="pager"><span>全 ${errors.length} 件</span><select id="noticePerPage" aria-label="表示件数">${[10,20,50].map(n=>`<option value="${n}" ${n===per?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-noticepage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-noticepage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="noticeGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>
+  </section>`;
+}
+function addUploadFailure(error) {
+  WATCH_ERRORS.unshift({...error, id: error.id || 'we' + Date.now(), at: error.at || nowStamp()});
+  noticeHasNew = true;
+  toast('自動アップロードに失敗しました：' + (error.file || error.path || ''), 'error');
+  render();
+}
+
 /** 直近 7 日の取込実績（成功／失敗の合計） */
 const WATCH_SUMMARY = { ok: 944, ng: 20 };
 
 /** 監視パスごとの処理後（del=削除 / keep=そのまま） */
-const WATCH_ROOT_AFTER = { del: '削除', keep: 'そのまま' };
+const WATCH_ROOT_AFTER = { del: '削除', keep: 'そのまま', move: '移動' };
 /** 二重取込の判定方法 */
 const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容ハッシュ（SHA-256）' };
 /** エラー通知の条件 */
@@ -5570,9 +5681,11 @@ function renderWatch() {
   const x = WATCH;
   const row = watchRow;
 
+  const showMovePath = x.roots.some((r) => r.after === 'move');
   const pathRows = x.roots.map((r) => `<tr class="wr-root${r.on ? '' : ' off'}">
         <td><input class="fld mono" data-wroot-path="${r.id}" value="${esc(r.path)}" placeholder="\\\\filesv01\\取込" aria-label="監視パス" /></td>
         <td><select class="fld" data-wroot-after="${r.id}" aria-label="処理後のファイル">${Object.keys(WATCH_ROOT_AFTER).map((v) => `<option value="${v}" ${(r.after || 'keep') === v ? 'selected' : ''}>${WATCH_ROOT_AFTER[v]}</option>`).join('')}</select></td>
+        ${showMovePath ? `<td>${r.after === 'move' ? `<input class="fld mono" data-wroot-move="${r.id}" value="${esc(r.moveTo || '')}" placeholder="移動先のフォルダパス" aria-label="移動先パス" />` : '<span class="muted">—</span>'}</td>` : ''}
         <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wrooton="${r.id}" role="switch" aria-checked="${r.on}" aria-label="この監視パスを有効にする"><span class="tgl-knob"></span></button></td>
         <td class="c"><button type="button" class="wp-del" data-wrootdel="${r.id}" aria-label="この監視パスを削除"${x.roots.length > 1 ? '' : ' disabled'}>×</button></td>
       </tr>`).join('');
@@ -5610,12 +5723,13 @@ function renderWatch() {
   <div class="watch-body">
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="1 行＝1 監視パス（1 台の仮想マシン上の共有フォルダ）です。帳票タイプのフォルダはこのパスの直下に置きます。行ごとに有効／無効と、取り込み成功後のファイルの扱い（削除／そのまま）を選べます。">i</span></h3>
+        <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="1 行＝1 監視パス（1 台の仮想マシン上の共有フォルダ）です。帳票タイプのフォルダはこのパスの直下に置きます。行ごとに有効／無効と、取り込み成功後のファイルの扱い（削除／そのまま／移動）を選べます。移動の場合は移動先パスを指定してください。">i</span></h3>
         <div class="watch-tablewrap">
           <table class="watch-table wr-roots">
             <thead><tr>
               <th>パス</th>
               <th style="width:150px">処理後のファイル</th>
+              ${showMovePath ? '<th>移動先パス</th>' : ''}
               <th class="c" style="width:52px">有効</th>
               <th class="c" style="width:40px"></th>
             </tr></thead>
@@ -5662,14 +5776,7 @@ function renderWatch() {
         </div>
       </section>
 
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">エラー通知</h3>
-        <div class="watch-fields">
-          ${row('通知する', watchToggle('notify', x.notify))}
-          ${row('通知条件', watchSelect('notifyOn', Object.keys(WATCH_NOTIFY_ON).map((k) => [k, WATCH_NOTIFY_ON[k]]), x.notifyOn), true)}
-          ${row('Webhook URL', `<input class="fld mono" data-wf="notifyUrl" value="${esc(x.notifyUrl)}" placeholder="https://example.jp/hook" />`, true)}
-        </div>
-      </section>
+
 
   </div>`;
 }
@@ -6253,7 +6360,7 @@ function typePane(step, t) {
     const groupKeyHelp = `<span class="info-i" data-tip="${esc(groupKeyTip)}">i</span>`;
     const lid = layoutIdOfTicketType(t);
     /* データ権限：操作グループのみ。選択した組織に所属するユーザー全員が対象。 */
-    const pickedGroups = (t.groupIds || []).slice();
+    const pickedGroups = expandGroupSelection(t.groupIds || []);
     const groupOpts = groupOptsWithDepth();
     const groupBlock = [
       '<div class="wiz-field"><span class="wl req">データ権限組織</span>',
@@ -6598,10 +6705,7 @@ function bindTicketDetail() {
       if (!t) return;
       const v = cb.value;
       if (id !== 'tpGroups') return;
-      const cur = (t.groupIds || []).slice();
-      const i = cur.indexOf(v);
-      if (i >= 0) cur.splice(i, 1); else cur.push(v);
-      t.groupIds = cur;
+      t.groupIds = toggleGroupSelection(expandGroupSelection(t.groupIds || []), v, cb.checked);
       saveTypePerm(t);
       render();
       placeOpenDropdown();
@@ -6613,7 +6717,7 @@ function bindTicketDetail() {
       const [id, v] = (b.dataset.wmsdel || '').split(':');
       const t = byId(TICKET_TYPES, state.typeId);
       if (!t || !id || id !== 'tpGroups') return;
-      t.groupIds = (t.groupIds || []).filter((x) => x !== v);
+      t.groupIds = toggleGroupSelection(expandGroupSelection(t.groupIds || []), v, false);
       saveTypePerm(t);
       render();
     };
@@ -7110,7 +7214,7 @@ function historyRows() {
 
 /** ホームのサブタブ（ご利用履歴 / 自動アップロードのダッシュボード） */
 function homeTabsHtml(active) {
-  const items = [['history', 'ご利用履歴'], ['dashboard', 'ダッシュボード']];
+  const items = [['history', 'ご利用履歴']];
   return `<div class="home-tabs" role="tablist" aria-label="ホーム">
     ${items.map(([id, label]) => `<button type="button" class="home-tab${active === id ? ' on' : ''}" data-hometab="${id}" role="tab" aria-selected="${active === id}">${label}</button>`).join('')}
   </div>`;
@@ -7156,9 +7260,7 @@ function renderAutoDashboard() {
 }
 
 function renderHome() {
-  if (state.homeTab === 'dashboard') {
-    return `<div class="homepanel">${homeTabsHtml('dashboard')}${renderAutoDashboard()}</div>`;
-  }
+
   const F = state.hFilters;
   const rows = historyRows();
   const pages = Math.max(1, Math.ceil(rows.length / state.hPerPage));
@@ -7527,7 +7629,7 @@ function render() {
   const prevMainEl = app.querySelector('.maincol');
   const prevMainTop = prevMainEl ? prevMainEl.scrollTop : 0;
   const prevWinY = window.scrollY || 0;
-  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
+  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
   /* メニュー権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
   if (route !== 'review' && !canReachPage(route)) {
     const fallback = ['home', 'upload', 'result', 'myTasks', 'ticketDetail', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].find((p) => canReachPage(p)) || 'home';
@@ -7546,9 +7648,9 @@ function render() {
   }
   const isTypeList = false;
   const isTypeDetail = route === 'ticketDetail';      // 左：タイプ一覧／右：Step1〜4
-  const isCfg = ['permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(route);
+  const isCfg = ['permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices'].includes(route);
   const isScene = route === 'bizScenes';        // 業務シーン設定（左：業務シーンリスト／右：ガイド or 編集）
-  const isFullPane = isTypeDetail || isScene;
+  const isFullPane = isTypeDetail || isScene || route === 'notices';
   const noSidePane = CFG_NO_SIDEBAR.includes(route);   // 利用設定の各画面：左の設定メニューを出さず全幅で見せる
   app.dataset.page = route;
   app.innerHTML = `
@@ -7558,6 +7660,7 @@ function render() {
       ${renderTopNav()}
     </nav>
     <div class="topright">
+      <button type="button" class="notice-bell" id="noticeBell" aria-label="お知らせ${noticeHasNew ? '（新しいエラーがあります）' : ''}" title="お知らせ"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5z"/><path d="M10 20h4"/></svg>${noticeHasNew ? '<span class="notice-dot"></span>' : ''}</button>
       ${(() => {
         const me = currentProfile();
         const actors = DEMO_ACTORS.map((a) => {
@@ -7579,7 +7682,7 @@ function render() {
         <div class="usermenu" role="menu">
           <div class="usermenu-head">
             <div class="usermenu-name">${esc(me.name)}</div>
-            <div class="usermenu-email">${esc(me.email)}</div>
+            <div class="usermenu-email">${esc(String(me.email || '').split('@')[0])}</div>
             <span class="usermenu-role">権限：${esc(me.roleLabel)}</span>
             ${me.hint ? `<p class="usermenu-hint">${esc(me.hint)}</p>` : ''}
         </div>
@@ -7602,7 +7705,7 @@ function render() {
     ${(isHome || isUpload || isMyTasks || isReview || isFullPane || noSidePane || isTypeList) ? '' : (isCfg ? renderCfgNav() : renderSidebarPane())}
     <div class="maincol ${(isHome || isUpload || isMyTasks || isReview) ? 'wide' : ''}">
       ${'' /* 読取結果一覧はステータスタブを先頭に置く */}
-      ${isHome ? renderHome()
+      ${route === 'notices' ? renderNotices() : isHome ? renderHome()
         : isMyTasks ? renderMyTasks()
           : isScene ? renderBizScenes()
             : isTypeDetail ? renderTicketDetail()
@@ -7642,6 +7745,18 @@ function render() {
 let dragSrc = null;
 
 function bind() {
+  const bell = $('#noticeBell');
+  if (bell) bell.onclick = () => {
+    noticeHasNew = false; state.page = 'notices';
+    if (!state.tabs.includes('notices')) state.tabs.push('notices');
+    render();
+  };
+  document.querySelectorAll('[data-noticepage]').forEach(b => b.onclick = () => { state.noticePage = Number(b.dataset.noticepage); render(); });
+  const noticePer = $('#noticePerPage');
+  if (noticePer) noticePer.onchange = () => { state.noticePerPage = Number(noticePer.value); state.noticePage = 1; render(); };
+  const noticeGoto = $('#noticeGoto');
+  if (noticeGoto) noticeGoto.onchange = () => { state.noticePage = Number(noticeGoto.value) || 1; render(); };
+
   /* 業務シーンまわりの後処理（定義が無い版でも render を止めない。
      ここで例外を投げると以降のバインドが全部止まり、タブもメニューも無反応になる） */
   if (typeof applyBizButtonVisibility === 'function') applyBizButtonVisibility();
@@ -8712,6 +8827,12 @@ function bindCfgPages() {
         if (r) r.path = el.value;
       };
     });
+    document.querySelectorAll('[data-wroot-move]').forEach((el) => {
+      el.oninput = () => {
+        const r = WATCH.roots.find((q) => q.id === el.dataset.wrootMove);
+        if (r) r.moveTo = el.value;
+      };
+    });
     document.querySelectorAll('[data-wroot-after]').forEach((el) => {
       el.onchange = () => {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootAfter);
@@ -8904,6 +9025,16 @@ function bindCfgPages() {
     const el = $('#userAddName'); if (el) el.focus();
   };
   if (USER_ADD_DRAFT) {
+    const userModal = document.querySelector('.user-add-modal');
+    if (userModal) userModal.onchange = (e) => {
+      const cb = e.target;
+      const gid = cb.getAttribute && cb.getAttribute('data-userGrp');
+      if (!gid) return;
+      const boxes = [...userModal.querySelectorAll('[data-userGrp]')];
+      const ids = boxes.filter((x) => x.checked).map((x) => x.getAttribute('data-userGrp'));
+      USER_ADD_DRAFT.groupIds = toggleGroupSelection(ids, gid, cb.checked);
+      boxes.forEach((x) => { x.checked = USER_ADD_DRAFT.groupIds.includes(x.getAttribute('data-userGrp')); });
+    };
     const back = $('#userAddBack');
     const closeDlg = () => { USER_ADD_DRAFT = null; render(); };
     if (back) back.onclick = (e) => { if (e.target === back) closeDlg(); };
@@ -8938,11 +9069,20 @@ function bindCfgPages() {
     if (ok) ok.onclick = () => {
       const d = USER_ADD_DRAFT;
       if (!d.name.trim()) { toast('ユーザー名を入力してください'); return; }
-      if (!d.email.trim()) { toast('メールアドレスを入力してください'); return; }
+      if (!d.email.trim()) { toast('ログインユーザー名を入力してください'); return; }
+      const saveGroups = (uid) => {
+        if (!d.groupIds) return;
+        const ids = expandGroupSelection(d.groupIds);
+        GROUPS.forEach((g) => {
+          g.userIds = (g.userIds || []).filter((id) => id !== uid);
+          if (ids.includes(g.id)) g.userIds.push(uid);
+        });
+      };
       const role = ROLES.find((r) => r.id === d.roleId) || ROLES[0];
       if (d.mode === 'edit') {
         const u = ENT_USERS.find((x) => x.id === d.id);
         if (u) {
+          saveGroups(u.uid);
           u.name = d.name.trim();
           u.email = d.email.trim();
           u.role = role ? role.name : u.role;
@@ -8970,6 +9110,7 @@ function bindCfgPages() {
         created: nowStamp(),
         status: d.status,
       };
+      saveGroups(uid);
       ENT_USERS.unshift(ent);
       USER_ADD_DRAFT = null;
       render();
@@ -9015,7 +9156,7 @@ function bindCfgPages() {
         id: u.id,
         uid: u.uid,
         name: u.name,
-        email: u.email,
+        email: String(u.email || '').split('@')[0],
         soloPermIds: u.soloPermIds || [],
         dataPerm: u.dataPerm || DATA_PERMISSIONS[0],
         status: u.status,
@@ -9565,26 +9706,19 @@ function bindPermDialogs() {
       });
       if (el.checked) el.dataset.wasChecked = '1';
     });
-    /* 「電算」は組織全体。チェックすると配下のグループがまとめて選ばれる */
-    const rootG = GROUPS.find((x) => x.root);
     const gChecks = [...document.querySelectorAll('[data-permpick^="g:"]')];
-    const rootCb = rootG ? gChecks.find((cb) => cb.dataset.permpick === `g:${rootG.id}`) : null;
-    const syncRoot = () => {
-      if (!rootCb) return;
-      const kids = gChecks.filter((cb) => cb !== rootCb);
-      const on = kids.filter((cb) => cb.checked).length;
-      rootCb.checked = kids.length > 0 && on === kids.length;
-      rootCb.indeterminate = on > 0 && on < kids.length;
-    };
-    /* 保存値が「電算」だけなら、配下もチェック済みの状態で開く */
-    if (rootCb && rootCb.checked) gChecks.forEach((cb) => { if (cb !== rootCb) cb.checked = true; });
-    gChecks.forEach((cb) => {
-      cb.addEventListener('change', () => {
-        if (cb === rootCb) gChecks.forEach((x) => { if (x !== rootCb) x.checked = rootCb.checked; });
-        syncRoot();
+    const gidOf = (cb) => cb.dataset.permpick.slice(2);
+    const syncGroupChecks = (ids) => {
+      gChecks.forEach((cb) => {
+        cb.checked = ids.includes(gidOf(cb));
+        const kids = groupDescendantIds(gidOf(cb));
+        cb.indeterminate = !cb.checked && kids.some((id) => ids.includes(id));
       });
-    });
-    syncRoot();
+    };
+    syncGroupChecks(expandGroupSelection(gChecks.filter((cb) => cb.checked).map(gidOf)));
+    gChecks.forEach((cb) => cb.addEventListener('change', () => {
+      syncGroupChecks(toggleGroupSelection(gChecks.filter((x) => x.checked).map(gidOf), gidOf(cb), cb.checked));
+    }));
     /* フォルダから開いたときは、操作（閲覧／修正／確認）を切り替えられる */
     document.querySelectorAll('[data-fpermact]').forEach((b) => {
       b.onclick = () => {
@@ -9890,26 +10024,32 @@ function bindUploadPanel() {
       const fmt = b.dataset.batchdl;
       const ids = Object.keys(state.picked).filter((id) => state.picked[id]);
       if (!ids.length) { toast('ダウンロードするファイルを選択してください'); return; }
-      /* 横向固定：同一帳票タイプの複数ファイルは 1 つの CSV にまとめる（1 ファイル 1 行） */
-      if (fmt === 'csv' && ids.length > 1) {
-        const files = ids.map((id) => byId(FILES_DATA, id)).filter(Boolean);
-        const layouts = [...new Set(files.map((f) => f.layout))];
-        if (layouts.length > 1) { toast('選択したファイルの帳票タイプが異なるため、まとめて出力できません'); return; }
-        const built = buildExportCsv(ids);
-        if (!built) { toast('出力できるデータがありません'); return; }
-        csvDownload(exportMergedFileName(files) + '.csv', built.text, built.enc);
-        files.forEach((f) => { f.status = 'exported'; f.exportedAt = nowStamp(); });
-        toast(`${files.length} 件を 1 つの CSV にまとめて出力しました`);
+      if (fmt === 'csv') {
+        const count = downloadGroupedCsv(ids);
+        toast(count ? `${ids.length} 件を帳票タイプ別に ${count} ファイルにまとめて出力しました` : '出力できるデータがありません');
         render();
         return;
       }
+      const entries = [];
+      const originalDownload = downloadText;
+      const names = new Set();
+      downloadText = (name, text, mime) => {
+        let unique = name, n = 2;
+        while (names.has(unique)) unique = name.replace(/(\.[^.]+)$/, '_' + n++ + '$1');
+        names.add(unique);
+        entries.push({name: unique, text, mime});
+      };
       let out = 0;
       let skip = 0;
+      try {
       ids.forEach((id) => {
         const delta = exportDelta(id);
         if (!delta.first && delta.changed.length === 0) { skip += 1; return; }
         if (commitExport(id, fmt)) out += 1;
       });
+      } finally { downloadText = originalDownload; }
+      if (entries.length > 1) downloadZip(entries);
+      else if (entries.length) originalDownload(entries[0].name, entries[0].text, entries[0].mime);
       if (!out) toast('選択したデータは前回出力と同一のため、重複出力をスキップしました');
       else if (skip) toast(`${out} 件を出力しました（${skip} 件は差分がないためスキップ）`);
       render();
@@ -10002,7 +10142,7 @@ function applyHash() {
     else if (k === 'rename') { const [target, text] = val.split('|'); state.rename[target] = text; }
     else if (k === 'f') { const [key, v2] = val.split(':'); state.filters[key] = v2; }
     else if (k === 'open') state.filterOpen = true;
-    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(val) ? val : 'result';
+    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices'].includes(val) ? val : 'result';
     else if (k === 'review' && val) {
       state.reviewId = val;
       state.page = 'review';

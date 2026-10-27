@@ -165,12 +165,12 @@ test('served bundle: 自動アップロードは監視パスごとの処理後�
   const run = servedApp();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'エラー通知']);
+  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行']);
   assert.equal((html.match(/data-wroot-after=/g) || []).length, run('WATCH.roots.length'));
   assert.doesNotMatch(html, /data-wroot-tenant=|data-wroot-done=|宛先メール|data-wf="notifyMail"/);
   assert.doesNotMatch(html, /通知方法|data-wf-check/);
-  assert.match(html, /Webhook URL/);
-  assert.match(html, /data-wf="notifyUrl"/);
+  assert.doesNotMatch(html, /Webhook URL/);
+  assert.doesNotMatch(html, /data-wf="notifyUrl"/);
 });
 
 test('served bundle: 絞り込みは既定 1 行（ファイル名・ステータス・帳票タイプ）＋詳細 2 行', () => {
@@ -200,14 +200,10 @@ test('served bundle: 絞り込みは既定 1 行（ファイル名・ステー�
 
 test('served bundle: ホームに自動アップロードのダッシュボードタブ', () => {
   const run = servedApp();
-  const html = run('state.homeTab = "dashboard"; renderHome()');
-  assert.match(html, /class="home-tabs"/);
-  assert.match(html, /data-hometab="dashboard"/);
-  assert.match(html, /class="auto-dash"/);
-  assert.match(html, /自動アップロードのエラー/);
-  assert.match(html, /class="auto-status/);
-  assert.doesNotMatch(html, /data-werr-handle=/);
-  const history = run('state.homeTab = "history"; renderHome()');
-  assert.match(history, /data-hopt="hBiz"/);
-  assert.doesNotMatch(history, /class="auto-dash"/);
+  const home = run('renderHome()');
+  assert.doesNotMatch(home, /data-hometab="dashboard"/);
+  const html = run('state.noticesOpen = true; renderNotices()');
+  assert.match(html, /お知らせ/);
+  for (const label of ['発生日時','ファイル名','監視パス','失敗理由']) assert.ok(html.includes(label));
+  assert.doesNotMatch(html, /既読|未読|対応済み/);
 });

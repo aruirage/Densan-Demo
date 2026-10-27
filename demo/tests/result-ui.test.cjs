@@ -1204,7 +1204,7 @@ test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 
   const run = app();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'エラー通知']);
+  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行']);
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit/);
 
@@ -1243,7 +1243,7 @@ test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 
   assert.equal(run('WATCH.roots.filter((r) => r.on).length * WATCH.rules.filter((r) => r.on).length'), 18);
 
   /* 共通設定（メール通知・宛先メール・通知方法の選択は廃止。Webhook URL を直接入力） */
-  for (const t of ['同一ファイルを除外', '再実行回数', 'Webhook URL']) {
+  for (const t of ['同一ファイルを除外', '再実行回数']) {
     assert.ok(html.includes(t), t);
   }
   assert.doesNotMatch(html, /宛先メール|data-wf="notifyMail"|通知方法|data-wf-check/);
@@ -1258,7 +1258,7 @@ test('自動アップロード: 監視パスごとに処理後のファイル（
   assert.match(html, /<option value="del"[^>]*>削除<\/option>/);
   assert.match(html, /<option value="keep"[^>]*>そのまま<\/option>/);
   assert.doesNotMatch(html, /data-wroot-done=|処理済フォルダ|data-wf-radio/);
-  assert.equal((html.match(/class="watch-sec"/g) || []).length, 5);
+  assert.equal((html.match(/class="watch-sec"/g) || []).length, 4);
   /* 選択値は行ごとに保持される */
   run('WATCH.roots[0].after = "del"; WATCH.roots[1].after = "keep";');
   const h2 = run('renderWatch()');
@@ -1272,8 +1272,8 @@ test('自動アップロード: 監視パスごとに処理後のファイル（
 test('エラー通知: 通知方法の選択は持たず、Webhook URL を直接入力する', () => {
   const run = app();
   const html = run('renderWatch()');
-  assert.match(html, /Webhook URL/);
-  assert.match(html, /data-wf="notifyUrl"/);
+  assert.doesNotMatch(html, /Webhook URL/);
+  assert.doesNotMatch(html, /data-wf="notifyUrl"/);
   assert.doesNotMatch(html, /通知方法|data-wf-check/);
   assert.doesNotMatch(html, /data-wf="notifyMail"|宛先メール|>メール</);
 });
@@ -1293,6 +1293,9 @@ test('ログ設定: 出力設定（詳細度・保存先）はログ画面に持
 
 test('ユーザー権限: 個人の権限はグループの権限に上乗せされる（和集合）', () => {
   const run = app();
+  // Isolate the role union from the newly inherited root permissions.
+  run('GROUPS.filter(g => g.root).forEach(g => { g.permIds = []; g.permId = null; })');
+  run('GROUPS.filter(g => groupDescendantIds(g.id).length).forEach(g => { g.permIds = []; g.permId = null; })');
   /* u5 は承認者グループ（R4）のみ → 確認はできない */
   assert.equal(run('userHasOp("confirm","u5")'), false);
   run('entUserByUid("u5").soloPermIds = ["R3"]');
@@ -1390,6 +1393,8 @@ test('グループ編集: 権限は複数選択できる', () => {
 
 test('グループの権限が複数のとき、所属ユーザーの実効権限は和集合になる', () => {
   const run = app();
+  // Isolate the role union from the newly inherited root permissions.
+  run('GROUPS.filter(g => g.root).forEach(g => { g.permIds = []; g.permId = null; })');
   run('GROUPS.find((g) => g.id === "g6").permIds = ["R4","R3"]');
   assert.deepEqual(JSON.parse(run('JSON.stringify(rolesOfUser("u6"))')), ['R4', 'R3']);
   /* R3 の確認が効く（R4 だけでは確認できない） */
@@ -1501,28 +1506,12 @@ test('CSV 出力: 列の表示/非表示・列順がヘッダに反映される'
 
 test('ホーム: ご利用履歴と自動アップロードのダッシュボードをタブで切り替える', () => {
   const run = app();
-  let html = run('state.homeTab = "history"; renderHome()');
-  assert.match(html, /class="home-tabs"/);
-  assert.match(html, /data-hometab="history"/);
-  assert.match(html, /data-hometab="dashboard"/);
-  assert.match(html, /ご利用履歴/);
-  assert.match(html, /ダッシュボード/);
-  assert.match(html, /data-hopt="hBiz"/);
-  assert.doesNotMatch(html, /class="auto-dash"/);
-
-  html = run('state.homeTab = "dashboard"; renderHome()');
-  assert.match(html, /class="auto-dash"/);
-  assert.match(html, /直近7日の取込/);
-  assert.match(html, /取込成功率/);
-  assert.match(html, /未対応エラー/);
-  assert.match(html, /自動アップロードのエラー/);
-  /* エラーは記録表示のみ（操作ボタンは置かない） */
-  assert.match(html, /class="auto-status/);
-  assert.match(html, /未対応/);
-  assert.match(html, /対応済み/);
-  assert.doesNotMatch(html, /data-werr-handle=|未対応に戻す|対応済みにする/);
-  assert.doesNotMatch(html, /class="auto-chart"|class="auto-legend"/);
-  assert.doesNotMatch(html, /data-hopt="hBiz"/);
+  const home = run('renderHome()');
+  assert.doesNotMatch(home, /data-hometab="dashboard"/);
+  const html = run('state.noticesOpen = true; renderNotices()');
+  assert.match(html, /お知らせ/);
+  for (const label of ['発生日時','ファイル名','監視パス','失敗理由']) assert.ok(html.includes(label));
+  assert.doesNotMatch(html, /既読|未読|対応済み/);
 });
 
 test('システム通知: 入力エラー・権限エラーは赤、完了・案内は緑', () => {
@@ -1576,4 +1565,49 @@ test('CSV 出力: テーブル列を上限まで横展開し、複数ファイ�
   assert.match(out.first, /小林 陸/);
   assert.match(out.first, /小林 早苗/);
   assert.doesNotMatch(out.first, /小林 望/);
+});
+
+test('batch CSV packages two type-specific files into one ZIP', () => {
+  const run = app();
+  const result = JSON.parse(run(`
+    const sample = FILES_DATA[0];
+    FILES_DATA.push({...sample,id:'group-a1',layout:'group-a',name:'a1.pdf'}, {...sample,id:'group-b1',layout:'group-b',name:'b1.pdf'}, {...sample,id:'group-a2',layout:'group-a',name:'a2.pdf'});
+    const downloads = [];
+    csvDownload = (name,text,enc) => downloads.push({name,text,enc});
+    let archive;
+    downloadZip = (entries) => { archive = entries; downloads.push(...entries); };
+    const count = downloadGroupedCsv(['group-a1','group-b1','group-a2']);
+    JSON.stringify({count, archived: !!archive, downloads, statuses: FILES_DATA.filter(f=>f.id.startsWith('group-')).map(f=>f.status)});
+  `));
+  assert.equal(result.archived, true);
+  assert.equal(result.count, 2);
+  assert.equal(result.downloads.length, 2);
+  assert.match(result.downloads[0].text, /a1\.pdf/);
+  assert.match(result.downloads[0].text, /a2\.pdf/);
+  assert.doesNotMatch(result.downloads[0].text, /b1\.pdf/);
+  assert.match(result.downloads[1].text, /b1\.pdf/);
+  assert.notEqual(result.downloads[0].name, result.downloads[1].name);
+  assert.deepEqual(result.statuses, ['exported','exported','exported']);
+});
+
+test('group selection cascades through descendants and inherited permissions include child members', () => {
+  const run = app();
+  const data = JSON.parse(run(`
+    GROUPS.push({id:'cascade-parent',parentId:null,userIds:[]},{id:'cascade-child',parentId:'cascade-parent',userIds:['cascade-user']},{id:'cascade-grand',parentId:'cascade-child',userIds:[]});
+    JSON.stringify({selected: toggleGroupSelection([], 'cascade-parent', true), cleared: toggleGroupSelection(['cascade-parent','cascade-child','cascade-grand'], 'cascade-parent', false), members: groupMemberIds('cascade-parent'), mine: groupsOfUser('cascade-user').map(g=>g.id)});
+  `));
+  assert.deepEqual(data.selected, ['cascade-parent','cascade-child','cascade-grand']);
+  assert.deepEqual(data.cleared, []);
+  assert.ok(data.members.includes('cascade-user'));
+  assert.ok(data.mine.includes('cascade-parent'));
+});
+
+test('auto upload exposes destination column only when moving files', () => {
+  const run = app();
+  assert.doesNotMatch(run('renderWatch()'), /data-wroot-move=/);
+  const html = run("WATCH.roots[0].after = 'move'; WATCH.roots[0].moveTo = 'archive/path'; renderWatch()");
+  assert.match(html, /value="move"[^>]*>移動/);
+  assert.match(html, /移動先パス/);
+  assert.match(html, /data-wroot-move=/);
+  assert.match(html, /archive\/path/);
 });

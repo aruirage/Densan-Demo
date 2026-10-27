@@ -1079,6 +1079,10 @@ th .ico{font-size:11px;color:var(--accent)}
   border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:7px solid var(--panel);
   filter:drop-shadow(0 -1px 0 var(--line));
 }
+/* ボタンとメニューの 8px の隙間でも hover を維持する透明な橋。 */
+.result-tablebar .batch-dl-menu::after{
+  content:'';position:absolute;top:-9px;left:0;right:0;height:9px;
+}
 .result-tablebar .batch-dl:not(.is-disabled):hover .batch-dl-menu,
 .result-tablebar .batch-dl:not(.is-disabled):focus-within .batch-dl-menu{display:block}
 .result-tablebar .batch-dl-menu button{
@@ -1951,3 +1955,17 @@ th .ico{font-size:11px;color:var(--accent)}
   .demo-bar { flex-wrap: wrap; row-gap: 6px; }
   .demo-bar-caps { white-space: normal; }
 }
+
+/* 站内错误通知：全用户共用入口，无已读管理。 */
+.notice-bell{position:relative;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;background:transparent;border:0;color:var(--accent);cursor:pointer}
+.notice-bell:hover{background:#eef4fc}
+.notice-dot{position:absolute;right:5px;top:4px;width:8px;height:8px;border-radius:50%;background:#dc2626;border:2px solid white}
+.notice-modal{width:min(1120px,94vw);max-width:1120px}
+.notice-help{padding:0 20px;color:#676767;font-size:13px}
+.notice-scroll{max-height:65vh;overflow:auto;padding:0 20px 20px}
+.notice-scroll td{vertical-align:top;overflow-wrap:anywhere;min-width:150px}
+.notice-page{padding:20px;display:flex;flex-direction:column;min-height:0;height:100%;box-sizing:border-box;background:#fff}
+.notice-page h2{margin:0 0 18px;font-size:20px}
+.notice-tablewrap{flex:1;min-height:0;overflow:auto}
+.notice-tablewrap td{vertical-align:top;overflow-wrap:anywhere}
+.notice-page .pager{justify-content:flex-end;padding-top:16px}
