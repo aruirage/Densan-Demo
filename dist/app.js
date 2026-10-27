@@ -3331,7 +3331,7 @@ function renderTable() {
 
   return `
   <div class="tablebar result-tablebar">
-    ${userHasOp('redo') ? `<button class="btn sm" id="batchRead" ${pickedCount ? '' : 'disabled'} title="選択した帳票をまとめて読み直します"><span class="ico i-scan" aria-hidden="true"></span>一括読取</button>` : ''}
+    ${userHasOp('redo') ? `<button class="btn sm primary" id="batchRead" title="選択した帳票をまとめて読み直します"><span class="ico i-scan" aria-hidden="true"></span>一括読取</button>` : ''}
     ${userHasOp('export') ? `<div class="batch-dl${pickedCount ? '' : ' is-disabled'}">
       <button type="button" class="btn sm result-download" id="batchExport" ${pickedCount ? '' : 'disabled'} aria-haspopup="true" title="選択行を一括ダウンロード"><span class="ico i-download" aria-hidden="true"></span>一括ダウンロード</button>
       <div class="batch-dl-menu" role="menu">
@@ -7959,7 +7959,7 @@ function renderUpload() {
     <section class="upload-card upload-list-card">
   <h2 class="sec-title">アップロード済ファイル</h2>
   <div class="upload-actions">
-        ${canShowRead ? `<button type="button" class="btn primary" id="upRead" ${picked ? '' : 'disabled'} title="読取待ちのファイルを読取り、読取結果一覧へ移動します">選択帳票読取</button>` : ''}
+        ${canShowRead ? `<button type="button" class="btn primary" id="upRead" title="読取待ちのファイルを読取り、読取結果一覧へ移動します">選択帳票読取</button>` : ''}
         ${userHasOp('delete') ? `<button type="button" class="btn danger-ghost" id="upDel" ${picked ? '' : 'disabled'}><span class="ico i-delete"></span>一括削除</button>` : ''}
     <span class="up-count">合計 <b>${uploadsForBiz.length}</b> 件のファイル</span>
         <span class="up-note"><span class="info-i">i</span>${upHasProgress() ? '読取処理中のファイルがあります（結果一覧でも進捗を確認できます）' : 'ファイルリストは7日後に自動的にクリアされます'}</span>

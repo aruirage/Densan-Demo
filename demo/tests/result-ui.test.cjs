@@ -1311,10 +1311,11 @@ test('読取ロール: 再読取・一括読取・アップロード画面の読
   assert.doesNotMatch(cell, /data-act="fix"/);
   assert.doesNotMatch(cell, /data-act="confirm"/);
   assert.doesNotMatch(cell, /data-dlmenu=/);
-  /* 一覧のツールバーに一括読取（選択が無いときは押せない） */
+  /* 一覧のツールバーに一括読取（未選択でも押せて、押すと選択を促す） */
   run('state.page = "result"; state.tab = "all"; state.resultPage = 1;');
   const table = run('renderTable()');
-  assert.match(table, /id="batchRead" disabled/);
+  assert.match(table, /class="btn sm primary" id="batchRead"/);
+  assert.doesNotMatch(table, /id="batchRead" disabled/);
   assert.match(table, /id="batchDelete"/);
   /* アップロード済ファイルの読取と削除 */
   const up = run('state.page = "upload"; renderUpload()');
