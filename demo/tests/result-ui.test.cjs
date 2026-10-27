@@ -1552,3 +1552,22 @@ test('システム通知: 入力エラー・権限エラーは赤、完了・案
     assert.equal(run(`isErrorToast(${JSON.stringify(msg)})`), false, msg);
   }
 });
+
+test('確認画面の履歴「表示」は編集内容に反映せず、読み取り専用でプレビューする', () => {
+  const run = app();
+  run(`
+    state.reviewId = 'f15';
+    state.saveHistoryOpen = true;
+    const f = byId(FILES_DATA, 'f15');
+    ensureSaveHistory(f);
+    state.saveHistView = f.saveHistory[0].id;
+  `);
+  const html = run('renderSaveHistoryDialog()');
+  assert.match(html, /class="savehist-detail"/);
+  assert.match(html, /この時点の内容/);
+  assert.match(html, /class="savehist-table"/);
+  assert.match(html, /閉じる/);
+  /* 表示しても編集内容（reviewDirty）は変更しない */
+  assert.equal(run('JSON.stringify(state.reviewDirty["f15"] || {})'), '{}');
+  assert.doesNotMatch(source, /履歴を編集内容に反映しました/);
+});
