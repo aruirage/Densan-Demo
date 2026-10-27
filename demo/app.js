@@ -7853,7 +7853,14 @@ function bindResultTableScroll() {
   const el = document.querySelector('.result-tablewrap');
   if (!el) return;
   if (state.resultScrollLeft > 0) el.scrollLeft = state.resultScrollLeft;
-  el.onscroll = () => { state.resultScrollLeft = el.scrollLeft; };
+  /* 右固定の操作列は、右端までスクロールすると本文に重ならない。
+     重なっている間だけ左エッジの影を出す。 */
+  const syncFixedShadow = () => {
+    const max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle('is-hscrolled', max > 0 && el.scrollLeft < max - 1);
+  };
+  el.onscroll = () => { state.resultScrollLeft = el.scrollLeft; syncFixedShadow(); };
+  syncFixedShadow();
   let dragging = false;
   let startX = 0;
   let startLeft = 0;
