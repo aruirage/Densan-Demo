@@ -4186,12 +4186,10 @@ function renderExportDialog() {
   const fromInput = C.fileNameFromInput !== false;
   const enc = C.encoding || 'UTF-8';
   const encodings = ['UTF-8', 'UTF-8（BOMなし）', 'Shift_JIS'];
-  /* 選択中のファイルが複数の帳票タイプにまたがるときは「まとめて出力」できない
-     （客户回答：1 つにまとめられるのは同一帳票タイプのときだけ） */
+  /* 選択中の代表ファイルから、出力設定を決める帳票タイプを求める */
   const pickedFiles = (typeof visibleFiles === 'function' ? visibleFiles() : [])
     .filter((f) => state.picked && state.picked[f.id]);
   const pickedLayouts = [...new Set(pickedFiles.map((f) => f.layout))];
-  const mixedTypes = pickedLayouts.length > 1;
   const exportType = TICKET_TYPES.find((x) => layoutIdOfTicketType(x) === pickedLayouts[0]);
   const exportCfg = exportType ? exportCfgOf(exportType) : null;
   const admin = isTenantAdmin(state.currentUser);
@@ -4226,14 +4224,10 @@ function renderExportDialog() {
           <select class="fld exp-control" data-expcfg="encoding">${encodings.map((o) => `<option ${enc === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
         </label>
         <div class="exp-switches">
-          ${mixedTypes
-            ? '<div class="exp-warn">選択したファイルの帳票タイプが異なるため、まとめて出力できません。</div>'
-            : sw('combineFiles', !!C.combineFiles, 'まとめて出力')}
           <div class="exp-name-group">
             ${sw('fileNameFromInput', fromInput, '入力名と同じ')}
             ${nameField}
         </div>
-          ${sw('requiredOnly', !!C.requiredOnly, '必須項目のみ')}
       </div>
       ${(() => {
         if (!admin || !expCols.length) return '';

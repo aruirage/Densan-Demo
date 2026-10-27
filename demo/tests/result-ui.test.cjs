@@ -1446,6 +1446,8 @@ test('エクスポートダイアログ: 管理者は列設定を編集できる
   const html = run('renderExportDialog()');
   /* 出力形式（横向／竖向／結合）は廃止 */
   assert.doesNotMatch(html, /data-exprecord|出力形式|横向（1 帳票 = 1 行）|竖向（項目名／項目値）|結合（一般＋テーブル Left Join）/);
+  /* まとめて出力・必須項目のみのスイッチも廃止 */
+  assert.doesNotMatch(html, /data-expcfg="combineFiles"|data-expcfg="requiredOnly"|まとめて出力|必須項目のみ/);
   /* 列設定：出力項目（一般 8 件）のトグル行＋初期化ボタン */
   assert.ok(html.includes('列設定（出力項目・列順）'));
   assert.ok(html.includes('id="expColReset"'));
