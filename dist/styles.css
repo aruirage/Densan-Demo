@@ -1152,7 +1152,19 @@ th .ico{font-size:11px;color:var(--accent)}
   position:sticky;
   right:0;
   z-index:2;
-  box-shadow:-12px 0 18px -8px rgba(15,23,42,.22);
+}
+/* border-collapse の表ではセルの box-shadow が描画されないため、
+   固定列の左エッジに擬似要素のグラデーションで影を付ける */
+.result-table th.result-actions-cell::before,
+.result-table td.result-actions-cell::before{
+  content:"";
+  position:absolute;
+  left:-14px;
+  top:0;
+  bottom:0;
+  width:14px;
+  background:linear-gradient(to left, rgba(15,23,42,.16), rgba(15,23,42,0));
+  pointer-events:none;
 }
 .result-table thead th.result-actions-cell{z-index:4;background:var(--bg);text-align:center}
 .result-table thead th[data-sort]{
