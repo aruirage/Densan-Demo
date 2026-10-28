@@ -1969,3 +1969,7 @@ th .ico{font-size:11px;color:var(--accent)}
 .notice-tablewrap{flex:1;min-height:0;overflow:auto}
 .notice-tablewrap td{vertical-align:top;overflow-wrap:anywhere}
 .notice-page .pager{justify-content:flex-end;padding-top:16px}
+/* 操作・処理の見出しと行アクションを同じ左端に揃える。 */
+.roles-table th.roles-actions-cell,.roles-table td.roles-actions-cell{text-align:left;padding-left:12px;padding-right:12px}
+.roles-table .roles-actions-cell .roles-acts{justify-content:flex-start;text-align:left;gap:4px 12px}
+.roles-table .roles-actions-cell .act-text{padding-left:0;padding-right:0}

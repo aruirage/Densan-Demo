@@ -91,14 +91,14 @@ const USERS = [
  *  9 ロール設計（R1/R2/R3/R5/R6/R7/R8/R10/R11）に 1 人ずつ対応させる。 */
 const DEMO_ACTORS = [
   { id: 'u1', role: 'システム管理者', email: 'ichiro.sato', hint: '全メニュー・全帳票・全操作' },
-  { id: 'u3', role: '業務管理者', email: 'kenta.yamada', hint: '「設定」の 2 メニュー（帳票設定・利用設定）だけ。一覧・アップロード・読取は不可' },
-  { id: 'u8', role: 'OCR結果確認', email: 'ryo.nakamura', hint: '閲覧・修正・確認（アップロードと設定は不可）' },
-  { id: 'u7', role: 'アップロード', email: 'aya.yamamoto', hint: 'アップロードのみ（閲覧・読取・確認・出力・削除は不可）' },
+  { id: 'u3', role: '業務管理者', email: 'kenta.yamada', hint: 'すべてのメニューを閲覧可能。設定管理は可能、アップロード・読取・確認・ダウンロードは不可' },
+  { id: 'u8', role: 'OCR結果確認', email: 'ryo.nakamura', hint: '全メニュー閲覧・編集・確認・履歴閲覧（ダウンロード不可）' },
+  { id: 'u7', role: 'アップロード', email: 'aya.yamamoto', hint: '閲覧・アップロード・アップロードファイル削除（読取・分類変更・確認・ダウンロード不可）' },
   { id: 'u6', role: '読取', email: 'osamu.watanabe', hint: '閲覧・読取（再読取／一括読取）・削除（確認と出力は不可）' },
-  { id: 'u5', role: 'OCR結果修正', email: 'yumi.ito', hint: '閲覧と修正のみ（確認・出力は不可）' },
-  { id: 'u2', role: 'AI分類結果修正', email: 'hanako.suzuki', hint: '閲覧と AI 分類結果の修正のみ' },
-  { id: 'u10', role: '出力', email: 'naoko.kobayashi', hint: '閲覧と出力（CSV／JSON／PDF）のみ' },
-  { id: 'u4', role: '閲覧', email: 'minoru.tanaka', hint: '一覧の閲覧のみ（操作ボタンは出ない）' },
+  { id: 'u5', role: 'OCR結果修正', email: 'yumi.ito', hint: '全メニュー閲覧・編集・履歴閲覧（確認・ダウンロード不可）' },
+  { id: 'u2', role: 'AI分類結果修正', email: 'hanako.suzuki', hint: '全メニュー閲覧・帳票タイプ変更' },
+  { id: 'u10', role: '出力', email: 'naoko.kobayashi', hint: '全メニュー閲覧・ダウンロード（CSV／JSON／PDF）' },
+  { id: 'u4', role: '閲覧', email: 'minoru.tanaka', hint: 'すべてのメニューを閲覧可能（編集・確認・ダウンロード不可）' },
 ];
 
 /** 右上に表示するログイン中ユーザ（state.currentUser から導出） */
@@ -188,7 +188,7 @@ function bindDemoActorOnce() {
 const STATUS_PHASES = [
   { id: 'upload', no: '1', label: '票据上传', actor: 'アップロード実行者（窓口・職員）' },
   { id: 'ocr', no: '2', label: '票据识别', actor: 'システム（OCR／AI）' },
-  { id: 'confirm', no: '3', label: '票据确认', actor: '確認権限を持つユーザ' },
+  { id: 'confirm', no: '3', label: '帳票確認', actor: '確認権限を持つユーザ' },
   { id: 'approve', no: '4', label: '票据承认', actor: '承認権限を持つユーザ' },
   { id: 'export', no: '5', label: '票据导出', actor: '出力権限を持つユーザ' },
 ];
@@ -363,15 +363,15 @@ const ENT_USERS = [
 let ROLES = [
   { id: 'R1', name: 'システム管理者', code: 'tenant_admin', desc: '万能権限。メニュー全到達に加え、帳票／アップロード権限表をバイパスして全業務を実行できる', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R2', name: '運用管理者', code: 'operation_admin', desc: '帳票設定＋利用設定＋ユーザー管理。日常運用の管理者', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R3', name: '確認者', code: 'confirmer', desc: '読取結果の確認・修正。マイタスクの確認作業', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R3', name: '確認者', code: 'confirmer', desc: '読取結果の閲覧・編集・保存・確認・履歴閲覧。ダウンロード不可', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R4', name: '承認者', code: 'approver', desc: '確認済み帳票の承認・再承認。マイタスクの承認作業', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R5', name: 'アップロード者', code: 'uploader', desc: 'ファイルのアップロードと読取結果の閲覧', created: '2025-10-01 00:00:00', status: '有効' },
-  /* 9 ロール設計で追加した分。メニュー権限は MENU_PERMS 側で付ける */
-  { id: 'R6', name: '閲覧', code: 'viewer', desc: '一覧の閲覧のみ（操作なし）', created: '2026-01-01 00:00:00', status: '有効' },
+  /* 9 ロール設計で追加した分。操作権限は MENU_PERMS 側で付ける */
+  { id: 'R6', name: '閲覧', code: 'viewer', desc: 'すべてのメニューを閲覧可能。編集・確認・履歴閲覧・ダウンロードは不可', created: '2026-01-01 00:00:00', status: '有効' },
   { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
   { id: 'R8', name: '読取', code: 'reader', desc: 'アップロード済ファイルの読取実行・再読取・削除', created: '2026-01-01 00:00:00', status: '有効' },
   { id: 'R10', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の修正（確認は不可）', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の編集・保存・履歴閲覧。確認とダウンロードは不可', created: '2026-01-01 00:00:00', status: '有効' },
 ];
 /** システム管理者ロール ID（メニュー全許可＋業務権限バイパス） */
 const TENANT_ADMIN_ROLE = 'R1';
@@ -419,14 +419,43 @@ const BIZ_LEAF_OP = {
   'op-delete': 'delete',
   'op-upload': 'upload',
   'op-read': 'read',
+  'op-classify': 'classify',
+  'op-history': 'history',
 };
 
 /** 確認を含むなら修正も付ける。修正が無いなら確認は外す */
 function syncOpFixConfirm(ids) {
   const set = new Set(ids || []);
+  if (set.has('op-download')) { set.delete('op-download'); set.add('op-export'); }
+  if (set.has('result')) { set.delete('result'); set.add('result-view'); }
+  if (set.has('upload')) { set.delete('upload'); set.add('upload-view'); }
   if (set.has('op-confirm')) set.add('op-fix');
-  if (!set.has('op-fix')) set.delete('op-confirm');
+  if (typeof PERMISSION_MODULES !== 'undefined') PERMISSION_MODULES.forEach(m => {
+    if (m.children.some(c => set.has(c.id))) set.add(m.children[0].id);
+  });
   return set;
+}
+function normalizedRoleActions(rid) {
+  const raw = MENU_PERMS[rid] || [];
+  const out = raw.flatMap(id => {
+    const module = PERMISSION_MODULES.find(m=>m.id===id && !['home','result','upload'].includes(id));
+    return module ? module.children.map(c=>c.id) : [id];
+  });
+
+  out.push(...PERMISSION_MODULES.map(m=>m.children[0].id));
+  return [...syncOpFixConfirm(out)];
+}
+function hasActionPermission(id, uid) {
+  return isTenantAdmin(uid || state.currentUser) || groupLeafSet(uid || state.currentUser).has(id);
+}
+function changeActionSelection(ids, changed, checked) {
+  const set = new Set(ids);
+  if (checked) set.add(changed); else {
+    set.delete(changed);
+    if (changed === 'op-fix') set.delete('op-confirm');
+    PERMISSION_MODULES.forEach(m => { if (m.children[0].id === changed) m.children.forEach(c=>set.delete(c.id)); });
+  }
+  return [...syncOpFixConfirm([...set])];
 }
 
 /** グループが持つ権限 ID（複数可。旧データは permId だけなのでそれを 1 件として扱う） */
@@ -441,13 +470,13 @@ function groupLeafSet(uid) {
   const ids = [];
   groupsOfUser(uid).forEach((g) => {
     permIdsOfGroup(g).forEach((rid) => {
-      (MENU_PERMS[rid] || []).forEach((id) => ids.push(id));
+      normalizedRoleActions(rid).forEach((id) => ids.push(id));
     });
   });
   /* 個人に付けた役割も足す（グループ所属の有無に関わらず常に和集合） */
   const eu = entUserByUid(uid);
   ((eu && eu.soloPermIds) || []).forEach((rid) => {
-    (MENU_PERMS[rid] || []).forEach((id) => ids.push(id));
+    normalizedRoleActions(rid).forEach((id) => ids.push(id));
   });
   return syncOpFixConfirm(ids);
 }
@@ -480,6 +509,67 @@ function userOpsOf(uOrUid) {
 }
 
 /** 操作権限。グループの按钮叶子だけを見る。閲覧は画面に入れること（業務ボタンは出さない） */
+/** One policy binding covers buttons, writable fields, drag and drop and switches. */
+function applyActionPermissions() {
+  if (typeof document === 'undefined') return;
+  const rules = [
+    ['#hDownload','home-export'], ['#fileInput,#fileDrop,[data-upact="del"]','op-upload'],
+    ['[data-uptype],[data-upact="manual"]','op-classify'], ['#upRead,#batchRead','op-read'],
+    ['[data-upact="del"]','upload-delete'], ['#rvSave,#rvFixDone,[data-ocr],[data-rvrevert],#rvBulkFix','op-fix'],
+    ['#rvConfirm,#rvLockOk,#rvBulkConfirm','op-confirm'], ['#rvHistory,[data-savehist]','op-history'],
+    ['#rvDownload,#batchExport,[data-batchdl],[data-dlmenu]','op-export'],
+    ['#batchDelete,[data-act="delete"]','op-delete'], ['[data-act="redo"]','op-redo'],
+    ['[data-act="confirm"]','op-confirm'], ['#typeAdd,[data-cfg="addType"]','settings-type-add'],
+    ['#tpSave,[data-rule],[data-ruleconf],[data-rule-ai],[data-tb-add],[data-tb-del],[data-tbcol],[data-tbcol-del],[data-tb-cond],[data-tb-toggle],#tpReupload,#tpName,#tpGroup,#tpDesc,#tpGlobalPrompt,[data-tpf],[data-tb-name],[data-tb-limit],[data-tpdel],[data-dragscope],[data-tpdrag],#tpDescAi,#tpDescClear,#tpPromptAi,#tpPromptClear','settings-type-edit'],
+    ['[data-wmsbtn="tpGroups"],[data-wmsopt="tpGroups"],[data-wmsdel^="tpGroups:"],[data-wmsclear="tpGroups"]','type-data-permission'],
+    ['[data-tpact="dl-tpl"],[data-tpact="dl-bulk"]','type-download'],
+    ['[data-tpact="import-bulk"]','settings-type-edit'],
+    ['[data-cfg="delType"]','settings-type-form-del'], ['#sceneAdd','settings-scenes-add'],
+    ['#scSave,[data-scenerename]','settings-scenes-edit'], ['[data-scenedel]','settings-scenes-del'],
+    ['[data-dictentryadd],[data-dictadd]','dict-add'], ['[data-dictentryedit],[data-dictrename],[data-dictf],[data-dictsave]','dict-edit'],
+    ['[data-dictentrydel],[data-dictdel]','dict-delete'], ['#dictBulkFile,#dictBulkOk,[data-dictbulk]','dict-import'],
+    ['#dictBulkDlTpl,[data-dictdownload]','dict-download'], ['[data-dictreanalyze]','dict-vectorize'],
+    ['[data-useradd]','usage-users-add'], ['[data-useredit]','usage-users-edit'],
+    ['[data-userdel],#userDelOk','usage-users-del'], ['[data-usertoggle]','usage-users-toggle'],
+    ['[data-userreset]','users-reset'], ['[data-grpadd]','usage-groups-add'],
+    ['[data-grpedit]','usage-groups-edit'], ['[data-grpdel]','usage-groups-del'],
+    ['[data-roleadd]','permissions-add'], ['[data-roleedit]','permissions-edit'],
+    ['[data-roledel]','permissions-del'], ['[data-rolemenu],#menuPermOk,[data-mpnode],[data-mpall]','permissions-menu'],
+    ['[data-gfopt="uaPerm"],[data-gfopt="gfPerm"],[data-userGrp],[data-gfopt="uaGroup"]','permission-assign'],
+    ['#secSave,[data-sec]','security-edit'], ['[data-logsave],[data-logcfg]','logs-edit'],
+    ['[data-logexport]','logs-download'], ['#watchSave,[data-watchsave],[data-wf],[data-wf-toggle],[data-wroot-path],[data-wroot-after],[data-wroot-move],[data-wrooton],[data-wrootdel],[data-wrootadd],[data-wrule-folder],[data-wruleon]','watch-edit']
+  ];
+  if (USER_ADD_DRAFT) rules.push(['#userAddName,#userAddEmail,#userAddStatus,#userAddOk', USER_ADD_DRAFT.mode === 'new' ? 'usage-users-add' : 'usage-users-edit']);
+  if (state.groupForm) rules.push(['#grpFormOk,#grpFormName,#grpFormKind,#grpFormDesc', state.groupForm.mode === 'new' ? 'usage-groups-add' : 'usage-groups-edit']);
+  const route = state.page;
+  const containers = route === 'ticketDetail' ? [['.wiz-pane input,.wiz-pane textarea,.wiz-pane select,.wiz-pane [draggable]','settings-type-edit']]
+    : route === 'bizScenes' ? [['.maincol input:not(#sceneQ),.maincol textarea,.maincol select,.maincol [draggable]','settings-scenes-edit']]
+    : route === 'watch' ? [['.maincol input,.maincol select,.maincol textarea,.maincol [role="switch"]','watch-edit']] : [];
+  const requirements = new Map();
+  containers.concat(rules).forEach(([selector, permission]) => {
+    document.querySelectorAll(selector).forEach(el => requirements.set(el, permission));
+  });
+  requirements.forEach((permission, el) => {
+      el.dataset.actionPermission = permission;
+      if (hasActionPermission(permission)) return;
+      el.setAttribute('aria-disabled','true');
+      if ('disabled' in el) el.disabled = true;
+      if ('readOnly' in el) el.readOnly = true;
+      if (el.hasAttribute && el.hasAttribute('draggable')) el.draggable = false;
+      el.classList.add('action-denied');
+  });
+}
+function bindActionPermissionGuard() {
+  if (typeof document === 'undefined' || document._actionGuardBound) return;
+  document._actionGuardBound = true;
+  ['click','change','input','drop','dragstart','submit'].forEach(event => document.addEventListener(event, e => {
+    const el = e.target.closest && e.target.closest('[data-action-permission]');
+    if (el && !hasActionPermission(el.dataset.actionPermission)) {
+      e.preventDefault(); e.stopImmediatePropagation();
+    }
+  }, true));
+}
+
 function applyBizButtonVisibility() {
   /* ボタンは render 時に userHasOp で個別に出し分け。ここは再描画のフック用。 */
 }
@@ -488,7 +578,7 @@ function userHasOp(op, uid) {
   const me = uid || state.currentUser;
   if (op === 'approve') return false;
   if (isTenantAdmin(me)) return true;
-  if (op === 'view') return canReachMenu('result', me) || canReachMenu('home', me);
+  if (op === 'view') return hasActionPermission('result-view', me);
   const leaves = groupLeafSet(me);
   if (op === 'fix') return leaves.has('op-fix') || leaves.has('op-confirm');
   if (op === 'confirm') return leaves.has('op-confirm');
@@ -497,7 +587,7 @@ function userHasOp(op, uid) {
   if (op === 'upload') return leaves.has('op-upload') || leaves.has('upload');
   if (op === 'read') return leaves.has('op-read');
   if (op === 'delete') return leaves.has('op-delete');
-  if (op === 'settings') return canReachMenu('settings', me) || canReachMenu('settings-type', me);
+  if (op === 'settings') return PERMISSION_MODULES.filter(m=>!['home','upload','result'].includes(m.id)).some(m=>m.children.slice(1).some(c=>leaves.has(c.id)));
   return userOpsOf(me).includes(op);
 }
 /** ユーザー追加ダイアログの入力値（null＝閉じている） */
@@ -523,11 +613,11 @@ const SECURITY = {
 };
 
 /* ── 権限管理のモック ────────────────────────────────────────────────────
- * システムレベル：ロール（ROLES）＋ メニュー権限（MENU_TREE / MENU_PERMS）
+ * システムレベル：ロール（ROLES）＋ 操作権限（MENU_TREE / MENU_PERMS）
  *                  ＝「利用設定 ＞ 権限設定」。画面到達可否だけを持つ。
  * 業務レベル　　：① 帳票タイプ × 4 業務操作 → グループ／ユーザー（TICKET_PERMS）
  *                ② 業務シーン × アップロード → グループ／ユーザー（UPLOAD_PERMS）
- *                  ＝帳票権限管理画面に上下で並べる。メニュー権限とは混ぜない。
+ *                  ＝帳票権限管理画面に上下で並べる。操作権限とは混ぜない。
  * -------------------------------------------------------------------- */
 
 /** 帳票の 4 業務操作（閲覧 → 確認 → 承認 → 再承認 の順で固定）
@@ -639,7 +729,7 @@ function userMatchesTargets(uid, targets) {
 }
 
 /** システム管理者か（メニュー全到達＋帳票／アップロード権限表をバイパス）
- *  デモ既定の「全システム・全メニュー権限」は window.DEMO_FULL_ADMIN で立てる
+ *  デモ既定の「全システム・全操作権限」は window.DEMO_FULL_ADMIN で立てる
  *  （admin-mode.js。URL に ?perm=1 を付けると権限どおりの制限に戻る）。 */
 function isTenantAdmin(uid) {
   if (typeof window !== 'undefined' && window.DEMO_FULL_ADMIN === true) return true;
@@ -706,57 +796,302 @@ function ensureUpBizAllowed() {
   return allowed;
 }
 
-/** メニュー権限ツリー（システムレベル。AI画像処理／外部API は置かない） */
-const MENU_TREE = [
-  { id: 'llm-ocr', label: 'LLM-OCR', children: [
-    { id: 'home', label: 'ホーム' },
-    /* アップロードはアップロード画面のボタン。読取結果一覧の操作列には出さない */
-    { id: 'upload', label: '新規アップロード', children: [
-      { id: 'op-upload', label: 'アップロード' },
-      { id: 'op-read', label: '読み取り実行' },
-    ] },
-    { id: 'result', label: '読取結果一覧', children: [
-      { id: 'op-redo', label: '再読取' },
-      { id: 'op-fix', label: '修正' },
-      { id: 'op-confirm', label: '確認' },
-      { id: 'op-download', label: 'ダウンロード' },
-      { id: 'op-delete', label: '削除' },
-    ] },
-    { id: 'settings', label: '帳票設定', children: [
-      { id: 'settings-type', label: '帳票タイプ設定', children: [
-        { id: 'settings-type-add', label: 'タイプ追加' },
-        { id: 'settings-type-edit', label: 'タイプ編集' },
-        { id: 'settings-type-form-del', label: 'タイプ削除' },
-      ] },
-      { id: 'settings-scenes', label: '業務シーン設定', children: [
-        { id: 'settings-scenes-add', label: '業務シーン追加' },
-        { id: 'settings-scenes-edit', label: '業務シーン編集' },
-        { id: 'settings-scenes-del', label: '業務シーン削除' },
-      ] },
-    ] },
-    { id: 'usage', label: '利用設定', children: [
-      { id: 'usage-dict', label: '辞書登録' },
-      { id: 'usage-users', label: 'ユーザー管理', children: [
-        { id: 'usage-users-add', label: 'ユーザー追加' },
-        { id: 'usage-users-edit', label: 'ユーザー編集' },
-        { id: 'usage-users-toggle', label: 'ユーザー無効化' },
-        { id: 'usage-groups-add', label: 'グループ追加' },
-        { id: 'usage-groups-edit', label: 'グループ編集' },
-        { id: 'usage-groups-del', label: 'グループ削除' },
-      ] },
-      { id: 'usage-permissions', label: '権限設定', children: [
-        { id: 'permissions-query', label: 'ロール照会' },
-        { id: 'permissions-add', label: 'ロール追加' },
-        { id: 'permissions-edit', label: 'ロール編集' },
-        { id: 'permissions-del', label: 'ロール削除' },
-        { id: 'permissions-menu', label: 'メニュー権限設定' },
-      ] },
-      { id: 'usage-security', label: 'セキュリティ設定' },
-      { id: 'usage-logs', label: 'ログ設定' },
-      { id: 'usage-watch', label: '自動アップロード' },
-    ] },
-  ] },
+/** 操作権限ツリー（システムレベル。AI画像処理／外部API は置かない） */
+const PERMISSION_MODULES = [
+  {
+    "id": "home",
+    "label": "ホーム",
+    "children": [
+      {
+        "id": "home",
+        "label": "閲覧"
+      },
+      {
+        "id": "home-export",
+        "label": "利用履歴ダウンロード"
+      }
+    ]
+  },
+  {
+    "id": "upload",
+    "label": "新規アップロード",
+    "children": [
+      {
+        "id": "upload-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "op-upload",
+        "label": "アップロード"
+      },
+      {
+        "id": "op-classify",
+        "label": "帳票タイプ変更"
+      },
+      {
+        "id": "op-read",
+        "label": "読取実行"
+      },
+      {
+        "id": "upload-delete",
+        "label": "削除"
+      }
+    ]
+  },
+  {
+    "id": "result",
+    "label": "読取結果一覧",
+    "children": [
+      {
+        "id": "result-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "op-fix",
+        "label": "編集"
+      },
+      {
+        "id": "op-confirm",
+        "label": "確認"
+      },
+      {
+        "id": "op-history",
+        "label": "履歴閲覧"
+      },
+      {
+        "id": "op-export",
+        "label": "ダウンロード"
+      },
+      {
+        "id": "op-redo",
+        "label": "再読取"
+      },
+      {
+        "id": "op-delete",
+        "label": "削除"
+      }
+    ]
+  },
+  {
+    "id": "settings-type",
+    "label": "帳票タイプ設定",
+    "children": [
+      {
+        "id": "type-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "settings-type-add",
+        "label": "追加"
+      },
+      {
+        "id": "settings-type-edit",
+        "label": "編集"
+      },
+      {
+        "id": "settings-type-form-del",
+        "label": "削除"
+      },
+      {
+        "id": "type-test",
+        "label": "テスト実行"
+      },
+      {
+        "id": "type-download",
+        "label": "ダウンロード"
+      },
+      {
+        "id": "type-data-permission",
+        "label": "データ権限設定"
+      }
+    ]
+  },
+  {
+    "id": "settings-scenes",
+    "label": "業務シーン設定",
+    "children": [
+      {
+        "id": "scene-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "settings-scenes-add",
+        "label": "追加"
+      },
+      {
+        "id": "settings-scenes-edit",
+        "label": "編集"
+      },
+      {
+        "id": "settings-scenes-del",
+        "label": "削除"
+      }
+    ]
+  },
+  {
+    "id": "usage-dict",
+    "label": "辞書登録",
+    "children": [
+      {
+        "id": "dict-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "dict-add",
+        "label": "追加"
+      },
+      {
+        "id": "dict-edit",
+        "label": "編集"
+      },
+      {
+        "id": "dict-delete",
+        "label": "削除"
+      },
+      {
+        "id": "dict-import",
+        "label": "インポート"
+      },
+      {
+        "id": "dict-download",
+        "label": "ダウンロード"
+      },
+      {
+        "id": "dict-vectorize",
+        "label": "ベクトル化実行"
+      }
+    ]
+  },
+  {
+    "id": "usage-users",
+    "label": "ユーザー管理",
+    "children": [
+      {
+        "id": "users-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "usage-users-add",
+        "label": "追加"
+      },
+      {
+        "id": "usage-users-edit",
+        "label": "編集"
+      },
+      {
+        "id": "usage-users-del",
+        "label": "削除"
+      },
+      {
+        "id": "usage-users-toggle",
+        "label": "有効／無効切替"
+      },
+      {
+        "id": "users-reset",
+        "label": "パスワードリセット"
+      }
+    ]
+  },
+  {
+    "id": "usage-groups",
+    "label": "グループ管理",
+    "children": [
+      {
+        "id": "groups-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "usage-groups-add",
+        "label": "追加"
+      },
+      {
+        "id": "usage-groups-edit",
+        "label": "編集"
+      },
+      {
+        "id": "usage-groups-del",
+        "label": "削除"
+      }
+    ]
+  },
+  {
+    "id": "usage-permissions",
+    "label": "権限設定",
+    "children": [
+      {
+        "id": "permissions-query",
+        "label": "閲覧"
+      },
+      {
+        "id": "permissions-add",
+        "label": "追加"
+      },
+      {
+        "id": "permissions-edit",
+        "label": "編集"
+      },
+      {
+        "id": "permissions-del",
+        "label": "削除"
+      },
+      {
+        "id": "permissions-menu",
+        "label": "操作権限設定"
+      },
+      {
+        "id": "permission-assign",
+        "label": "権限割当"
+      }
+    ]
+  },
+  {
+    "id": "usage-security",
+    "label": "セキュリティ設定",
+    "children": [
+      {
+        "id": "security-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "security-edit",
+        "label": "設定変更"
+      }
+    ]
+  },
+  {
+    "id": "usage-logs",
+    "label": "ログ設定",
+    "children": [
+      {
+        "id": "logs-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "logs-edit",
+        "label": "設定変更"
+      },
+      {
+        "id": "logs-download",
+        "label": "ダウンロード"
+      }
+    ]
+  },
+  {
+    "id": "usage-watch",
+    "label": "自動アップロード",
+    "children": [
+      {
+        "id": "watch-view",
+        "label": "閲覧"
+      },
+      {
+        "id": "watch-edit",
+        "label": "設定変更"
+      }
+    ]
+  }
 ];
+const MENU_TREE = [{id:"llm-ocr",label:"LLM-OCR",children:PERMISSION_MODULES}];
 
 const MENU_LEAVES = (() => {
   const out = [];
@@ -767,34 +1102,25 @@ const MENU_LEAVES = (() => {
 /* 全ロール共通で「ホームと一覧」には到達できる。閲覧は葉にしない
    （操作ボタンが一つも無ければ操作列ごと隠すので、閲覧＝到達で足りる）。 */
 const BIZ_MENU_BASE = ['home', 'result'];
-let MENU_PERMS = {
-  /* システム管理者＝メニュー全項目（業務権限も isTenantAdmin でバイパス） */
-  R1: MENU_LEAVES.slice(),
-  /* 運用管理者（通用管理者）＝帳票設定まわり＋ユーザー管理 */
-  /* 業務管理者＝「設定」の 2 メニュー（帳票設定・利用設定）だけを持つ。
-     一覧の閲覧もアップロードも与えない（設定専任）。 */
-  R2: [
-    'settings-type', 'settings-type-add', 'settings-type-edit', 'settings-type-form-del',
-    'settings-scenes', 'settings-scenes-add', 'settings-scenes-edit', 'settings-scenes-del',
-    'usage-dict',
-    'usage-users', 'usage-users-add', 'usage-users-edit', 'usage-users-toggle',
-    'usage-groups-add', 'usage-groups-edit', 'usage-groups-del',
-    'permissions-query', 'permissions-add', 'permissions-edit', 'permissions-del', 'permissions-menu',
-    'usage-security', 'usage-logs', 'usage-watch',
-  ],
-  R3: ['home', 'op-upload', 'op-read', 'result', 'op-fix', 'op-confirm', 'op-redo', 'op-download', 'op-delete'],
-  R4: ['home', 'result'],
-  R5: ["upload", "op-upload"],
-  /* 9 ロール設計で追加した分。serve.py の配分パッチと同じ値にしてある */
-  R6: BIZ_MENU_BASE.slice(),
-  R7: BIZ_MENU_BASE.concat(['op-classify']),
-  /* 読取＝読取実行・再読取・削除（アップロード済ファイルの後始末まで担う） */
-  R8: BIZ_MENU_BASE.concat(['op-read', 'op-redo', 'op-delete']),
-  /* 出力＝ダウンロード／一括ダウンロード */
-  R10: BIZ_MENU_BASE.concat(['op-export']),
-  /* OCR結果修正＝修正だけ（確認は不可） */
-  R11: BIZ_MENU_BASE.concat(['op-fix']),
-};
+function defaultOperationGrants() {
+  const business = ['home', 'result-view'];
+  const adminModules = PERMISSION_MODULES.filter(m=>!['home','upload','result'].includes(m.id));
+  const grants = {
+    R1: PERMISSION_MODULES.flatMap(m=>m.children.map(c=>c.id)),
+    R2: PERMISSION_MODULES.map(m=>m.children[0].id).concat(adminModules.flatMap(m=>m.children.map(c=>c.id))),
+    R3: business.concat(['op-confirm','op-history']),
+    R4: business.slice(),
+    R5: business.concat(['op-upload','upload-delete']),
+    R6: PERMISSION_MODULES.map(m=>m.children[0].id),
+    R7: business.concat(['op-classify']),
+    R8: business.concat(['op-read','op-redo','op-delete','upload-delete']),
+    R10: business.concat(['op-export']),
+    R11: business.concat(['op-fix','op-history']),
+  };
+  Object.keys(grants).forEach(r=>grants[r]=[...syncOpFixConfirm(grants[r].concat(PERMISSION_MODULES.map(m=>m.children[0].id)))]);
+  return grants;
+}
+let MENU_PERMS = { ...defaultOperationGrants() };
 
 /* ── 帳票設定系のモック（実機の一覧列に合わせる） ── */
 let TICKET_TYPES = [
@@ -1146,7 +1472,7 @@ const groupKindClass = (kind) => (GROUP_KINDS.find((k) => k.label === kind) || {
 /** 最上位の操作グループ。削除不可。ほかのグループはすべてこの下にぶら下がる。 */
 const ROOT_GROUP_ID = 'g0';
 let GROUPS = [
-  { id: ROOT_GROUP_ID, name: '電算', kind: '', desc: 'すべての操作グループの最上位（削除不可）', userIds: [], parentId: null, root: true, permId: 'R1' },
+  { id: ROOT_GROUP_ID, name: '電算', kind: '', desc: 'すべての操作グループの最上位（削除不可）', userIds: [], parentId: null, root: true, permId: null },
   { id: 'g1', name: '住民異動窓口',     kind: '確認',     desc: '住民異動届の受付と読取結果の確認',   userIds: ['u1', 'u2', 'u3'], parentId: ROOT_GROUP_ID },
   { id: 'g2', name: '住民課承認者',     kind: '承認',     desc: '住民異動届の旧承認担当',        userIds: ['u1', 'u4', 'u5'], parentId: 'g1' },
   { id: 'g3', name: '住民課長',         kind: '再承認',   desc: '住民異動届の旧再承認',      userIds: ['u1'], parentId: 'g1' },
@@ -1160,7 +1486,7 @@ let GROUPS = [
 /** グループは権限設定の権限を一つ選ぶ */
 const KIND_PERM = { '確認': 'R3', 'アップロード': 'R5', '承認': 'R4', '再承認': 'R4', '閲覧': 'R4' };
 GROUPS.forEach((g) => {
-  if (!g.permId) g.permId = KIND_PERM[g.kind] || 'R4';
+  if (!g.permId && !g.root) g.permId = KIND_PERM[g.kind] || 'R4';
 });
 /** グループ ID → 所属ユーザー ID の配列 */
 const groupMemberIds = (gid) => [...new Set([gid, ...groupDescendantIds(gid)].flatMap((id) => (byId(GROUPS, id) || {}).userIds || []))];
@@ -1300,7 +1626,7 @@ const HEADER_MENUS = {
   ] },
 };
 
-/** 画面ルート → メニュー権限ツリーのノード id */
+/** 画面ルート → 操作権限ツリーのノード id */
 const PAGE_MENU_NODE = {
   home: 'home',
   upload: 'upload',
@@ -1329,8 +1655,10 @@ function menuLeavesForUser(uid) {
 /** メニューノード（画面）に到達できるか。権限が無ければメニュー自体を出さない */
 function canReachMenu(nodeId, uid) {
   if (!nodeId) return false;
+  if (nodeId === 'notices' || PERMISSION_MODULES.some(m=>m.id===nodeId || m.children[0].id===nodeId)) return true;
   const set = menuLeavesForUser(uid);
   if (set === null) return true;
+  if (nodeId === 'usage-users' && hasActionPermission('groups-view', uid)) return true;
   if (set.has(nodeId)) return true;
   /* 親ノード許可＝配下リーフのいずれかが許可されている扱い */
   const find = (nodes) => {
@@ -1355,6 +1683,7 @@ function canReachMenu(nodeId, uid) {
 
 /** 画面ルートを開けるか */
 function canReachPage(page, uid) {
+  if (page === 'notices') return true;
   const node = PAGE_MENU_NODE[page];
   if (!node) return isTenantAdmin(uid || state.currentUser);
   return canReachMenu(node, uid);
@@ -1486,7 +1815,7 @@ const state = {
   dd: null,                       // 開いている複数選択ドロップダウン
   navMenu: null,                  // 開いているヘッダーのサブメニュー
   permForm: null,                 // 権限作成／編集ダイアログ { mode, id, name, code, desc, status }
-  menuPerm: null,                 // メニュー権限ダイアログ { roleId, checked[], closed[] }
+  menuPerm: null,                 // 操作権限ダイアログ { roleId, checked[], closed[] }
   permCell: null,                 // 権限セル編集 { kind:'ticket'|'upload', layoutId?, act?, bizId?, mode? }
   asgMode: {},                    // フロー担当の药丸モード { confirm|approve|reapprove: 'role'|'user' }
   filters: { ...defaultFilters(), createdFrom: HOME_FROM, createdTo: HOME_TO },
@@ -2410,7 +2739,7 @@ function passesMyTaskFilters(f) {
  */
 function reviewFootFlags(f) {
   const { need, stages, done } = flowOf(f);
-  if (state.reviewViewOnly) {
+  if (state.reviewViewOnly || !userHasOp('fix')) {
     return {
       phase: 'view',
       readonly: true,
@@ -2427,11 +2756,11 @@ function reviewFootFlags(f) {
     const canConfirm = userHasOp('confirm') && availableActions(f).includes('confirm');
     const intent = reviewIntentOf(f.id);
     /* 修正権限がなくても、確認入口（intent=confirm）なら項目を編集できる */
-    const canEditFields = (intent === 'fix' && canFix) || (intent === 'confirm' && canConfirm);
+    const canEditFields = canFix;
     return {
       phase: 'confirm',
       readonly: !canEditFields,
-      canSave: intent === 'fix' && canFix,
+      canSave: canFix,
       canConfirm,
       canApprove: false,
       canReturn: false,
@@ -3097,7 +3426,7 @@ function tabDef(id) {
   if (TABS_DEF[id]) return TABS_DEF[id];
   if (isReviewTab(id)) {
     const fileId = reviewTabFileId(id);
-    const name = dispFileName(fileId) || fileId || '详情';
+    const name = dispFileName(fileId) || fileId || '詳細';
     const short = name.length > 18 ? name.slice(0, 16) + '…' : name;
     return { id, label: short, title: name, route: 'review', fileId };
   }
@@ -3308,7 +3637,8 @@ function openReview(fileId, opts) {
   const o = typeof opts === 'string' ? { mode: opts } : (opts || {});
   const f = byId(FILES_DATA, fileId);
   const returnPage = o.returnPage || (o.viewOnly ? 'result' : 'myTasks');
-  const viewOnly = !!o.viewOnly;
+  if (!f || (typeof canViewFile === 'function' && !canViewFile(f))) { toast('この帳票を閲覧する権限がありません', 'error'); return; }
+  const viewOnly = !userHasOp('fix');
   const intent = o.intent || (viewOnly ? 'view' : 'confirm');
   state.reviewId = fileId;
   state.reviewViewOnly = viewOnly;
@@ -3338,7 +3668,7 @@ function openReview(fileId, opts) {
   ensureSaveHistory(f);
   render();
   const fl = reviewFootFlags(f);
-  toast(state.reviewViewOnly ? '详情を開きました' : fl.phase === 'approve' ? '承認タスクを開きました' : fl.phase === 'confirm' ? '確認タスクを開きました' : '详情を開きました');
+  toast(state.reviewViewOnly ? '詳細を開きました' : fl.phase === 'approve' ? '承認タスクを開きました' : fl.phase === 'confirm' ? '確認タスクを開きました' : '詳細を開きました');
 }
 
 function reviewOriginalValue(key) {
@@ -4944,8 +5274,8 @@ function renderRoleList() {
       <td>${esc(r.desc)}</td>
       <td class="roles-time">${esc(r.created)}</td>
       <td><span class="status-badge ${r.status === '有効' ? 'on' : 'off'}">${esc(r.status)}</span></td>
-      <td><div class="acts roles-acts">
-        <button type="button" class="act-text" data-rolemenu="${r.id}">メニュー権限</button>
+      <td class="roles-actions-cell"><div class="acts roles-acts">
+        <button type="button" class="act-text" data-rolemenu="${r.id}">操作権限</button>
         <button type="button" class="act-text" data-roleedit="${r.id}">編集</button>
         <button type="button" class="act-text danger" data-roledel="${r.id}">削除</button>
       </div></td>
@@ -4998,12 +5328,12 @@ function renderRoleList() {
       <table>
         <thead><tr>
           <th style="width:64px">番号</th>
-          <th>権限名</th>
-          <th style="width:140px">権限ID</th>
+          <th style="width:150px">権限名</th>
+          <th style="width:130px">権限ID</th>
           <th>概要</th>
-          <th style="width:160px">作成時間</th>
+          <th style="width:230px">作成時間</th>
           <th style="width:96px">ステータス</th>
-          <th style="width:220px">操作・処理</th>
+          <th class="roles-actions-cell" style="width:190px">操作・処理</th>
         </tr></thead>
         <tbody>${body}</tbody>
       </table>
@@ -5189,12 +5519,13 @@ function menuPermLeaves(node) {
   return node.children ? node.children.flatMap(menuPermLeaves) : [node.id];
 }
 
-/** メニュー権限ダイアログ（システムレベル：画面到達権限のツリー） */
+/** 操作権限ダイアログ（システムレベル：画面到達権限のツリー） */
 function menuPermDialog() {
   const m = state.menuPerm;
   if (!m) return '';
   const role = byId(ROLES, m.roleId) || {};
-  const checked = m.checked || [];
+  const fixedViews = PERMISSION_MODULES.map(module=>module.children[0].id);
+  const checked = [...new Set((m.checked || []).concat(fixedViews))];
   const closed = m.closed || [];
   const nodeHtml = (n) => {
     const leaves = menuPermLeaves(n);
@@ -5203,7 +5534,7 @@ function menuPermDialog() {
       ? `<span class="mpcaret ico i-caret-down ${closed.includes(n.id) ? 'closed' : ''}" data-mptoggle="${n.id}"></span>`
       : '<span class="mpcaret"></span>';
     const kids = n.children && !closed.includes(n.id) ? `<ul>${n.children.map(nodeHtml).join('')}</ul>` : '';
-    return `<li>${caret}<label class="mpnode"><input type="checkbox" class="cb" data-mpnode="${n.id}" ${on === leaves.length ? 'checked' : ''} /><span class="mplabel">${esc(n.label)}</span></label>${kids}</li>`;
+    return `<li>${caret}<label class="mpnode"><input type="checkbox" class="cb" data-mpnode="${n.id}" ${fixedViews.includes(n.id) ? 'disabled title="すべてのユーザーが閲覧できます"' : ''} ${on === leaves.length ? 'checked' : ''} /><span class="mplabel">${esc(n.label)}</span></label>${kids}</li>`;
   };
   /* ツリー上の「全選択」「全展開」の現在値をスイッチの見た目に反映する */
   const allOn = MENU_LEAVES.length > 0 && MENU_LEAVES.every((id) => checked.includes(id));
@@ -5215,12 +5546,12 @@ function menuPermDialog() {
         <span class="mp-sw-val">${val}</span>
       </div>`;
   return `<div class="modal-back" id="menuPermBack"><div class="modal perm-modal mp-modal">
-    <div class="modal-head"><b>メニュー権限</b><span class="spacer"></span><button class="icon-btn" id="menuPermClose" aria-label="閉じる"><span class="ico i-close"></span></button></div>
+    <div class="modal-head"><b>操作権限</b><span class="spacer"></span><button class="icon-btn" id="menuPermClose" aria-label="閉じる"><span class="ico i-close"></span></button></div>
     <div class="perm-body">
       <div class="perm-row"><span class="lbl">権限名</span><div class="mp-idchip">${esc(role.name || '')}</div></div>
       <div class="perm-row"><span class="lbl">権限ID</span><div class="mp-idchip">${esc(role.code || '')}</div></div>
       <div class="mp-block">
-        <div class="mp-block-label">メニュー権限</div>
+        <div class="mp-block-label">操作権限</div>
         <div class="mp-panel">
           <div class="mp-toolbar">
             ${mpSwitch('すべて選択/すべて解除', 'data-mpall', allOn, allOn ? 'はい' : 'いいえ')}
@@ -7130,7 +7461,7 @@ function renderPermissions() {
   }).join('');
 
   /* 上表：フォルダ（業務シーン → 帳票タイプ）単位で「閲覧→修正→確認」。
-   * 下表：業務シーン単位のアップロード。セルクリックで編集。メニュー権限とは別テーブル。 */
+   * 下表：業務シーン単位のアップロード。セルクリックで編集。操作権限とは別テーブル。 */
   return `${cfgHeader('帳票権限管理', '')}
   <h3 class="cfg-sub">フォルダ権限（業務シーン → 帳票タイプ）<span class="info-i" data-tip="ファイルツリーのフォルダがそのまま権限の単位です。業務シーンの行は配下の帳票タイプすべてに同じ値を書き込み、帳票タイプの行で個別に変えられます。閲覧を外すと、そのフォルダの帳票は一覧にも出ません。">i</span></h3>
   <div class="tablewrap"><table class="fp-table">
@@ -7430,7 +7761,7 @@ function renderMyTasks() {
       const f = r.file;
       const cfg = approvalOf(f.layout);
       const kindMeta = { label: '要確認', cls: 'confirm', act: '確認する', targets: cfg.confirmGroups };
-      const actLabel = tab === 'done' ? '详情' : kindMeta.act;
+      const actLabel = tab === 'done' ? '詳細' : kindMeta.act;
       /* 未対応＝割当先／対応済＝処理者。データ権限が自身のみの人は自分の行だけ見える */
       const assigneeUid = taskOwnerUid(f, r.kind, tab);
       const assignee = userName(assigneeUid) || assigneeUserNames(kindMeta.targets);
@@ -7642,7 +7973,7 @@ function render() {
   const prevMainTop = prevMainEl ? prevMainEl.scrollTop : 0;
   const prevWinY = window.scrollY || 0;
   let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
-  /* メニュー権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
+  /* 操作権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
   if (route !== 'review' && !canReachPage(route)) {
     const fallback = ['home', 'upload', 'result', 'myTasks', 'ticketDetail', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].find((p) => canReachPage(p)) || 'home';
     state.page = fallback;
@@ -7750,6 +8081,7 @@ function render() {
     if (prevWinY) window.scrollTo(0, prevWinY);
   }
   bind();
+  applyActionPermissions();
 }
 
 /* ============================== 6. イベント ============================== */
@@ -7757,6 +8089,7 @@ function render() {
 let dragSrc = null;
 
 function bind() {
+  bindActionPermissionGuard();
   const bell = $('#noticeBell');
   if (bell) bell.onclick = () => {
     noticeHasNew = false; state.page = 'notices';
@@ -8101,7 +8434,11 @@ function bindResultPanel() {
     };
   });
   document.querySelectorAll('[data-result-preview]').forEach((b) => {
-    b.onclick = () => openReview(b.dataset.resultPreview, { viewOnly: true, returnPage: 'result' });
+    b.onclick = () => {
+      const file = byId(FILES_DATA, b.dataset.resultPreview);
+      if (file && file.status === 'reading') openPreview(file.id);
+      else openReview(b.dataset.resultPreview, { viewOnly: !userHasOp('fix'), returnPage: 'result' });
+    };
   });
   document.querySelectorAll('.result-table [data-sort]').forEach((th) => {
     th.onclick = (e) => {
@@ -8325,10 +8662,10 @@ function renderReview() {
   if (state.reviewRotate == null) state.reviewRotate = 0;
   if (!state.reviewReadTab) state.reviewReadTab = 'text';
   const fl = reviewFootFlags(f);
-  const readonly = fl.readonly;
+  const readonly = fl.readonly || !userHasOp('fix');
   const phase = fl.phase;
   const isApproveUi = phase === 'approve' || phase === 'export';
-  const phaseLabel = phase === 'approve' ? '承認' : phase === 'confirm' ? '確認' : phase === 'export' ? '出力' : '详情';
+  const phaseLabel = phase === 'approve' ? '承認' : phase === 'confirm' ? '確認' : phase === 'export' ? '出力' : '詳細';
   const textFields = OCR_FIELDS.b6;
   const tableFields = OCR_TABLES.default;
   const dirty = state.reviewDirty[f.id] || {};
@@ -8467,7 +8804,7 @@ function renderReview() {
             <button type="button" class="rv-guide" id="rvGuide"><span class="ico i-error"></span>操作ガイド</button>
           </div>
           <div class="rv-ocr-top-actions">
-            ${reviewIntent === 'confirm' ? '<button type="button" class="btn sm rv-head-btn" id="rvHistory"><span class="ico i-wait"></span>履歴</button>' : ''}
+            ${userHasOp('history') ? '<button type="button" class="btn sm rv-head-btn" id="rvHistory"><span class="ico i-wait"></span>履歴</button>' : ''}
             ${canReviewDownload ? `<button type="button" class="btn sm rv-head-btn" id="rvDownload" data-dlmenu="${esc(f.id)}" aria-haspopup="menu">ダウンロード</button>` : ''}
           </div>
         </div>`;
@@ -9263,11 +9600,11 @@ function bindCfgPages() {
     render();
     toast('絞り込み条件をリセットしました');
   };
-  /* メニュー権限（システムレベル）ダイアログ */
+  /* 操作権限（システムレベル）ダイアログ */
   document.querySelectorAll('[data-rolemenu]').forEach((b) => {
     b.onclick = () => {
       const id = b.dataset.rolemenu;
-      state.menuPerm = { roleId: id, checked: (MENU_PERMS[id] || []).slice(), closed: [] };
+      state.menuPerm = { roleId: id, checked: normalizedRoleActions(id), closed: [] };
       render();
     };
   });
@@ -9597,7 +9934,7 @@ function bindCfgPages() {
   });
 }
 
-/** 権限系ダイアログ（権限作成／編集・メニュー権限・帳票権限セル）のイベント */
+/** 権限系ダイアログ（権限作成／編集・操作権限・帳票権限セル）のイベント */
 function bindPermDialogs() {
   const closeAll = () => { state.permForm = null; state.menuPerm = null; state.permCell = null; render(); };
   const wire = (backId, closeIds) => {
@@ -9640,7 +9977,7 @@ function bindPermDialogs() {
     };
   }
 
-  /* ── メニュー権限（システムレベルの画面到達権限ツリー） ── */
+  /* ── 操作権限（システムレベルの画面到達権限ツリー） ── */
   const m = state.menuPerm;
   if (m) {
     wire('#menuPermBack', ['menuPermClose', 'menuPermCancel']);
@@ -9652,7 +9989,7 @@ function bindPermDialogs() {
     document.querySelectorAll('[data-mpall]').forEach((b) => {
       b.onclick = () => {
         const allOn = MENU_LEAVES.length > 0 && MENU_LEAVES.every((id) => m.checked.includes(id));
-        m.checked = allOn ? [] : MENU_LEAVES.slice();
+        m.checked = allOn ? PERMISSION_MODULES.map(module=>module.children[0].id) : MENU_LEAVES.slice();
     render();
       };
     });
@@ -9680,15 +10017,16 @@ function bindPermDialogs() {
       e.stopPropagation();
         if (cb.checked) leaves.forEach((l) => { if (!m.checked.includes(l)) m.checked.push(l); });
         else m.checked = m.checked.filter((l) => !leaves.includes(l));
-        m.checked = [...syncOpFixConfirm(m.checked)];
+        if (!cb.checked && leaves.length === 1) m.checked = changeActionSelection(m.checked, leaves[0], false);
+        else m.checked = [...syncOpFixConfirm(m.checked)];
       render();
     };
   });
     const ok = $('#menuPermOk');
     if (ok) ok.onclick = () => {
-      MENU_PERMS[m.roleId] = [...syncOpFixConfirm(m.checked)];
+      MENU_PERMS[m.roleId] = [...syncOpFixConfirm(m.checked.concat(PERMISSION_MODULES.map(module=>module.children[0].id)))];
       state.menuPerm = null; render();
-      toast('メニュー権限を保存しました');
+      toast('操作権限を保存しました');
     };
   }
 
@@ -10191,7 +10529,41 @@ function syncHashFromState() {
   if (location.hash !== want) location.hash = base;
 }
 
+/** 起動時だけ追加する固定サンプル。再描画やページ移動では重複追加しない。 */
+function seedAdditionalDemoData() {
+  if (state.additionalDemoSeeded) return;
+  state.additionalDemoSeeded = true;
+  const statuses = ['done','done','failed','confirmed','exported','reading'];
+  const bases = FILES_DATA.slice();
+  for (let i=0; i<24; i++) {
+    const base = bases[i % bases.length];
+    const status = statuses[i % statuses.length];
+    const at = `2026-10-28 ${String(14-Math.floor(i/12)).padStart(2,'0')}:${String(59-i).padStart(2,'0')}:00`;
+    FILES_DATA.push({...base, id:'demo-result-'+(i+1), tenant:'tenant1',
+      name:`追加サンプル_${String(i+1).padStart(2,'0')}_${base.name}`, status,
+      createdAt:at, updatedAt:at, readAt:status==='reading'?null:at,
+      confirmedAt:['confirmed','exported'].includes(status)?at:null,
+      history:status==='failed'?'読取失敗：画像が不鮮明です':status==='confirmed'?'確認済み':status==='exported'?'出力済み（CSV）':status==='reading'?'読取処理中':'読取完了',
+      exportSnapshot:null, saveHistory:null, flow:[], picked:false});
+  }
+  BUSINESS.forEach((biz, bi) => {
+    const layouts = layoutsForBiz(biz.id);
+    if (!layouts.length) return;
+    const states = ['waiting','waiting','classifying','waiting','failed','done','reading','waiting','waiting','failed','waiting','done'];
+    states.forEach((status,i) => {
+      const layout = layouts[i % layouts.length];
+      state.uploads.push({id:`demo-upload-${bi}-${i}`, biz:biz.id, layout:layout.id,
+        name:`${String(i+1).padStart(2,'0')}_${layout.name}_サンプル.pdf`, size:180000+i*87000,
+        pages:1+i%5, uploadedAt:`2026-10-28 10:${String(59-i).padStart(2,'0')}:00`,
+        user:['佐藤 一郎','鈴木 花子','山本 彩'][i%3], status, auto:true,
+        history:status==='failed'?'読取失敗':status==='classifying'?'自動判別中':'分類完了',
+        error:status==='failed'?'画像が不鮮明なため読み取れませんでした':'',});
+    });
+  });
+}
+
 applyHash();
+seedAdditionalDemoData();
 window.addEventListener('hashchange', () => { applyHash(); render(); });
 if (state._seedClassify) { const c = state._seedClassify; delete state._seedClassify; startClassifying(c); }
 render();

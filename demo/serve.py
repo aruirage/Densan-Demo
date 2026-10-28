@@ -178,22 +178,21 @@ var GROUP_OPS = {
                   : g.kind === 'アップロード' ? 'gu' : 'gm';
   });
   var upload = ['閲覧', 'アップロード'];
-  var confirm = ['閲覧', '確認'];
-  var approve = ['閲覧', '確認', '承認'];
-  var all = ['閲覧', 'アップロード', '確認', '承認', '出力'];
+  var confirm = ['閲覧', '編集', '確認', '履歴閲覧'];
+  var approve = ['閲覧'];
+  var all = ['閲覧', 'アップロード', '編集', '確認', '履歴閲覧', 'ダウンロード'];
   var bucket = [
     /* 最上位。ほかのグループはすべてこの下（削除不可） */
-    { id: 'groot', name: '電算', kind: '', roles: [], desc: 'すべての操作グループの最上位（削除不可）', userIds: [], root: true, permId: 'R1', parentId: null },
+    { id: 'groot', name: '電算', kind: '', roles: [], desc: 'すべての操作グループの最上位（削除不可）', userIds: [], root: true, permId: null, parentId: null },
     { id: 'gu', name: '読取グループ', kind: upload.join('、'), roles: upload.slice(), desc: '閲覧・アップロードを担当', userIds: ['u7'], permId: 'R5', parentId: 'groot' },
-    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認と OCR 結果の修正', userIds: ['u8'], permId: 'R3', parentId: 'groot' },
-    { id: 'ga', name: '承認グループ', kind: approve.join('、'), roles: approve.slice(), desc: 'CSV/JSON/PDF の出力', userIds: ['u4'], permId: 'R4', parentId: 'groot' },
+    { id: 'gc', name: '確認グループ', kind: confirm.join('、'), roles: confirm.slice(), desc: '確認・編集・保存・履歴閲覧。ダウンロード不可', userIds: ['u8'], permId: 'R3', parentId: 'groot' },
     /* 新設計（9 グループ）で追加した 5 つ */
     { id: 'gb', name: '業務管理者グループ', kind: all.join('、'), roles: all.slice(), desc: '帳票設定・利用設定（業務管理者）', userIds: ['u3'], permId: 'R2', parentId: 'groot' },
-    { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: '一覧の閲覧のみ（操作なし）', userIds: ['u1', 'u2', 'u4', 'u5', 'u6', 'u7', 'u8', 'u10'], permId: 'R6', parentId: 'groot' },
+    { id: 'gv', name: '閲覧グループ', kind: '閲覧', roles: ['閲覧'], desc: 'すべてのメニューを閲覧可能。編集・確認・履歴・ダウンロード不可', userIds: ['u4'], permId: 'R6', parentId: 'groot' },
     { id: 'gk', name: 'AI分類結果修正グループ', kind: 'AI分類結果修正', roles: ['AI分類結果修正'], desc: 'AI 分類結果（帳票タイプ）の修正', userIds: ['u2'], permId: 'R7', parentId: 'groot' },
     { id: 'gr', name: '読取実行グループ', kind: '読取', roles: ['読取'], desc: 'アップロード済ファイルの読取実行・再読取・削除', userIds: ['u6'], permId: 'R8', parentId: 'groot' },
     { id: 'ge', name: '出力グループ', kind: '出力', roles: ['出力'], desc: 'CSV/JSON/PDF の出力', userIds: ['u10'], permId: 'R10', parentId: 'groot' },
-    { id: 'gf', name: 'OCR結果修正グループ', kind: 'OCR結果修正', roles: ['OCR結果修正'], desc: 'OCR 結果の修正（確認は不可）', userIds: ['u5'], permId: 'R11', parentId: 'groot' },
+    { id: 'gf', name: 'OCR結果修正グループ', kind: 'OCR結果修正', roles: ['OCR結果修正'], desc: 'OCR 結果の編集・保存・履歴閲覧。確認・ダウンロード不可', userIds: ['u5'], permId: 'R11', parentId: 'groot' },
     { id: 'gm', name: '管理者グループ', kind: all.join('、'), roles: all.slice(), desc: 'すべての権限', userIds: ['u1', 'u9'], permId: 'R1', parentId: 'groot' }
   ];
   list.length = 0;
@@ -1635,11 +1634,11 @@ def apply_roles_9(src):
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
   const _extraRoles = [
-    { id: 'R6', name: '閲覧', code: 'viewer', desc: '一覧の閲覧のみ（操作なし）', created: '2026-01-01 00:00:00', status: '有効' },
+    { id: 'R6', name: '閲覧', code: 'viewer', desc: 'すべてのメニューを閲覧可能。編集・確認・履歴・ダウンロード不可', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R8', name: '読取', code: 'reader', desc: 'アップロード済ファイルの読取実行・再読取・削除', created: '2026-01-01 00:00:00', status: '有効' },
     { id: 'R10', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
-    { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の修正（確認は不可）', created: '2026-01-01 00:00:00', status: '有効' },
+    { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の編集・保存・履歴閲覧。確認・ダウンロード不可', created: '2026-01-01 00:00:00', status: '有効' },
   ];
   _extraRoles.forEach((r) => { if (!ROLES.some((x) => x.id === r.id)) ROLES.push(r); });
   ['R6', 'R7', 'R8', 'R10', 'R11'].forEach((id) => {
@@ -2754,23 +2753,8 @@ def patched_app_js(path):
     m_perms = re.search(r"((?:var|let|const) MENU_PERMS = \{[\s\S]*?\n\};)", patched)
     # メニュー権限の配分（9 ロール）：設計どおりに上書き
     _menufix = """
-/* ── メニュー権限の配分（9 ロール設計） ─────────────────── */
-try {
-  var _biz = ['home', 'result'];
-  MENU_PERMS.R2 = ['settings-type', 'settings-type-add', 'settings-type-edit', 'settings-type-form-del',
-    'settings-scenes', 'settings-scenes-add', 'settings-scenes-edit', 'settings-scenes-del',
-    'usage-dict', 'usage-users', 'usage-users-add', 'usage-users-edit', 'usage-users-toggle',
-    'usage-groups-add', 'usage-groups-edit', 'usage-groups-del',
-    'permissions-query', 'permissions-add', 'permissions-edit', 'permissions-del', 'permissions-menu',
-    'usage-security', 'usage-logs', 'usage-watch'];
-  MENU_PERMS.R3 = _biz.concat(['op-confirm']);
-  MENU_PERMS.R5 = _biz.concat(['op-upload']);
-  MENU_PERMS.R6 = _biz.slice();
-  MENU_PERMS.R7 = _biz.concat(['op-classify']);
-  MENU_PERMS.R8 = _biz.concat(['op-read', 'op-redo', 'op-delete']);
-  MENU_PERMS.R10 = _biz.concat(['op-export']);
-  MENU_PERMS.R11 = _biz.concat(['op-fix']);
-} catch (_e) { /* ignore */ }
+/* メニュー権限の配分（9 ロール設計）：共通の初期権限定義を使う */
+MENU_PERMS = defaultOperationGrants();
 """
     if 'メニュー権限の配分（9 ロール設計）' not in patched:
         patched = patched + _menufix

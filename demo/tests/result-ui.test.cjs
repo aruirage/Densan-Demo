@@ -421,6 +421,7 @@ test('selecting forms for reading promotes rows and jumps to result list while r
 });
 test('upload screen business division is a dropdown select filtered by UPLOAD_PERMS', () => {
   const run = app();
+  run('entUserByUid("u2").soloPermIds = ["R5"]; entUserByUid("u4").soloPermIds = ["R5"]');
   /* u2＝読取グループ → アップロードできる業務シーンだけが出る */
   run('state.currentUser = "u2";');
   const html = run('renderUpload()');
@@ -820,6 +821,7 @@ test('ticket permission matrix lists every folder (business scene → ticket typ
 });
 test('upload permission matrix lists every business scene with upload assignees', () => {
   const run = app();
+  run('entUserByUid("u2").soloPermIds = ["R5"]; entUserByUid("u4").soloPermIds = ["R5"]');
   const html = run('renderPermissions()');
   assert.match(html, /アップロード権限（業務シーン単位）/);
   const bizCount = Number(run('BUSINESS.length'));
@@ -907,14 +909,14 @@ test('role form dialog creates and edits a permission with the four reference fi
 test('menu permission dialog renders the reachability tree with parent-child cascade', () => {
   const run = app();
   let html = run("state.menuPerm = { roleId: 'R1', checked: MENU_LEAVES.slice(), closed: [] }; menuPermDialog()");
-  assert.match(html, /メニュー権限/);
+  assert.match(html, /操作権限/);
   assert.match(html, /id="menuPermBack"/);
   assert.match(html, /id="mpTree"/);
   assert.match(html, /class="mptree"/);
   assert.match(html, /data-mpnode="llm-ocr"/);
   assert.match(html, /data-mpnode="settings-type"/);
   assert.match(html, /data-mpnode="permissions-menu"/);
-  assert.match(html, /data-mptoggle="settings"/);
+  assert.match(html, /data-mptoggle="settings-type"/);
   /* 帳票タイプ／業務シーンの細粒度＋読取結果のボタン権限＋辞書 */
   assert.match(html, /data-mpnode="settings-type-add"/);
   assert.match(html, /data-mpnode="settings-scenes-add"/);
@@ -928,13 +930,13 @@ test('menu permission dialog renders the reachability tree with parent-child cas
   assert.ok((html.match(/checked/g) || []).length >= 10);
   for (const id of ['menuPermOk', 'menuPermCancel', 'menuPermClose']) assert.ok(html.includes(`id="${id}"`), id);
 
-  html = run("state.menuPerm.closed = ['settings']; menuPermDialog()");
-  assert.doesNotMatch(html, /data-mpnode="settings-type"/);      // 折りたたみ中は子を出さない
+  html = run("state.menuPerm.closed = ['settings-type']; menuPermDialog()");
+  assert.doesNotMatch(html, /data-mpnode="settings-type-add"/);      // 折りたたみ中は子を出さない
   assert.match(html, /mpcaret ico i-caret-down closed/);
 
   /* 親は配下リーフの部分選択で半選択になり、子へ一括反映する */
   assert.match(source, /cb\.indeterminate = on > 0 && on < leaves\.length/);
-  assert.match(source, /MENU_PERMS\[m\.roleId\] = \[\.\.\.syncOpFixConfirm\(m\.checked\)\]/);
+  assert.match(source, /MENU_PERMS\[m\.roleId\] = \[\.\.\.syncOpFixConfirm\(m\.checked\.concat/);
   assert.equal(run('state.menuPerm = null; menuPermDialog()'), '');
 });
 
@@ -1339,7 +1341,7 @@ test('アップロードロール: u7 既定はアップロードのみ（閲覧
   /* 既定の u7 は R5（アップロード）だけ。R8（読取）は付けない */
   run('entUserByUid("u7").soloPermIds = ["R5"]; state.currentUser = "u7";');
   assert.equal(run('userHasOp("upload", "u7")'), true);
-  assert.equal(run('userHasOp("view", "u7")'), false);
+  assert.equal(run('userHasOp("view", "u7")'), true);
   assert.equal(run('userHasOp("read", "u7")'), false);
   assert.equal(run('userHasOp("delete", "u7")'), false);
   assert.equal(run('userHasOp("confirm", "u7")'), false);
@@ -1348,7 +1350,7 @@ test('アップロードロール: u7 既定はアップロードのみ（閲覧
   const caps = JSON.parse(run('JSON.stringify((function(){'
     + 'const CAPS=[["view","閲覧"],["upload","アップロード"],["read","読取"],["fix","修正"],["confirm","確認"],["export","出力"],["delete","削除"],["settings","設定"]];'
     + 'return CAPS.filter(([k])=>{try{return userHasOp(k,"u7");}catch(e){return false;}}).map(([,t])=>t);})())'));
-  assert.deepEqual(caps, ['アップロード']);
+  assert.deepEqual(caps, ['閲覧', 'アップロード']);
 });
 
 test('出力ロール: ダウンロードと一括ダウンロードだけが出る', () => {
@@ -1621,4 +1623,56 @@ test('upload notices require enabled switch and matching notification condition'
   assert.match(run('renderWatch()'), /data-wf-toggle="notify"/);
   assert.match(run('renderWatch()'), /data-wf="notifyOn"/);
   assert.doesNotMatch(run('renderWatch()'), /Webhook URL/);
+});
+
+test('operation catalog has 55 unique actions including classification, history, data grants and vectorization', () => {
+  const run = app();
+  const ids = JSON.parse(run('JSON.stringify(PERMISSION_MODULES.flatMap(m=>m.children.map(c=>c.id)))'));
+  assert.equal(ids.length, 55);
+  assert.equal(new Set(ids).size, 55);
+  for (const id of ['op-classify','op-history','type-data-permission','dict-vectorize','permission-assign']) assert.ok(ids.includes(id));
+});
+test('confirm implies edit and view, removing edit removes confirm; history and download remain independent', () => {
+  const run = app();
+  assert.deepEqual(JSON.parse(run("JSON.stringify([...syncOpFixConfirm(['op-confirm'])].sort())")), ['op-confirm','op-fix','result-view']);
+  assert.deepEqual(JSON.parse(run("JSON.stringify(changeActionSelection(['op-confirm','op-fix','result-view'], 'op-fix', false))")), ['result-view']);
+  assert.deepEqual(JSON.parse(run("JSON.stringify(changeActionSelection(['op-confirm','op-fix','result-view'], 'result-view', false))")), []);
+});
+test('a custom view-only role can enter result but has no mutation, history or export grant', () => {
+  const run = app();
+  run("GROUPS.forEach(g=>g.userIds=(g.userIds||[]).filter(id=>id!=='u5')); entUserByUid('u5').soloPermIds=['custom-read']; MENU_PERMS['custom-read']=['result-view']; state.currentUser='u5';");
+  assert.equal(run("canReachPage('result')"), true);
+  for (const op of ['fix','confirm','export','history','delete']) assert.equal(run(`userHasOp('${op}')`), false, op);
+  run("MENU_PERMS['custom-read']=['op-fix'];");
+  assert.equal(run("userHasOp('fix')"),true);
+  assert.equal(run("userHasOp('confirm')"),false);
+  run("MENU_PERMS['custom-read']=['op-confirm'];");
+  assert.equal(run("userHasOp('fix') && userHasOp('confirm')"),true);
+});
+
+test('view-only UI locks OCR input and dragging, while searches remain usable', () => {
+  const run = app();
+  const result = JSON.parse(run(`
+    GROUPS.forEach(g=>g.userIds=(g.userIds||[]).filter(id=>id!=='u5'));
+    entUserByUid('u5').soloPermIds=['custom-ro']; MENU_PERMS['custom-ro']=['result-view']; state.currentUser='u5';
+    const field = {dataset:{},disabled:false,readOnly:false,draggable:true,setAttribute(){},hasAttribute:k=>k==='draggable',classList:{add(){}}};
+    const search = {disabled:false};
+    globalThis.document = {querySelectorAll:s=>s.includes('[data-ocr]')?[field]:[]};
+    applyActionPermissions();
+    JSON.stringify({locked:field.disabled, readonly:field.readOnly, draggable:field.draggable, search:search.disabled});
+  `));
+  assert.deepEqual(result,{locked:true,readonly:true,draggable:false,search:false});
+});
+
+test('additional demo samples cover statuses and provide upload pagination without duplicating on reseed', () => {
+  const run = app();
+  const before = run('FILES_DATA.length');
+  run('seedAdditionalDemoData()');
+  assert.equal(run('FILES_DATA.length'),before+24);
+  assert.equal(run("state.uploads.filter(u=>u.biz==='b1').length"),12);
+  for (const status of ['waiting','failed','classifying','done','reading']) assert.equal(run(`state.uploads.some(u=>u.status==='${status}')`),true);
+  const count = run('state.uploads.length');
+  run('seedAdditionalDemoData()');
+  assert.equal(run('FILES_DATA.length'),before+24);
+  assert.equal(run('state.uploads.length'),count);
 });
