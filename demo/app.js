@@ -3296,7 +3296,7 @@ function renderFilters() {
       </div>
       <div class="result-search-actions filter-acts">
         <button type="button" class="btn primary filter-act" id="searchBtn" title="検索" aria-label="検索"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-        <button type="button" class="btn filter-act" id="resetBtn" title="リセット" aria-label="リセット"><span class="ico i-refresh" aria-hidden="true"></span></button>
+        <button type="button" class="btn filter-act" id="resetBtn" title="リセット" aria-label="リセット"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
         <button class="link result-more" data-exp="filter" aria-expanded="${open}" aria-controls="resultAdvanced"><span class="ico ${open ? 'i-caret-up' : 'i-caret-down'}" aria-hidden="true"></span>${open ? '閉じる' : 'もっと見る'}</button>
     </div>
       </div>
@@ -3787,7 +3787,7 @@ function syncReviewFieldFromInput(inp) {
       rev.dataset.rvRevert = key;
       rev.title = '読取値に戻す';
       rev.setAttribute('aria-label', '読取値に戻す');
-      rev.innerHTML = '<span class="ico i-refresh" aria-hidden="true"></span>';
+      rev.innerHTML = '<svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>';
       wrap.appendChild(rev);
       rev.onclick = (e) => {
         e.stopPropagation();
@@ -4082,7 +4082,7 @@ function renderSaveHistoryDialog() {
         <div class="savehist-user">操作 : ${esc(h.user)}</div>
       </div>
       <div class="savehist-acts">
-        <button type="button" class="btn" data-sh-show="${esc(h.id)}"><span class="ico i-refresh"></span>表示</button>
+        <button type="button" class="btn" data-sh-show="${esc(h.id)}"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>表示</button>
         <button type="button" class="btn savehist-dl" data-sh-dl="${esc(h.id)}">ダウンロード</button>
       </div>
     </div>`;
@@ -5163,8 +5163,8 @@ function renderUsers() {
         <div class="field"><span class="lbl">権限</span><select class="fld" id="ugRole"><option value="">選択してください</option>${ROLES.map((r) => `<option value="${esc(r.name)}" ${ug.role === r.name ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>
         <div class="field"><span class="lbl">ステータス</span><select class="fld" id="ugStatus"><option value="">選択してください</option><option value="有効" ${ug.status === '有効' ? 'selected' : ''}>有効</option><option value="無効" ${ug.status === '無効' ? 'selected' : ''}>無効</option></select></div>
         <div class="cfg-filter-acts">
-          <button type="button" class="btn primary" id="ugSearch"><span class="ico i-search"></span>検索</button>
-          <button type="button" class="btn" id="ugReset"><span class="ico i-refresh"></span>リセット</button>
+          <button type="button" class="btn primary" id="ugSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
+          <button type="button" class="btn" id="ugReset"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
         </div>
       </div>
 
@@ -5238,7 +5238,7 @@ function renderUserList() {
     <div class="field"><span class="lbl">ステータス</span><select class="fld"><option>選択してください</option><option>有効</option><option>無効</option></select></div>
     <span class="spacer"></span>
     <button class="btn primary" id="cfgUserSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-    <button class="btn" id="cfgUserReset"><span class="ico i-refresh"></span>リセット</button>
+    <button class="btn" id="cfgUserReset"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
   </div>
   <div class="tablewrap"><table>
     <thead><tr><th style="width:56px">番号</th><th>ユーザー名</th><th>ユーザーID</th><th style="width:110px">権限</th>
@@ -5323,7 +5323,7 @@ function renderRoleList() {
   </div>
       <div class="roles-filter-actions">
         <button type="button" class="btn primary" id="roleSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-        <button type="button" class="btn" id="roleReset"><span class="ico i-refresh"></span>リセット</button>
+        <button type="button" class="btn" id="roleReset"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
       </div>
     </div>
 
@@ -5434,7 +5434,7 @@ function renderGroupList() {
       </div>
       <div class="roles-filter-actions">
         <button type="button" class="btn primary" id="grpSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-        <button type="button" class="btn" id="grpReset"><span class="ico i-refresh"></span>リセット</button>
+        <button type="button" class="btn" id="grpReset"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
       </div>
     </div>
 
@@ -5617,7 +5617,7 @@ function renderLogs() {
  const auth=state.logTab!=='operation';const f=state.logDraft||(state.logDraft={});
  const rows=logRows();const per=state.logPer||10;const pages=Math.max(1,Math.ceil(rows.length/per));const page=state.logPage=Math.max(1,Math.min(pages,state.logPage||1));
  const body=rows.slice((page-1)*per,page*per).map(l=>`<tr><td class="nowrap">${esc(l.at)}</td><td>${esc(String(l.user||'').split('@')[0])}</td>${auth?`<td>${esc(l.type)}</td><td>${esc(l.ip||'—')}</td>`:`<td>${esc(l.feature||l.type)}</td><td>${esc(l.action||l.type)}</td><td>${esc(l.target||'—')}</td>`}<td><span class="st ${l.result==='成功'?'ok':'ng'}">${esc(l.result)}</span></td><td>${esc(l.note||'')}</td></tr>`).join('');
- return `<div class="logs-topbar"><div class="home-tabs"><button class="home-tab ${auth?'on':''}" data-logtab="auth">認証ログ一覧</button><button class="home-tab ${!auth?'on':''}" data-logtab="operation">操作ログ一覧</button></div><button class="btn" id="logsDownload">ダウンロード</button></div><div class="cfg-filters logs-filters"><div class="field"><span class="lbl">期間</span><input class="fld" type="date" data-logfilter="from" value="${esc(f.from||'')}" /> ～ <input class="fld" type="date" data-logfilter="to" value="${esc(f.to||'')}" /></div><div class="field"><span class="lbl">ユーザーID</span><input class="fld" data-logfilter="user" value="${esc(f.user||'')}" /></div><div class="field"><span class="lbl">${auth?'イベント':'機能'}</span>${auth ? `<select class="fld" data-logfilter="kind"><option value="">選択してください</option>${AUTH_EVENTS.map(v=>`<option ${f.kind===v?'selected':''}>${esc(v)}</option>`).join('')}</select>` : wizMulti('logFunctions','機能を選択してください',logFunctions().map(v=>[v,v]),f.functions||[])}</div><div class="field"><span class="lbl">操作結果</span><select class="fld" data-logfilter="result"><option value="">すべて</option>${['成功','失敗'].map(v=>`<option ${f.result===v?'selected':''}>${v}</option>`).join('')}</select></div><div class="logs-filter-actions"><button class="btn primary" id="logsSearch">検索</button><button class="btn" id="logsReset" title="条件をクリアして再表示">更新</button></div></div><div class="tablewrap"><table><thead><tr><th>操作日時</th><th>ユーザーID</th>${auth?'<th>イベント種別</th><th>IPアドレス</th>':'<th>機能</th><th>操作種別</th><th>操作対象</th>'}<th>操作結果</th><th>備考</th></tr></thead><tbody>${body||`<tr><td colspan="${auth?6:7}" class="empty-cell">データがありません</td></tr>`}</tbody></table></div><div class="pager"><span>検索結果 ${rows.length} 件中</span><select id="logsPer">${[10,20,50].map(n=>`<option value="${n}" ${per===n?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-logpage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-logpage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="logsGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>`;
+ return `<div class="logs-topbar"><div class="home-tabs"><button class="home-tab ${auth?'on':''}" data-logtab="auth">認証ログ一覧</button><button class="home-tab ${!auth?'on':''}" data-logtab="operation">操作ログ一覧</button></div><button class="btn" id="logsDownload">ダウンロード</button></div><div class="cfg-filters logs-filters"><div class="field"><span class="lbl">期間</span><input class="fld" type="date" data-logfilter="from" value="${esc(f.from||'')}" /> ～ <input class="fld" type="date" data-logfilter="to" value="${esc(f.to||'')}" /></div><div class="field"><span class="lbl">ユーザーID</span><input class="fld" data-logfilter="user" value="${esc(f.user||'')}" /></div><div class="field"><span class="lbl">${auth?'イベント':'機能'}</span>${auth ? `<select class="fld" data-logfilter="kind"><option value="">選択してください</option>${AUTH_EVENTS.map(v=>`<option ${f.kind===v?'selected':''}>${esc(v)}</option>`).join('')}</select>` : wizMulti('logFunctions','機能を選択してください',logFunctions().map(v=>[v,v]),f.functions||[])}</div><div class="field"><span class="lbl">操作結果</span><select class="fld" data-logfilter="result"><option value="">すべて</option>${['成功','失敗'].map(v=>`<option ${f.result===v?'selected':''}>${v}</option>`).join('')}</select></div><div class="logs-filter-actions"><button class="btn primary" id="logsSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button><button class="btn" id="logsReset" title="条件をクリアして再表示"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button></div></div><div class="tablewrap"><table><thead><tr><th>操作日時</th><th>ユーザーID</th>${auth?'<th>イベント種別</th><th>IPアドレス</th>':'<th>機能</th><th>操作種別</th><th>操作対象</th>'}<th>操作結果</th><th>備考</th></tr></thead><tbody>${body||`<tr><td colspan="${auth?6:7}" class="empty-cell">データがありません</td></tr>`}</tbody></table></div><div class="pager"><span>検索結果 ${rows.length} 件中</span><select id="logsPer">${[10,20,50].map(n=>`<option value="${n}" ${per===n?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-logpage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-logpage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="logsGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>`;
 }
 function bindLogs() {
  const functionButton=document.querySelector('[data-wmsbtn="logFunctions"]');
@@ -5851,7 +5851,7 @@ function renderDictBulkModal(d) {
       <div class="dict-bulk-search">
         <input class="fld" id="dictBulkQ" placeholder="辞書名を検索" value="${esc(d.bulkQ)}" aria-label="取込データを検索" />
       </div>
-      <button type="button" class="btn dict-bulk-refresh" id="dictBulkRefresh" title="リセット" aria-label="リセット"><span class="ico i-refresh"></span></button>
+      <button type="button" class="btn dict-bulk-refresh" id="dictBulkRefresh" title="リセット" aria-label="リセット"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg></button>
       <button type="button" class="icon-btn" id="dictBulkClose" aria-label="閉じる"><span class="ico i-close"></span></button>
     </div>
     <div class="dict-bulk-body">
@@ -6931,7 +6931,7 @@ function renderTicketDetail() {
   const zoomBar = '<div class="wiz-tools">'
     + '<button class="icon-btn" id="tpFit" title="幅に合わせる"><span class="ico i-multi"></span></button>'
     + '<button class="icon-btn" id="tpRotL" title="左に回転"><span class="ico i-reset"></span></button>'
-    + '<button class="icon-btn" id="tpRotR" title="右に回転"><span class="ico i-refresh"></span></button>'
+    + '<button class="icon-btn" id="tpRotR" title="右に回転"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg></button>'
     + '<button class="icon-btn" id="tpZoomIn" title="拡大"><span class="ico i-zoom-in"></span></button>'
     + '<button class="icon-btn" id="tpZoomOut" title="縮小"><span class="ico i-zoom-out"></span></button></div>';
 
@@ -7685,7 +7685,7 @@ function renderHome() {
         </div>
         <div class="home-filter-actions">
           <button class="btn primary" id="hSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-        <button class="btn" id="hReset" ${hasHomeFilters() ? '' : 'disabled'}><span class="ico i-refresh"></span>リセット</button>
+        <button class="btn" id="hReset" ${hasHomeFilters() ? '' : 'disabled'}><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
       </div>
       </div>
     </div>
@@ -7815,7 +7815,7 @@ function renderMyTasks() {
         <span class="mytask-filter-spacer"></span>
         <div class="mytask-filter-acts filter-acts">
           <button type="button" class="btn primary filter-act" id="mtSearch" title="検索" aria-label="検索"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-          <button type="button" class="btn filter-act" id="mtReset" title="リセット" aria-label="リセット"><span class="ico i-refresh" aria-hidden="true"></span>リセット</button>
+          <button type="button" class="btn filter-act" id="mtReset" title="リセット" aria-label="リセット"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
         </div>
       </div>
       <div class="tablewrap">
@@ -8787,7 +8787,7 @@ function renderReview() {
             + `<div class="rv-field-input-wrap">`
             + `<input class="rv-field-input${editedCls}" data-ocr="${esc(key)}" value="${esc(val)}" ${ro} />`
             + (showRevert
-              ? `<button type="button" class="rv-field-revert icon-btn" data-rv-revert="${esc(key)}" title="読取値に戻す" aria-label="読取値に戻す"><span class="ico i-refresh" aria-hidden="true"></span></button>`
+              ? `<button type="button" class="rv-field-revert icon-btn" data-rv-revert="${esc(key)}" title="読取値に戻す" aria-label="読取値に戻す"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg></button>`
               : '')
             + `</div></label></div>`;
         }).join('')}</div>`);

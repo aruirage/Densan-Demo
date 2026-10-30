@@ -499,9 +499,9 @@ test('result filter actions show icon search/reset matching mytasks and toggle e
   assert.match(actions, /aria-label="検索"/);
   assert.match(actions, /aria-label="リセット"/);
   assert.match(actions, /search-icon/);
-  assert.match(actions, /ico i-refresh/);
+  assert.match(actions, /<svg class="search-icon refresh-icon"/);
   assert.match(actions, /<\/svg>検索<\/button>/);
-  assert.doesNotMatch(actions, />リセット</);
+  assert.match(actions, />リセット</);
   assert.match(actions, /data-exp="filter"/);
   assert.match(actions, /もっと見る/);
   assert.equal((html.match(/class="result-filter-row/g) || []).length, 1);
