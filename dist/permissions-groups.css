@@ -857,3 +857,26 @@
 
 /* フォルダ権限ダイアログは対象（配下の帳票件数）と操作の切替が入るぶん広く取る */
 .perm-modal.fp-modal { width: min(760px, 100%) !important; }
+/* 上位組織は作成位置で固定。編集では組織名のみ変更する。 */
+.org-parent-readonly:disabled{background:#f3f4f6!important;color:#9ca3af!important;border-color:#e5e7eb!important;cursor:not-allowed;opacity:1}
+/* ユーザー一覧：番号・名前・組織・権限・作成時間・状態・操作 */
+.users-tablewrap .users-table th:nth-child(1){width:60px}
+.users-tablewrap .users-table th:nth-child(2){width:170px}
+.users-tablewrap .users-table th:nth-child(3){width:180px}
+.users-tablewrap .users-table th:nth-child(4){width:190px}
+.users-tablewrap .users-table th:nth-child(5){width:175px}
+.users-tablewrap .users-table th:nth-child(6){width:90px;display:table-cell}
+.users-tablewrap .users-table td:nth-child(6){display:table-cell}
+.users-tablewrap .users-table th:nth-child(7){width:290px;text-align:left!important}
+.users-tablewrap .users-table td:nth-child(7) .acts{justify-content:flex-start}
+/* ID列を含むユーザー一覧 */
+.users-tablewrap .users-table th:nth-child(3){width:160px}
+.users-tablewrap .users-table th:nth-child(4){width:170px}
+.users-tablewrap .users-table th:nth-child(5){width:190px}
+.users-tablewrap .users-table th:nth-child(6){width:175px}
+.users-tablewrap .users-table th:nth-child(7){width:90px}
+.users-tablewrap .users-table th:nth-child(8){width:290px;text-align:left!important}
+.users-tablewrap .users-table td:nth-child(8) .acts{justify-content:flex-start}
+/* ユーザー一覧の見出し・セルを同一の左端に統一。 */
+.users-tablewrap .users-table th,.users-tablewrap .users-table td,.users-tablewrap .users-table .col-no{text-align:left!important}
+.users-tablewrap .users-table .acts{justify-content:flex-start!important}

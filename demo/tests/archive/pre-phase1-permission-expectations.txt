@@ -1,0 +1,378 @@
+旧ボタン権限・組織継承・単一ログの仕様に基づくテスト。2026-10-30 の段階導入で置き換え。
+
+test('view-only UI locks OCR input and dragging, while searches remain usable', () => {
+  const run = app();
+  const result = JSON.parse(run(`
+    GROUPS.forEach(g=>g.userIds=(g.userIds||[]).filter(id=>id!=='u5'));
+    entUserByUid('u5').soloPermIds=['custom-ro']; MENU_PERMS['custom-ro']=['result-view']; state.currentUser='u5';
+    const field = {dataset:{},disabled:false,readOnly:false,draggable:true,setAttribute(){},hasAttribute:k=>k==='draggable',classList:{add(){}}};
+    const search = {disabled:false};
+    globalThis.document = {querySelectorAll:s=>s.includes('[data-ocr]')?[field]:[]};
+    applyActionPermissions();
+    JSON.stringify({locked:field.disabled, readonly:field.readOnly, draggable:field.draggable, search:search.disabled});
+  `));
+  assert.deepEqual(result,{locked:true,readonly:true,draggable:false,search:false});
+});
+
+test('a custom view-only role can enter result but has no mutation, history or export grant', () => {
+  const run = app();
+  run("GROUPS.forEach(g=>g.userIds=(g.userIds||[]).filter(id=>id!=='u5')); entUserByUid('u5').soloPermIds=['custom-read']; MENU_PERMS['custom-read']=['result-view']; state.currentUser='u5';");
+  assert.equal(run("canReachPage('result')"), true);
+  for (const op of ['fix','confirm','export','history','delete']) assert.equal(run(`userHasOp('${op}')`), false, op);
+  run("MENU_PERMS['custom-read']=['op-fix'];");
+  assert.equal(run("userHasOp('fix')"),true);
+  assert.equal(run("userHasOp('confirm')"),false);
+  run("MENU_PERMS['custom-read']=['op-confirm'];");
+  assert.equal(run("userHasOp('fix') && userHasOp('confirm')"),true);
+});
+
+test('confirm implies edit and view, removing edit removes confirm; history and download remain independent', () => {
+  const run = app();
+  assert.deepEqual(JSON.parse(run("JSON.stringify([...syncOpFixConfirm(['op-confirm'])].sort())")), ['op-confirm','op-fix','result-view']);
+  assert.deepEqual(JSON.parse(run("JSON.stringify(changeActionSelection(['op-confirm','op-fix','result-view'], 'op-fix', false))")), ['result-view']);
+  assert.deepEqual(JSON.parse(run("JSON.stringify(changeActionSelection(['op-confirm','op-fix','result-view'], 'result-view', false))")), []);
+});
+
+test('グループの権限が複数のとき、所属ユーザーの実効権限は和集合になる', () => {
+  const run = app();
+  // Isolate the role union from the newly inherited root permissions.
+  run('GROUPS.filter(g => g.root).forEach(g => { g.permIds = []; g.permId = null; })');
+  run('GROUPS.find((g) => g.id === "g6").permIds = ["R4","R3"]');
+  assert.deepEqual(JSON.parse(run('JSON.stringify(rolesOfUser("u6"))')), ['R4', 'R3']);
+  /* R3 の確認が効く（R4 だけでは確認できない） */
+  assert.equal(run('userHasOp("confirm","u6")'), true);
+});
+
+test('グループ編集: 権限は複数選択できる', () => {
+  const run = app();
+  run('state.groupForm = { mode:"edit", id:"g6", name:"保育・児童窓口", permIds:["R3","R4"], userIds:["u6"] };');
+  const html = run('groupFormDialog()');
+  assert.match(html, /data-gfopt="gfPerm"/);
+  assert.match(html, /value="R3"[^>]*checked/);
+  assert.match(html, /value="R4"[^>]*checked/);
+  /* 単一選択のラジオは使わない */
+  assert.doesNotMatch(html, /data-gfsopt="gfPerm"/);
+});
+
+test('ユーザー編集: 権限はドロップダウンで複数選択でき、グループ継承分は別に表示する', () => {
+  const run = app();
+  run('USER_ADD_DRAFT = { mode:"edit", id:"U5", uid:"u5", name:"伊藤 由美", email:"yumi.ito@itso.co.jp", soloPermIds:["R3"], status:"有効" };');
+  const html = run('renderUserAddDialog()');
+  /* 個人の権限は複数選択のドロップダウン（旧：読み取り専用のテキスト／単一セレクト／チップ） */
+  assert.doesNotMatch(html, /id="userAddRole"/);
+  assert.doesNotMatch(html, /data-userperm/);
+  assert.match(html, /data-msbtn="uaPerm"/);
+  assert.match(html, /data-gfopt="uaPerm"/);
+  assert.match(html, /value="R3"[^>]*checked/);
+  assert.match(html, /所属グループから継承/);
+  assert.match(html, /和集合/);
+});
+
+test('出力ロール: ダウンロードと一括ダウンロードだけが出る', () => {
+  const run = app();
+  run('state.currentUser = "u10";');
+  const cell = run('resultActionsCell({ id: "f1", status: "done", layout: "l1" })');
+  assert.match(cell, /data-dlmenu="f1"/);
+  assert.doesNotMatch(cell, /data-act="redo"|data-act="fix"|data-act="confirm"|data-act="delete"/);
+  run('state.page = "result"; state.tab = "all"; state.resultPage = 1;');
+  const table = run('renderTable()');
+  assert.match(table, /id="batchExport"/);
+  assert.doesNotMatch(table, /id="batchRead"/);
+  assert.equal(run('userHasOp("export","u10")'), true);
+  assert.equal(run('userHasOp("read","u10")'), false);
+  assert.equal(run('userHasOp("confirm","u10")'), false);
+});
+
+test('アップロードロール: u7 既定はアップロードのみ（閲覧・読取・削除は出ない）', () => {
+  const run = app();
+  /* 既定の u7 は R5（アップロード）だけ。R8（読取）は付けない */
+  run('entUserByUid("u7").soloPermIds = ["R5"]; state.currentUser = "u7";');
+  assert.equal(run('userHasOp("upload", "u7")'), true);
+  assert.equal(run('userHasOp("view", "u7")'), true);
+  assert.equal(run('userHasOp("read", "u7")'), false);
+  assert.equal(run('userHasOp("delete", "u7")'), false);
+  assert.equal(run('userHasOp("confirm", "u7")'), false);
+  assert.equal(run('userHasOp("export", "u7")'), false);
+  /* デモ切替バーは「アップロード」だけ表示される */
+  const caps = JSON.parse(run('JSON.stringify((function(){'
+    + 'const CAPS=[["view","閲覧"],["upload","アップロード"],["read","読取"],["fix","修正"],["confirm","確認"],["export","出力"],["delete","削除"],["settings","設定"]];'
+    + 'return CAPS.filter(([k])=>{try{return userHasOp(k,"u7");}catch(e){return false;}}).map(([,t])=>t);})())'));
+  assert.deepEqual(caps, ['閲覧', 'アップロード']);
+});
+
+test('読取ロール: 再読取・一括読取・アップロード画面の読取／削除が出る', () => {
+  const run = app();
+  /* u7 に R5（アップロード）＋R8（読取）を注入して「読取ロール」の挙動を検証（既定は R5 のみ） */
+  run('entUserByUid("u7").soloPermIds = ["R5", "R8"]; state.currentUser = "u7";');
+  const cell = run('resultActionsCell({ id: "f1", status: "done", layout: "l1" })');
+  assert.match(cell, /data-act="redo"/);
+  assert.match(cell, /data-act="delete"/);
+  assert.doesNotMatch(cell, /data-act="fix"/);
+  assert.doesNotMatch(cell, /data-act="confirm"/);
+  assert.doesNotMatch(cell, /data-dlmenu=/);
+  /* 一覧のツールバーに一括読取（未選択でも押せて、押すと選択を促す） */
+  run('state.page = "result"; state.tab = "all"; state.resultPage = 1;');
+  const table = run('renderTable()');
+  assert.match(table, /class="btn sm primary" id="batchRead"/);
+  assert.doesNotMatch(table, /id="batchRead" disabled/);
+  assert.match(table, /id="batchDelete"/);
+  /* アップロード済ファイルの読取と削除 */
+  const up = run('state.page = "upload"; renderUpload()');
+  assert.match(up, /id="upRead"/);
+  assert.match(up, /id="upDel"/);
+  /* 読取はできるが確認はできない */
+  assert.equal(run('userHasOp("redo","u7")'), true);
+  assert.equal(run('userHasOp("read","u7")'), true);
+  assert.equal(run('userHasOp("delete","u7")'), true);
+  assert.equal(run('userHasOp("confirm","u7")'), false);
+  assert.equal(run('userHasOp("export","u7")'), false);
+});
+
+test('ユーザー権限: 個人の権限はグループの権限に上乗せされる（和集合）', () => {
+  const run = app();
+  // Isolate the role union from the newly inherited root permissions.
+  run('GROUPS.filter(g => g.root).forEach(g => { g.permIds = []; g.permId = null; })');
+  run('GROUPS.filter(g => groupDescendantIds(g.id).length).forEach(g => { g.permIds = []; g.permId = null; })');
+  /* u5 は承認者グループ（R4）のみ → 確認はできない */
+  assert.equal(run('userHasOp("confirm","u5")'), false);
+  run('entUserByUid("u5").soloPermIds = ["R3"]');
+  /* 個人に R3 を足すと、グループの R4 と合わせて確認ができる */
+  assert.equal(run('userHasOp("confirm","u5")'), true);
+  assert.deepEqual(JSON.parse(run('JSON.stringify(rolesOfUser("u5"))')), ['R4', 'R3']);
+  run('entUserByUid("u5").soloPermIds = []');
+  assert.equal(run('userHasOp("confirm","u5")'), false);
+});
+
+test('ログ設定: 出力設定（詳細度・保存先）はログ画面に持つ', () => {
+  const run = app();
+  const html = run('renderLogs()');
+  assert.match(html, /log-cfg/);
+  assert.match(html, /data-logcfg="level"/);
+  assert.match(html, /data-logcfg="path"/);
+  assert.match(html, /data-logsave/);
+  for (const t of ['詳細度', '保存先', 'ログ出力設定']) assert.ok(html.includes(t), t);
+  /* ログの閲覧テーブルは残っている */
+  assert.match(html, /操作日時/);
+  assert.equal((html.match(/<tr>/g) || []).length, run('SECURITY.logs.length') + 1);
+});
+
+test('departments are gone: groups, users and history are organised without them', () => {
+  const run = app();
+
+  /* 部門マスタ自体が存在しない */
+  assert.equal(run('typeof DEPTS'), 'undefined');
+  assert.equal(run('typeof deptName'), 'undefined');
+  assert.doesNotMatch(source, /DEPTS|deptName|deptOfUser|HISTORY_DEPTS/);
+
+  /* ユーザーは部門を持たない（所属はロールグループで表現する） */
+  const users = JSON.parse(run('JSON.stringify(USERS)'));
+  users.forEach((u) => assert.equal('dept' in u, false, u.id));
+  const ent = JSON.parse(run('JSON.stringify(ENT_USERS)'));
+  ent.forEach((u) => assert.equal('dept' in u, false, u.id));
+
+  /* 部門は廃止。ユーザーグループ（担当ロール）は残す */
+  assert.equal(run('typeof GROUPS'), 'object');
+  assert.ok(run('GROUPS.length') >= 1);
+
+  /* 業務シーンに部門権限はない（データ権限 UI も削除済み） */
+  const scenes = JSON.parse(run('JSON.stringify(BIZ_SCENES)'));
+  scenes.forEach((sc) => assert.equal('deptIds' in sc, false, sc.id));
+  const sceneHtml = run('state.page = "bizScenes"; state.sceneId = "cls-jyumin"; state.sceneStep = 1; renderBizScenes()');
+  assert.doesNotMatch(sceneHtml, /データ権限ユーザー/);
+
+  /* ご利用履歴にも部門の絞り込み・列は無い */
+  const hist = JSON.parse(run('JSON.stringify(HISTORY.slice(0, 5))'));
+  hist.forEach((h) => assert.equal('dept' in h, false, h.reqId));
+  const home = run('renderHome()');
+  assert.doesNotMatch(home, /data-hopt="hDept"|>部門</);
+  assert.match(home, /data-hopt="hBiz"/);
+  assert.doesNotMatch(source, /'ユーザー', '部門'\]/);
+
+  /* ユーザー管理は部門なし。所属グループ（担当ロール）は表示する */
+  const usersHtml = run('renderUsers()');
+  assert.doesNotMatch(usersHtml, /所属部門|部門情報/);
+  assert.match(usersHtml, /所属グループ|ユーザー名/);
+});
+
+test('menu permission dialog renders the reachability tree with parent-child cascade', () => {
+  const run = app();
+  let html = run("state.menuPerm = { roleId: 'R1', checked: MENU_LEAVES.slice(), closed: [] }; menuPermDialog()");
+  assert.match(html, /操作権限/);
+  assert.match(html, /id="menuPermBack"/);
+  assert.match(html, /id="mpTree"/);
+  assert.match(html, /class="mptree"/);
+  assert.match(html, /data-mpnode="llm-ocr"/);
+  assert.match(html, /data-mpnode="settings-type"/);
+  assert.match(html, /data-mpnode="permissions-menu"/);
+  assert.match(html, /data-mptoggle="settings-type"/);
+  /* 帳票タイプ／業務シーンの細粒度＋読取結果のボタン権限＋辞書 */
+  assert.match(html, /data-mpnode="settings-type-add"/);
+  assert.match(html, /data-mpnode="settings-scenes-add"/);
+  assert.match(html, /data-mpnode="usage-users"/);
+  assert.match(html, /data-mpnode="op-confirm"/);
+  assert.match(html, /data-mpnode="usage-dict"/);
+  assert.match(html, /業務シーン追加|タイプ追加|ユーザー管理/);
+  assert.doesNotMatch(html, /AI画像処理|外部API|業務区分追加|部門照会|グループ照会|帳票分類/);
+  /* 権限名／権限ID は読み取り専用のチップ */
+  assert.match(html, /class="mp-idchip"/);
+  assert.ok((html.match(/checked/g) || []).length >= 10);
+  for (const id of ['menuPermOk', 'menuPermCancel', 'menuPermClose']) assert.ok(html.includes(`id="${id}"`), id);
+
+  html = run("state.menuPerm.closed = ['settings-type']; menuPermDialog()");
+  assert.doesNotMatch(html, /data-mpnode="settings-type-add"/);      // 折りたたみ中は子を出さない
+  assert.match(html, /mpcaret ico i-caret-down closed/);
+
+  /* 親は配下リーフの部分選択で半選択になり、子へ一括反映する */
+  assert.match(source, /cb\.indeterminate = on > 0 && on < leaves\.length/);
+  assert.match(source, /MENU_PERMS\[m\.roleId\] = \[\.\.\.syncOpFixConfirm\(m\.checked\.concat/);
+  assert.equal(run('state.menuPerm = null; menuPermDialog()'), '');
+});
+
+test('classification wizard step 1 mirrors prototype fields with a 20-form cap', () => {
+  const run = app();
+  run('state.page = "bizScenes"; state.sceneId = "cls-jyumin"; state.sceneStep = 1');
+  const html = run('renderBizScenes()');
+  assert.equal(run('MAX_CLASSIFY_FORMS'), 20);
+  assert.match(html, /業務シーン ID/);
+  assert.match(html, /2077224056968261701/);
+  assert.match(html, /data-scenestep="1"/);
+  assert.match(html, /data-scenestep="2"/);
+  assert.match(html, /AI分類設定/);
+  assert.match(html, /効果テスト/);
+  assert.match(html, /選択済み 3\/20/);
+  assert.match(html, /id="scAddType"/);
+  assert.match(html, /帳票追加/);
+  assert.doesNotMatch(html, /分類する帳票/);
+  /* 業務シーンのデータ権限選択は廃止（フロー担当は帳票タイプで設定） */
+  assert.doesNotMatch(html, /データ権限ユーザー|data-wmsbtn="scUser"|scDept|データ権限部門/);
+  assert.match(html, /data-typedel="form-jyumin-a"/);
+  assert.match(html, /10_A団体_住民異動届/);
+  assert.match(html, /cat-badge/);
+  assert.match(html, /保存＆テスト/);
+  assert.match(html, /id="scClose"/);
+  assert.doesNotMatch(html, /id="scPrev"/);
+});
+
+test('confirm-only users never get approve tasks because approval was dropped', () => {
+  const run = app();
+  /* 確認専任 u2：承認タスク 0 */
+  assert.equal(run('userHasOp("confirm", "u2")'), true);
+  run('state.currentUser = "u2"');
+  assert.equal(run('myTaskRows("pending").filter((r) => r.kind === "approve" || r.kind === "reapprove").length'), 0);
+  assert.equal(run('myTaskRows("done").filter((r) => r.kind === "approve" || r.kind === "reapprove").length'), 0);
+  assert.ok(run('myTaskRows("pending").filter((r) => r.kind === "confirm").length') >= 0);
+  /* 承認操作そのものを使わないので、承認・再承認タスクは誰にも出ない */
+  assert.equal(run('myTaskRows("pending").filter((r) => r.kind === "approve" || r.kind === "reapprove").length'), 0);
+});
+
+test('my tasks lists pending and done with filters', () => {
+  const run = app();
+  /* 確認担当 u4。5 状態に絞ったので承認タスクは持たない */
+  run('state.currentUser = "u4"');
+  assert.ok(run('myTaskFiles("confirm").length') > 0);
+  assert.equal(run('myTaskFiles("approve").length'), 0);
+  assert.ok(run('myTaskRows("pending").length') > 0);
+  assert.ok(run('myTaskRows("done").length') > 0);
+  run('state.page = "myTasks"; state.myTaskTab = "pending"; state.currentUser = "u4"');
+  const html = run('renderMyTasks()');
+  assert.match(html, /data-mytab="pending"/);
+  assert.match(html, /data-mytab="done"/);
+  assert.match(html, /未対応/);
+  assert.match(html, /対応済/);
+  assert.match(html, /id="mtName"/);
+  assert.match(html, /id="mtBiz"/);
+  assert.match(html, /id="mtCat"/);
+  assert.match(html, /確認する/);
+  assert.doesNotMatch(html, /承認する|再承認する|要再承認（2 段目）/);
+  /* 担当は具体ユーザ名（グループ名ではない） */
+  assert.match(html, /田中 実|伊藤 由美|佐藤 一郎/);
+  assert.doesNotMatch(html, /確認者グループ|承認者グループ|窓口グループ/);
+  assert.doesNotMatch(html, /担当グループに割り当てられた/);
+});
+
+test('every demo role can enter every menu without gaining settings or business operations', () => {
+  const run = servedApp();
+  for (const uid of ['u1','u2','u3','u4','u5','u6','u7','u8','u10']) {
+    assert.equal(run(`PERMISSION_MODULES.every(m=>canReachMenu(m.id,'${uid}'))`),true,uid);
+  }
+  assert.equal(run("userHasOp('settings','u4')"),false);
+  assert.equal(run("userHasOp('confirm','u4') || userHasOp('export','u4')"),false);
+});
+
+test('business administrator sees all menus while operational actions remain ungranted', () => {
+  const run = servedApp();
+  assert.equal(run('PERMISSION_MODULES.every(m=>defaultOperationGrants().R2.includes(m.children[0].id))'),true);
+  assert.equal(run("defaultOperationGrants().R2.some(id=>['op-upload','op-read','op-fix','op-confirm','op-export','op-delete'].includes(id))"),false);
+  assert.equal(run("defaultOperationGrants().R2.includes('watch-edit')"),true);
+});
+
+test('demo viewer has read access to every configured menu without write or download actions', () => {
+  const run = servedApp();
+  assert.equal(run("PERMISSION_MODULES.every(m=>defaultOperationGrants().R6.includes(m.children[0].id))"),true);
+  assert.equal(run("defaultOperationGrants().R6.length"),12);
+  assert.equal(run("defaultOperationGrants().R6.some(id=>['op-fix','op-confirm','op-export','op-delete','permission-assign'].includes(id))"),false);
+  assert.equal(run("GROUPS.find(g=>g.id==='gv').userIds.join(',')"),'u4');
+});
+
+test('default mock roles use canonical grants; confirmation, history and download are distinct', () => {
+  const run = servedApp();
+  const grants = JSON.parse(run('JSON.stringify(defaultOperationGrants())'));
+  assert.ok(grants.R3.includes('op-confirm') && grants.R3.includes('op-fix') && grants.R3.includes('op-history'));
+  assert.ok(!grants.R3.includes('op-export'));
+  assert.ok(grants.R11.includes('op-fix') && !grants.R11.includes('op-confirm'));
+  assert.ok(grants.R10.includes('op-export') && !grants.R10.includes('op-fix'));
+  assert.ok(grants.R6.includes('result-view') && !grants.R6.includes('op-history'));
+  assert.ok(grants.R7.includes('op-classify') && !grants.R7.includes('op-upload'));
+  for (const ids of Object.values(grants)) for (const id of ids) assert.ok(run(`MENU_LEAVES.includes(${JSON.stringify(id)})`), id);
+});
+
+test('served policy honors custom read, edit and confirm roles after runtime patches', () => {
+  const run = servedApp();
+  run("GROUPS.forEach(g=>g.userIds=(g.userIds||[]).filter(id=>id!=='u5')); entUserByUid('u5').soloPermIds=['custom']; MENU_PERMS.custom=['result-view']; state.currentUser='u5';");
+  assert.equal(run("canReachPage('result')"),true);
+  assert.equal(run("userHasOp('fix') || userHasOp('confirm') || userHasOp('export')"),false);
+  run("MENU_PERMS.custom=['op-fix']");
+  assert.equal(run("userHasOp('fix')"),true);
+  assert.equal(run("userHasOp('confirm')"),false);
+  run("MENU_PERMS.custom=['op-confirm']");
+  assert.equal(run("userHasOp('fix') && userHasOp('confirm')"),true);
+  assert.equal(run("userHasOp('history') || userHasOp('export')"),false);
+});
+
+test('served operation policy keeps 55 unique actions and confirmation dependencies', () => {
+  const run = servedApp();
+  assert.equal(run('PERMISSION_MODULES.flatMap(m=>m.children).length'),55);
+  assert.equal(run('new Set(PERMISSION_MODULES.flatMap(m=>m.children.map(c=>c.id))).size'),55);
+  assert.equal(run("[...syncOpFixConfirm(['op-confirm'])].includes('op-fix')"),true);
+  assert.equal(run("[...syncOpFixConfirm(['op-confirm'])].includes('op-history')"),false);
+  assert.equal(run("[...syncOpFixConfirm(['op-confirm'])].includes('op-export')"),false);
+  assert.equal(run("GROUPS.filter(g=>g.root).some(g=>g.permId==='R1')"),false);
+});
+
+処理後パス固定化前のテスト
+test('自動アップロード: 監視パスごとに処理後のファイル（削除／そのまま）を選べる', () => {
+  const run = app();
+  const html = run('renderWatch()');
+  assert.equal((html.match(/data-wroot-after=/g) || []).length, run('WATCH.roots.length'));
+  assert.match(html, /<option value="del"[^>]*>削除<\/option>/);
+  assert.match(html, /<option value="keep"[^>]*>そのまま<\/option>/);
+  assert.doesNotMatch(html, /data-wroot-done=|処理済フォルダ|data-wf-radio/);
+  assert.equal((html.match(/class="watch-sec"/g) || []).length, 5);
+  /* 選択値は行ごとに保持される */
+  run('WATCH.roots[0].after = "del"; WATCH.roots[1].after = "keep";');
+  const h2 = run('renderWatch()');
+  assert.match(h2, /data-wroot-after="r1"[\s\S]*?<option value="del" selected/);
+  assert.match(h2, /data-wroot-after="r2"[\s\S]*?<option value="keep" selected/);
+  /* 保存時にフォルダ名の重複を弾く */
+  run('WATCH.rules[0].folder = WATCH.rules[1].folder;');
+  assert.equal(run('WATCH.rules.filter((r) => r.on).map((r) => r.folder.trim().toLowerCase()).filter((n, i, a) => a.indexOf(n) !== i).length'), 1);
+});
+test('auto upload exposes destination column only when moving files', () => {
+  const run = app();
+  assert.doesNotMatch(run('renderWatch()'), /data-wroot-move=/);
+  const html = run("WATCH.roots[0].after = 'move'; WATCH.roots[0].moveTo = 'archive/path'; renderWatch()");
+  assert.match(html, /value="move"[^>]*>移動/);
+  assert.match(html, /移動先パス/);
+  assert.match(html, /data-wroot-move=/);
+  assert.match(html, /archive\/path/);
+});

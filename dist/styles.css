@@ -1973,3 +1973,10 @@ th .ico{font-size:11px;color:var(--accent)}
 .roles-table th.roles-actions-cell,.roles-table td.roles-actions-cell{text-align:left;padding-left:12px;padding-right:12px}
 .roles-table .roles-actions-cell .roles-acts{justify-content:flex-start;text-align:left;gap:4px 12px}
 .roles-table .roles-actions-cell .act-text{padding-left:0;padding-right:0}
+/* ログ一覧：タブとダウンロード、検索操作を右端に配置。 */
+.logs-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.logs-topbar .home-tabs{flex:1;margin:0}
+.logs-topbar #logsDownload{flex:none;margin-left:auto}
+.logs-filters{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.logs-filter-actions{display:flex;gap:8px;margin-left:auto;justify-content:flex-end}
+.watch-table [data-wroot-move]:disabled{background:#f3f4f6;color:#9ca3af;cursor:not-allowed;opacity:1}

@@ -289,6 +289,7 @@ window.isSuperUser = isSuperUser;
   function canViewFile(f) {
     var h = hook();
     if (!h || !f) return true;
+    if (typeof h.sceneCanAccessFile === 'function') return h.sceneCanAccessFile(f);
     var layouts = visibleLayouts();
     if (layouts === null) return true;
     return layouts.indexOf(f.layout) >= 0;

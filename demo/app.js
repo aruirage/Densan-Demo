@@ -345,7 +345,7 @@ const OCR_ORIGINAL = {
 /* ── ユーザー管理・セキュリティ・ログのモック（実機の列に合わせる） ── */
 /* uid＝帳票権限・マイタスク側のユーザー（USERS）との対応。所属グループはこの uid で引く。 */
 /* dataPerm：自身のみ＝自分に割当／自分が処理したタスクだけ。全件参照＝同権限プール内の他人の待办／已办も見える。
- * 操作権限・所属はユーザーグループ側で付与（ユーザー個別では持たない）。システム管理者は全操作。 */
+ * メニュー権限・所属はユーザーグループ側で付与（ユーザー個別では持たない）。システム管理者は全操作。 */
 const ENT_USERS = [
   { id: 'U1', uid: 'u1', name: '佐藤 美子', email: 'miko.sato', role: 'システム管理者', dataPerm: '全件参照', created: '2026-09-30 10:12:00', status: '有効' },
   { id: 'U2', uid: 'u2', name: '鈴木 太郎', email: 'taro.suzuki', role: '確認者', dataPerm: '自身のみ', created: '2026-10-01 09:02:11', status: '有効' },
@@ -359,14 +359,14 @@ const ENT_USERS = [
   /* 出力専任。グループ未所属で、個人の権限（R10）だけを持つ */
   { id: 'U10', uid: 'u10', name: '小林 直子', email: 'naoko.kobayashi', role: '出力者', dataPerm: '自身のみ', created: '2026-10-09 09:15:00', status: '有効', soloPermIds: ['R10'] },
 ];
-/** システム権限（メニュー到達）。業務の操作権限はユーザーグループの役割で付与する */
+/** システム権限（メニュー到達）。業務のメニュー権限はユーザーグループの役割で付与する */
 let ROLES = [
   { id: 'R1', name: 'システム管理者', code: 'tenant_admin', desc: '万能権限。メニュー全到達に加え、帳票／アップロード権限表をバイパスして全業務を実行できる', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R2', name: '運用管理者', code: 'operation_admin', desc: '帳票設定＋利用設定＋ユーザー管理。日常運用の管理者', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R3', name: '確認者', code: 'confirmer', desc: '読取結果の閲覧・編集・保存・確認・履歴閲覧。ダウンロード不可', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R4', name: '承認者', code: 'approver', desc: '確認済み帳票の承認・再承認。マイタスクの承認作業', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R5', name: 'アップロード者', code: 'uploader', desc: 'ファイルのアップロードと読取結果の閲覧', created: '2025-10-01 00:00:00', status: '有効' },
-  /* 9 ロール設計で追加した分。操作権限は MENU_PERMS 側で付ける */
+  /* 9 ロール設計で追加した分。メニュー権限は MENU_PERMS 側で付ける */
   { id: 'R6', name: '閲覧', code: 'viewer', desc: 'すべてのメニューを閲覧可能。編集・確認・履歴閲覧・ダウンロードは不可', created: '2026-01-01 00:00:00', status: '有効' },
   { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
   { id: 'R8', name: '読取', code: 'reader', desc: 'アップロード済ファイルの読取実行・再読取・削除', created: '2026-01-01 00:00:00', status: '有効' },
@@ -377,7 +377,7 @@ let ROLES = [
 const TENANT_ADMIN_ROLE = 'R1';
 /** ユーザー追加ダイアログのデータ権限（製品の選択肢） */
 /**
- * 操作権限のラベル定義（付与はユーザーグループの「役割」で行う）。
+ * メニュー権限のラベル定義（付与はユーザーグループの「役割」で行う）。
  * システム権限（メニュー到達）とは別物。確認には修正が含まれる。修正だけでは確認できない。
  */
 const USER_OPS = [
@@ -424,29 +424,14 @@ const BIZ_LEAF_OP = {
 };
 
 /** 確認を含むなら修正も付ける。修正が無いなら確認は外す */
-function syncOpFixConfirm(ids) {
-  const set = new Set(ids || []);
-  if (set.has('op-download')) { set.delete('op-download'); set.add('op-export'); }
-  if (set.has('result')) { set.delete('result'); set.add('result-view'); }
-  if (set.has('upload')) { set.delete('upload'); set.add('upload-view'); }
-  if (set.has('op-confirm')) set.add('op-fix');
-  if (typeof PERMISSION_MODULES !== 'undefined') PERMISSION_MODULES.forEach(m => {
-    if (m.children.some(c => set.has(c.id))) set.add(m.children[0].id);
-  });
-  return set;
-}
-function normalizedRoleActions(rid) {
-  const raw = MENU_PERMS[rid] || [];
-  const out = raw.flatMap(id => {
-    const module = PERMISSION_MODULES.find(m=>m.id===id && !['home','result','upload'].includes(id));
-    return module ? module.children.map(c=>c.id) : [id];
-  });
-
-  out.push(...PERMISSION_MODULES.map(m=>m.children[0].id));
-  return [...syncOpFixConfirm(out)];
-}
+function syncOpFixConfirm(ids) { return new Set(ids || []); }
+function normalizedRoleActions(rid) { return MENU_PERMS[rid] || []; }
 function hasActionPermission(id, uid) {
-  return isTenantAdmin(uid || state.currentUser) || groupLeafSet(uid || state.currentUser).has(id);
+  const page = state.page;
+  const module = PERMISSION_MODULES.find(m=>m.children.some(c=>c.id===id));
+  const menu = module && module.id;
+  if (id.startsWith('usage-users-') || id.startsWith('usage-groups-') || id.startsWith('permissions-')) return isTenantAdmin(uid || state.currentUser) || groupLeafSet(uid || state.currentUser).has(id);
+  return !menu || canReachMenu(menu,uid);
 }
 function changeActionSelection(ids, changed, checked) {
   const set = new Set(ids);
@@ -468,11 +453,6 @@ function permIdsOfGroup(g) {
 /** 在组里用组的 permId；个人に付けた権限は上乗せ（実効権限＝和集合） */
 function groupLeafSet(uid) {
   const ids = [];
-  groupsOfUser(uid).forEach((g) => {
-    permIdsOfGroup(g).forEach((rid) => {
-      normalizedRoleActions(rid).forEach((id) => ids.push(id));
-    });
-  });
   /* 個人に付けた役割も足す（グループ所属の有無に関わらず常に和集合） */
   const eu = entUserByUid(uid);
   ((eu && eu.soloPermIds) || []).forEach((rid) => {
@@ -485,7 +465,7 @@ function groupLeafSet(uid) {
 function rolesOfUser(uid) {
   const out = [];
   const add = (rid) => { if (rid && !out.includes(rid)) out.push(rid); };
-  groupsOfUser(uid).forEach((g) => permIdsOfGroup(g).forEach(add));
+
   const eu = entUserByUid(uid);
   ((eu && eu.soloPermIds) || []).forEach(add);
   return out;
@@ -508,56 +488,12 @@ function userOpsOf(uOrUid) {
   return out;
 }
 
-/** 操作権限。グループの按钮叶子だけを見る。閲覧は画面に入れること（業務ボタンは出さない） */
+/** メニュー権限。グループの按钮叶子だけを見る。閲覧は画面に入れること（業務ボタンは出さない） */
 /** One policy binding covers buttons, writable fields, drag and drop and switches. */
 function applyActionPermissions() {
-  if (typeof document === 'undefined') return;
-  const rules = [
-    ['#hDownload','home-export'], ['#fileInput,#fileDrop,[data-upact="del"]','op-upload'],
-    ['[data-uptype],[data-upact="manual"]','op-classify'], ['#upRead,#batchRead','op-read'],
-    ['[data-upact="del"]','upload-delete'], ['#rvSave,#rvFixDone,[data-ocr],[data-rvrevert],#rvBulkFix','op-fix'],
-    ['#rvConfirm,#rvLockOk,#rvBulkConfirm','op-confirm'], ['#rvHistory,[data-savehist]','op-history'],
-    ['#rvDownload,#batchExport,[data-batchdl],[data-dlmenu]','op-export'],
-    ['#batchDelete,[data-act="delete"]','op-delete'], ['[data-act="redo"]','op-redo'],
-    ['[data-act="confirm"]','op-confirm'], ['#typeAdd,[data-cfg="addType"]','settings-type-add'],
-    ['#tpSave,[data-rule],[data-ruleconf],[data-rule-ai],[data-tb-add],[data-tb-del],[data-tbcol],[data-tbcol-del],[data-tb-cond],[data-tb-toggle],#tpReupload,#tpName,#tpGroup,#tpDesc,#tpGlobalPrompt,[data-tpf],[data-tb-name],[data-tb-limit],[data-tpdel],[data-dragscope],[data-tpdrag],#tpDescAi,#tpDescClear,#tpPromptAi,#tpPromptClear','settings-type-edit'],
-    ['[data-wmsbtn="tpGroups"],[data-wmsopt="tpGroups"],[data-wmsdel^="tpGroups:"],[data-wmsclear="tpGroups"]','type-data-permission'],
-    ['[data-tpact="dl-tpl"],[data-tpact="dl-bulk"]','type-download'],
-    ['[data-tpact="import-bulk"]','settings-type-edit'],
-    ['[data-cfg="delType"]','settings-type-form-del'], ['#sceneAdd','settings-scenes-add'],
-    ['#scSave,[data-scenerename]','settings-scenes-edit'], ['[data-scenedel]','settings-scenes-del'],
-    ['[data-dictentryadd],[data-dictadd]','dict-add'], ['[data-dictentryedit],[data-dictrename],[data-dictf],[data-dictsave]','dict-edit'],
-    ['[data-dictentrydel],[data-dictdel]','dict-delete'], ['#dictBulkFile,#dictBulkOk,[data-dictbulk]','dict-import'],
-    ['#dictBulkDlTpl,[data-dictdownload]','dict-download'], ['[data-dictreanalyze]','dict-vectorize'],
-    ['[data-useradd]','usage-users-add'], ['[data-useredit]','usage-users-edit'],
-    ['[data-userdel],#userDelOk','usage-users-del'], ['[data-usertoggle]','usage-users-toggle'],
-    ['[data-userreset]','users-reset'], ['[data-grpadd]','usage-groups-add'],
-    ['[data-grpedit]','usage-groups-edit'], ['[data-grpdel]','usage-groups-del'],
-    ['[data-roleadd]','permissions-add'], ['[data-roleedit]','permissions-edit'],
-    ['[data-roledel]','permissions-del'], ['[data-rolemenu],#menuPermOk,[data-mpnode],[data-mpall]','permissions-menu'],
-    ['[data-gfopt="uaPerm"],[data-gfopt="gfPerm"],[data-userGrp],[data-gfopt="uaGroup"]','permission-assign'],
-    ['#secSave,[data-sec]','security-edit'], ['[data-logsave],[data-logcfg]','logs-edit'],
-    ['[data-logexport]','logs-download'], ['#watchSave,[data-watchsave],[data-wf],[data-wf-toggle],[data-wroot-path],[data-wroot-after],[data-wroot-move],[data-wrooton],[data-wrootdel],[data-wrootadd],[data-wrule-folder],[data-wruleon]','watch-edit']
-  ];
-  if (USER_ADD_DRAFT) rules.push(['#userAddName,#userAddEmail,#userAddStatus,#userAddOk', USER_ADD_DRAFT.mode === 'new' ? 'usage-users-add' : 'usage-users-edit']);
-  if (state.groupForm) rules.push(['#grpFormOk,#grpFormName,#grpFormKind,#grpFormDesc', state.groupForm.mode === 'new' ? 'usage-groups-add' : 'usage-groups-edit']);
-  const route = state.page;
-  const containers = route === 'ticketDetail' ? [['.wiz-pane input,.wiz-pane textarea,.wiz-pane select,.wiz-pane [draggable]','settings-type-edit']]
-    : route === 'bizScenes' ? [['.maincol input:not(#sceneQ),.maincol textarea,.maincol select,.maincol [draggable]','settings-scenes-edit']]
-    : route === 'watch' ? [['.maincol input,.maincol select,.maincol textarea,.maincol [role="switch"]','watch-edit']] : [];
-  const requirements = new Map();
-  containers.concat(rules).forEach(([selector, permission]) => {
-    document.querySelectorAll(selector).forEach(el => requirements.set(el, permission));
-  });
-  requirements.forEach((permission, el) => {
-      el.dataset.actionPermission = permission;
-      if (hasActionPermission(permission)) return;
-      el.setAttribute('aria-disabled','true');
-      if ('disabled' in el) el.disabled = true;
-      if ('readOnly' in el) el.readOnly = true;
-      if (el.hasAttribute && el.hasAttribute('draggable')) el.draggable = false;
-      el.classList.add('action-denied');
-  });
+ if(typeof document==='undefined')return;
+ const rules=[['[data-useradd]','usage-users-add'],['[data-useredit]','usage-users-edit'],['[data-userdel]','usage-users-del'],['[data-grpadd]','usage-groups-add'],['[data-grpedit]','usage-groups-edit'],['[data-grpdel]','usage-groups-del'],['[data-roleadd]','permissions-add'],['[data-roleedit],[data-rolemenu]','permissions-edit'],['[data-roledel]','permissions-del']];
+ rules.forEach(([sel,id])=>document.querySelectorAll(sel).forEach(el=>{el.dataset.actionPermission=id;if(!hasActionPermission(id)){el.disabled=true;el.setAttribute('aria-disabled','true');}}));
 }
 function bindActionPermissionGuard() {
   if (typeof document === 'undefined' || document._actionGuardBound) return;
@@ -575,20 +511,11 @@ function applyBizButtonVisibility() {
 }
 
 function userHasOp(op, uid) {
-  const me = uid || state.currentUser;
-  if (op === 'approve') return false;
-  if (isTenantAdmin(me)) return true;
-  if (op === 'view') return hasActionPermission('result-view', me);
-  const leaves = groupLeafSet(me);
-  if (op === 'fix') return leaves.has('op-fix') || leaves.has('op-confirm');
-  if (op === 'confirm') return leaves.has('op-confirm');
-  if (op === 'redo') return leaves.has('op-redo');
-  if (op === 'export') return leaves.has('op-download') || leaves.has('op-export');
-  if (op === 'upload') return leaves.has('op-upload') || leaves.has('upload');
-  if (op === 'read') return leaves.has('op-read');
-  if (op === 'delete') return leaves.has('op-delete');
-  if (op === 'settings') return PERMISSION_MODULES.filter(m=>!['home','upload','result'].includes(m.id)).some(m=>m.children.slice(1).some(c=>leaves.has(c.id)));
-  return userOpsOf(me).includes(op);
+  if (op==='approve') return false;
+  if (isTenantAdmin(uid || state.currentUser)) return true;
+  if (op==='settings') return canReachMenu('settings',uid);
+  if (op==='upload' || op==='classify' || op==='read') return canReachMenu('upload',uid);
+  return canReachMenu('result',uid);
 }
 /** ユーザー追加ダイアログの入力値（null＝閉じている） */
 let USER_ADD_DRAFT = null;
@@ -613,11 +540,11 @@ const SECURITY = {
 };
 
 /* ── 権限管理のモック ────────────────────────────────────────────────────
- * システムレベル：ロール（ROLES）＋ 操作権限（MENU_TREE / MENU_PERMS）
+ * システムレベル：ロール（ROLES）＋ メニュー権限（MENU_TREE / MENU_PERMS）
  *                  ＝「利用設定 ＞ 権限設定」。画面到達可否だけを持つ。
  * 業務レベル　　：① 帳票タイプ × 4 業務操作 → グループ／ユーザー（TICKET_PERMS）
  *                ② 業務シーン × アップロード → グループ／ユーザー（UPLOAD_PERMS）
- *                  ＝帳票権限管理画面に上下で並べる。操作権限とは混ぜない。
+ *                  ＝帳票権限管理画面に上下で並べる。メニュー権限とは混ぜない。
  * -------------------------------------------------------------------- */
 
 /** 帳票の 4 業務操作（閲覧 → 確認 → 承認 → 再承認 の順で固定）
@@ -729,13 +656,14 @@ function userMatchesTargets(uid, targets) {
 }
 
 /** システム管理者か（メニュー全到達＋帳票／アップロード権限表をバイパス）
- *  デモ既定の「全システム・全操作権限」は window.DEMO_FULL_ADMIN で立てる
+ *  デモ既定の「全システム・全メニュー権限」は window.DEMO_FULL_ADMIN で立てる
  *  （admin-mode.js。URL に ?perm=1 を付けると権限どおりの制限に戻る）。 */
 function isTenantAdmin(uid) {
   if (typeof window !== 'undefined' && window.DEMO_FULL_ADMIN === true) return true;
   const me = uid || (typeof state !== 'undefined' ? state.currentUser : null);
   if (!me) return false;
   const members = (typeof ROLE_MEMBERS !== 'undefined' && ROLE_MEMBERS[TENANT_ADMIN_ROLE]) || [];
+  if (typeof state !== 'undefined' && state.phaseOneInitialized) return ((entUserByUid(me)||{}).soloPermIds||[]).includes(TENANT_ADMIN_ROLE);
   return members.includes(me);
 }
 
@@ -758,7 +686,7 @@ function principalExists(id) {
 
 /** 帳票タイプの業務操作ができるか（システム管理者は常に可）
  *  修正／確認は帳票権限表（TICKET_PERMS）の担当を優先する。
- *  表が空・担当 ID がすべて無効（未設定）のときだけ、全体の操作権限にフォールバックする。 */
+ *  表が空・担当 ID がすべて無効（未設定）のときだけ、全体のメニュー権限にフォールバックする。 */
 function canTicketAct(layoutId, act, uid) {
   const me = uid || state.currentUser;
   if (act === 'approve' || act === 'reapprove') return false;
@@ -796,7 +724,7 @@ function ensureUpBizAllowed() {
   return allowed;
 }
 
-/** 操作権限ツリー（システムレベル。AI画像処理／外部API は置かない） */
+/** メニュー権限ツリー（システムレベル。AI画像処理／外部API は置かない） */
 const PERMISSION_MODULES = [
   {
     "id": "home",
@@ -1036,7 +964,7 @@ const PERMISSION_MODULES = [
       },
       {
         "id": "permissions-menu",
-        "label": "操作権限設定"
+        "label": "メニュー権限設定"
       },
       {
         "id": "permission-assign",
@@ -1091,7 +1019,122 @@ const PERMISSION_MODULES = [
     ]
   }
 ];
-const MENU_TREE = [{id:"llm-ocr",label:"LLM-OCR",children:PERMISSION_MODULES}];
+const MENU_TREE = [
+  {
+    "id": "llm-ocr",
+    "label": "LLM-OCR",
+    "children": [
+      {
+        "id": "home",
+        "label": "ホーム"
+      },
+      {
+        "id": "upload",
+        "label": "新規アップロード"
+      },
+      {
+        "id": "result",
+        "label": "読取結果一覧"
+      },
+      {
+        "id": "settings",
+        "label": "帳票設定",
+        "children": [
+          {
+            "id": "settings-type",
+            "label": "帳票タイプ"
+          },
+          {
+            "id": "settings-scenes",
+            "label": "業務シーン"
+          }
+        ]
+      },
+      {
+        "id": "usage",
+        "label": "利用設定",
+        "children": [
+          {
+            "id": "usage-dict",
+            "label": "辞書登録"
+          },
+          {
+            "id": "usage-users",
+            "label": "ユーザー管理",
+            "children": [
+              {
+                "id": "users-view",
+                "label": "ユーザー照会"
+              },
+              {
+                "id": "usage-users-add",
+                "label": "ユーザー追加"
+              },
+              {
+                "id": "usage-users-edit",
+                "label": "ユーザー編集"
+              },
+              {
+                "id": "usage-users-del",
+                "label": "ユーザー削除"
+              },
+              {
+                "id": "groups-view",
+                "label": "部門照会"
+              },
+              {
+                "id": "usage-groups-add",
+                "label": "部門追加"
+              },
+              {
+                "id": "usage-groups-edit",
+                "label": "部門編集"
+              },
+              {
+                "id": "usage-groups-del",
+                "label": "部門削除"
+              }
+            ]
+          },
+          {
+            "id": "usage-permissions",
+            "label": "権限設定",
+            "children": [
+              {
+                "id": "permissions-query",
+                "label": "ロール照会"
+              },
+              {
+                "id": "permissions-add",
+                "label": "ロール追加"
+              },
+              {
+                "id": "permissions-edit",
+                "label": "ロール編集"
+              },
+              {
+                "id": "permissions-del",
+                "label": "ロール削除"
+              }
+            ]
+          },
+          {
+            "id": "usage-security",
+            "label": "セキュリティ設定"
+          },
+          {
+            "id": "usage-logs",
+            "label": "ログ設定"
+          },
+          {
+            "id": "usage-watch",
+            "label": "自動アップロード"
+          }
+        ]
+      }
+    ]
+  }
+];
 
 const MENU_LEAVES = (() => {
   const out = [];
@@ -1103,22 +1146,8 @@ const MENU_LEAVES = (() => {
    （操作ボタンが一つも無ければ操作列ごと隠すので、閲覧＝到達で足りる）。 */
 const BIZ_MENU_BASE = ['home', 'result'];
 function defaultOperationGrants() {
-  const business = ['home', 'result-view'];
-  const adminModules = PERMISSION_MODULES.filter(m=>!['home','upload','result'].includes(m.id));
-  const grants = {
-    R1: PERMISSION_MODULES.flatMap(m=>m.children.map(c=>c.id)),
-    R2: PERMISSION_MODULES.map(m=>m.children[0].id).concat(adminModules.flatMap(m=>m.children.map(c=>c.id))),
-    R3: business.concat(['op-confirm','op-history']),
-    R4: business.slice(),
-    R5: business.concat(['op-upload','upload-delete']),
-    R6: PERMISSION_MODULES.map(m=>m.children[0].id),
-    R7: business.concat(['op-classify']),
-    R8: business.concat(['op-read','op-redo','op-delete','upload-delete']),
-    R10: business.concat(['op-export']),
-    R11: business.concat(['op-fix','op-history']),
-  };
-  Object.keys(grants).forEach(r=>grants[r]=[...syncOpFixConfirm(grants[r].concat(PERMISSION_MODULES.map(m=>m.children[0].id)))]);
-  return grants;
+  const business = ['home','upload','result'];
+  return {R1:MENU_LEAVES.slice(), R2:MENU_LEAVES.slice(), R3:business.slice(), R4:['home','result'], R5:business.slice(), R6:['home','result'], R7:business.slice(), R8:business.slice(), R10:['home','result'], R11:['home','result']};
 }
 let MENU_PERMS = { ...defaultOperationGrants() };
 
@@ -1460,7 +1489,7 @@ const roleMemberIds = (roleId) => ROLE_MEMBERS[roleId] || [];
  * 個人にだけ割り当てたいときは「その人だけのグループ」を作る（セルに個人は入れない）。
  * 製品の「部門」は組織階層（上位下位をもつ）なので別物として扱い、こちらは担当ロール。
  * グループに担当が割り当てられると、その中の誰かにランダムで割り当てる。 */
-/** グループの役割（＝所属ユーザー全員に付く操作権限。1 グループ 1 役割） */
+/** グループの役割（＝所属ユーザー全員に付くメニュー権限。1 グループ 1 役割） */
 const GROUP_KINDS = [
   { key: 'view', label: '閲覧', cls: 'is-view', ops: ['view'] },
   { key: 'confirm', label: '確認', cls: 'is-conf', ops: ['view', 'confirm'] },
@@ -1626,7 +1655,7 @@ const HEADER_MENUS = {
   ] },
 };
 
-/** 画面ルート → 操作権限ツリーのノード id */
+/** 画面ルート → メニュー権限ツリーのノード id */
 const PAGE_MENU_NODE = {
   home: 'home',
   upload: 'upload',
@@ -1655,10 +1684,10 @@ function menuLeavesForUser(uid) {
 /** メニューノード（画面）に到達できるか。権限が無ければメニュー自体を出さない */
 function canReachMenu(nodeId, uid) {
   if (!nodeId) return false;
-  if (nodeId === 'notices' || PERMISSION_MODULES.some(m=>m.id===nodeId || m.children[0].id===nodeId)) return true;
+
   const set = menuLeavesForUser(uid);
   if (set === null) return true;
-  if (nodeId === 'usage-users' && hasActionPermission('groups-view', uid)) return true;
+
   if (set.has(nodeId)) return true;
   /* 親ノード許可＝配下リーフのいずれかが許可されている扱い */
   const find = (nodes) => {
@@ -1815,7 +1844,7 @@ const state = {
   dd: null,                       // 開いている複数選択ドロップダウン
   navMenu: null,                  // 開いているヘッダーのサブメニュー
   permForm: null,                 // 権限作成／編集ダイアログ { mode, id, name, code, desc, status }
-  menuPerm: null,                 // 操作権限ダイアログ { roleId, checked[], closed[] }
+  menuPerm: null,                 // メニュー権限ダイアログ { roleId, checked[], closed[] }
   permCell: null,                 // 権限セル編集 { kind:'ticket'|'upload', layoutId?, act?, bizId?, mode? }
   asgMode: {},                    // フロー担当の药丸モード { confirm|approve|reapprove: 'role'|'user' }
   filters: { ...defaultFilters(), createdFrom: HOME_FROM, createdTo: HOME_TO },
@@ -2124,6 +2153,7 @@ function buildTree() {
 }
 
 function canSeeCategory(catId, uid) {
+  if (state.phaseOneInitialized) return LAYOUT.filter(l=>l.category===catId).some(l=>sceneCanAccessFile({layout:l.id},uid));
   const me = uid || (typeof state !== 'undefined' ? state.currentUser : null);
   if (typeof isTenantAdmin === 'function' && isTenantAdmin(me)) return true;
   const c = byId(CATEGORY, catId);
@@ -2139,6 +2169,7 @@ function canSeeCategory(catId, uid) {
 
 /** 帳票タイプのデータ権限。操作グループの多選のみ（所属ユーザー全員が対象）。未設定なら全員。 */
 function canSeeLayout(layoutId, uid) {
+  if (state.phaseOneInitialized) return sceneCanAccessFile({layout:layoutId},uid);
   const me = uid || (typeof state !== 'undefined' ? state.currentUser : null);
   if (typeof isTenantAdmin === 'function' && isTenantAdmin(me)) return true;
   const l = byId(LAYOUT, layoutId);
@@ -2432,7 +2463,7 @@ function renderTree() {
       const ni = treeIcon(n.type === 'file' ? 'document' : 'folder', opened);
       const fullName = nodeLabel(n);
       /* フォルダ（業務シーン・帳票タイプ）＝権限の単位。名称変更と権限設定を置く */
-      const ops = (n.type === 'biz' || n.type === 'cat')
+      const ops = (n.type === 'biz' || n.type === 'cat') && canRenameTree()
         ? [`<button class="redo" title="表示名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
         : [];
       /* 長い名前は省略表示。hover で全文（ファイルは data-tip、フォルダは title） */
@@ -2645,7 +2676,7 @@ function taskOwnerUid(f, kind, bucket) {
 
 /**
  * マイタスクに出してよいか。
- * 1) 操作権限：確認者は承認タスクを見ない／承認者は確認タスクを見ない
+ * 1) メニュー権限：確認者は承認タスクを見ない／承認者は確認タスクを見ない
  * 2) 帳票権限：その帳票タイプの担当プールに入っている（管理者はバイパス）
  * 3) データ権限：自身のみ＝自分の割当／処理分だけ。全件参照＝同プールの他人分も見える
  */
@@ -3401,7 +3432,6 @@ function renderTable() {
 /* ===================== 5-b2. タブ（ホーム／新規アップロード／ファイル一覧／マイタスク） ===================== */
 
 const TABS_DEF = {
-  notices: { id: 'notices', label: 'お知らせ', route: 'notices' },
   home: { id: 'home', label: 'ホーム', route: 'home' },
   upload: { id: 'upload', label: '新規アップロード', route: 'upload' },
   result: { id: 'result', label: '読取結果一覧', route: 'result' },
@@ -4904,41 +4934,18 @@ function renderUserAddDialog() {
           <input class="fld" id="userAddName" value="${esc(d.name)}" placeholder="ユーザー名を入力してください" />
         </label>
         <label class="user-add-field">
-          <span class="user-add-label"><i class="req">*</i>ログインユーザー名</span>
-          <input class="fld" id="userAddEmail" autocomplete="username" value="${esc(d.email)}" placeholder="ログインユーザー名を入力してください" />
+          <span class="user-add-label"><i class="req">*</i>ユーザーID</span>
+          <input class="fld" id="userAddEmail" autocomplete="username" value="${esc(d.email)}" placeholder="ユーザーIDを入力してください" />
         </label>
+        <label class="user-add-field"><span class="user-add-label"><i class="req">*</i>所属組織</span><select class="fld" id="userOrganization">${groupOptsWithDepth().map(([id,name])=>`<option value="${id}" ${(d.groupIds || []).includes(id)?'selected':''}>${esc(name)}</option>`).join('')}</select></label>
         <div class="user-add-field is-top">
           <span class="user-add-label"><i class="req">*</i>権限</span>
           <div class="user-perms">
             ${groupFormMulti('uaPerm', '権限を選択してください', ROLES.map((r) => [r.id, r.name]), d.soloPermIds || [])}
-            ${(() => {
-              const gs = d.uid ? groupsOfUser(d.uid) : [];
-              /* 兼務で同じ役割のグループに複数入っていても 1 回だけ出す */
-              const ids = [];
-              gs.forEach((g) => permIdsOfGroup(g).forEach((rid) => { if (!ids.includes(rid)) ids.push(rid); }));
-              const names = ids.map((rid) => (byId(ROLES, rid) || {}).name).filter(Boolean);
-              if (!names.length) return '<p class="user-perm-note">グループ未所属。ここで選んだ権限だけが有効になります。</p>';
-              return `<p class="user-perm-note">所属グループから継承：<b>${esc(names.join('、'))}</b>　実効権限はグループと個人の和集合です。</p>`;
-            })()}
+
           </div>
         </div>
-        <div class="user-add-field">
-          <span class="user-add-label">帳票类别</span>
-          <div>${(() => {
-            /* 権限の単位はフォルダ（業務シーン → 帳票タイプ）。閲覧に入っている
-               グループから、その人が見られる帳票タイプを逆算して出す。 */
-            const gs = d.uid ? groupsOfUser(d.uid) : [];
-            const gids = gs.map((g) => g.id);
-            const all = gs.some((g) => g.root);
-            const names = all
-              ? CATEGORY.map((c) => c.name)
-              : CATEGORY.filter((c) => nodeLayouts(c.id).some((l) => (permsOf(l.id).view || []).some((t) => gids.includes(t) || (byId(GROUPS, t) || {}).root))).map((c) => c.name);
-            if (!names.length) return '<span class="muted">—</span>';
-            const shown = names.slice(0, 3).map((n) => `<span class="pill">${esc(n)}</span>`).join('');
-            const rest = names.length > 3 ? `<span class="pill more" title="${esc(names.join('、'))}">+${names.length - 3}</span>` : '';
-            return shown + rest;
-          })()}</div>
-        </div>
+        <div class="user-add-field"><span class="user-add-label">データ権限業務シーン</span><div>${BIZ_SCENES.filter(sc=>(sc.userIds||[]).includes(d.uid)).map(sc=>`<span class="pill">${esc(sc.name)}</span>`).join('') || '—'}</div></div>
         <div class="user-add-field">
           <span class="user-add-label">ステータス</span>
           <span class="user-add-status">
@@ -4997,7 +5004,7 @@ function renderApiPage() {
 }
 /** ユーザー → 所属グループ（帳票権限の付与単位）。uid 経由で GROUPS を逆引きする */
 function userGroups(u) {
-  return groupsOfUser(u && u.uid);
+  return GROUPS.filter(g=>(g.userIds||[]).includes(u && u.uid));
 }
 
 /** グループの配下 id（子・孫…） */
@@ -5053,7 +5060,7 @@ function userGroupsCellHtml(u, highlightGid) {
 }
 
 /** ユーザー管理。左＝操作グループのツリー、右＝直属ユーザーの一覧。
- *  所属・操作権限はグループ側で付与する（ユーザー編集では触らない）。 */
+ *  所属・メニュー権限はグループ側で付与する（ユーザー編集では触らない）。 */
 function renderUsers() {
   const focus = (state.userGroupFocus && byId(GROUPS, state.userGroupFocus))
     ? state.userGroupFocus
@@ -5112,9 +5119,9 @@ function renderUsers() {
     return `<tr>
     <td class="col-no" style="color:var(--text-2)">${start + i + 1}</td>
     <td title="${esc(u.name)}">${esc(u.name)}</td>
-    <td title="${esc(String(u.email || '').split('@')[0])}">${esc(String(u.email || '').split('@')[0])}</td>
-    <td><div class="grp-members">${roleHtml}</div></td>
+    <td>${esc(String(u.email||u.uid).split('@')[0])}</td>
     <td><div class="grp-members user-grp-cell">${userGroupsCellHtml(u, focus)}</div></td>
+    <td><div class="grp-members">${roleHtml}</div></td>
     <td style="white-space:nowrap;color:var(--text-2)">${esc(u.created || '—')}</td>
     <td><span class="st ${u.status === '有効' ? 'ok' : 'wait'}"><span class="dot"></span>${esc(u.status)}</span></td>
     <td><div class="acts">
@@ -5124,7 +5131,7 @@ function renderUsers() {
       <button class="act-text danger" data-userdel="${u.id}">削除</button>
     </div></td></tr>`;
   }).join('') || `<tr><td colspan="8" class="empty-cell">${!focusRoot && direct.length === 0 && scopeUsers.length > 0
-      ? `このグループに直属のユーザーはいません（配下に ${scopeUsers.length} 名）`
+      ? `この部門に直属のユーザーはいません（配下に ${scopeUsers.length} 名）`
       : '該当するユーザーはいません'}</td></tr>`;
   const pagesHtml = [];
   if (pages > 1) {
@@ -5138,21 +5145,21 @@ function renderUsers() {
   return `${cfgHeader('ユーザー管理', '')}
   <div class="users-page">
     <aside class="users-side">
-      <div class="users-side-head">操作グループ</div>
+      <div class="users-side-head">組織情報</div>
       <div class="users-side-tools">
-        <input class="fld" id="grpQ" placeholder="キーワード" value="${esc((state.groupDraft && state.groupDraft.q) || '')}" aria-label="グループを検索" />
+        <input class="fld" id="grpQ" placeholder="キーワード" value="${esc((state.groupDraft && state.groupDraft.q) || '')}" aria-label="部門を検索" />
       </div>
       <div class="ug-tree">${node(null, 0)}</div>
     </aside>
     <div class="users-main">
-      <h3 class="users-title">${esc(g ? g.name : 'グループ未選択')}</h3>
+      <h3 class="users-title">${esc(g ? g.name : '部門未選択')}</h3>
       <p class="users-sub">${focusRoot
     ? `所属人数: ${scopeUsers.length}人（組織全体）`
     : `所属人数: ${direct.length}人（直属） / ${scopeUsers.length}人（配下含む）`}</p>
 
       <div class="cfg-filters users-filters">
         <div class="field"><span class="lbl">ユーザー名</span><input class="fld" id="ugQ" placeholder="ユーザー名" value="${esc(ug.q)}" /></div>
-        <div class="field"><span class="lbl">ログインユーザー名</span><input class="fld" id="ugEmail" placeholder="ログインユーザー名" value="${esc(ug.email)}" /></div>
+        <div class="field"><span class="lbl">ユーザーID</span><input class="fld" id="ugEmail" placeholder="ユーザーID" value="${esc(ug.email)}" /></div>
         <div class="field"><span class="lbl">権限</span><select class="fld" id="ugRole"><option value="">選択してください</option>${ROLES.map((r) => `<option value="${esc(r.name)}" ${ug.role === r.name ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>
         <div class="field"><span class="lbl">ステータス</span><select class="fld" id="ugStatus"><option value="">選択してください</option><option value="有効" ${ug.status === '有効' ? 'selected' : ''}>有効</option><option value="無効" ${ug.status === '無効' ? 'selected' : ''}>無効</option></select></div>
         <div class="cfg-filter-acts">
@@ -5165,7 +5172,7 @@ function renderUsers() {
 
       <div class="tablewrap users-tablewrap" title="横にドラッグして列を表示できます">
       <table class="result-table users-table"><thead><tr>
-        <th class="col-no">番号</th><th>ユーザー名</th><th>ログインユーザー名</th><th>権限</th><th>所属グループ</th><th>作成時間</th><th>ステータス</th><th>操作・処理</th>
+        <th class="col-no">番号</th><th>ユーザー名</th><th>ユーザーID</th><th>所属組織</th><th>権限</th><th>作成時間</th><th>ステータス</th><th>操作・処理</th>
       </tr></thead><tbody>${body}</tbody></table>
       </div>
 
@@ -5225,7 +5232,7 @@ function renderUserList() {
     }).join('');
   return `<div class="cfg-filters">
     <div class="field"><span class="lbl">ユーザー名</span><input class="fld" id="cfgUserQ" placeholder="キーワードを入力" value="${esc(cfgState.userQ)}" /></div>
-    <div class="field"><span class="lbl">ログインユーザー名</span><input class="fld" placeholder="入力してください" /></div>
+    <div class="field"><span class="lbl">ユーザーID</span><input class="fld" placeholder="入力してください" /></div>
     <div class="field"><span class="lbl">権限</span><select class="fld"><option>選択してください</option>${ROLES.map((r) => `<option>${esc(r.name)}</option>`).join('')}</select></div>
     <div class="field"><span class="lbl">所属グループ</span><select class="fld" id="cfgUserGroup"><option value="">選択してください</option>${groupOptsWithDepth().map(([gid, gname, , depth]) => `<option value="${esc(gid)}" ${gid === gsel ? 'selected' : ''}>${esc('　'.repeat(depth) + gname)}</option>`).join('')}</select></div>
     <div class="field"><span class="lbl">ステータス</span><select class="fld"><option>選択してください</option><option>有効</option><option>無効</option></select></div>
@@ -5234,7 +5241,7 @@ function renderUserList() {
     <button class="btn" id="cfgUserReset"><span class="ico i-refresh"></span>リセット</button>
   </div>
   <div class="tablewrap"><table>
-    <thead><tr><th style="width:56px">番号</th><th>ユーザー名</th><th>ログインユーザー名</th><th style="width:110px">権限</th>
+    <thead><tr><th style="width:56px">番号</th><th>ユーザー名</th><th>ユーザーID</th><th style="width:110px">権限</th>
       <th style="width:230px">所属グループ</th><th style="width:160px">作成時間</th><th style="width:90px">ステータス</th><th style="width:150px;text-align:right">操作</th></tr></thead>
     <tbody>${body}</tbody></table></div>`;
 }
@@ -5275,7 +5282,7 @@ function renderRoleList() {
       <td class="roles-time">${esc(r.created)}</td>
       <td><span class="status-badge ${r.status === '有効' ? 'on' : 'off'}">${esc(r.status)}</span></td>
       <td class="roles-actions-cell"><div class="acts roles-acts">
-        <button type="button" class="act-text" data-rolemenu="${r.id}">操作権限</button>
+        <button type="button" class="act-text" data-rolemenu="${r.id}">メニュー権限</button>
         <button type="button" class="act-text" data-roleedit="${r.id}">編集</button>
         <button type="button" class="act-text danger" data-roledel="${r.id}">削除</button>
       </div></td>
@@ -5478,40 +5485,27 @@ function roleFormDialog() {
 }
 
 /* グループ編集：権限設定で作った権限を選ぶ。ボタンの中身は権限側で決まる */
+function renderOrganizationDelete() {
+ const org=byId(GROUPS,state.organizationDelete);if(!org)return '';
+ return `<div class="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="orgDeleteTitle" style="width:min(460px,94vw)"><div class="modal-head"><b id="orgDeleteTitle">組織削除</b></div><div class="perm-body"><p style="line-height:1.8"><span style="color:#df942c">⚠</span> 組織を削除すると、下位組織および本組織・下位組織に所属するユーザーもすべて削除されます。よろしいですか？慎重に操作してください。</p><p>${esc(org.name)}</p></div><div class="modal-foot"><span class="spacer"></span><button class="btn" id="orgDeleteCancel">キャンセル</button><button class="btn primary" id="orgDeleteOk">OK</button></div></div></div>`;
+}
+function deleteOrganization(id) {
+ const org=byId(GROUPS,id);if(!org||org.root)return false;
+ const ids=new Set([id,...groupDescendantIds(id)]);
+ const users=new Set(GROUPS.filter(g=>ids.has(g.id)).flatMap(g=>g.userIds||[]));
+ for(let i=ENT_USERS.length-1;i>=0;i--)if(users.has(ENT_USERS[i].uid))ENT_USERS.splice(i,1);
+ for(let i=USERS.length-1;i>=0;i--)if(users.has(USERS[i].id))USERS.splice(i,1);
+ for(let i=GROUPS.length-1;i>=0;i--){if(ids.has(GROUPS[i].id))GROUPS.splice(i,1);else GROUPS[i].userIds=(GROUPS[i].userIds||[]).filter(uid=>!users.has(uid));}
+ BIZ_SCENES.forEach(sc=>{sc.departmentIds=(sc.departmentIds||[]).filter(gid=>!ids.has(gid));sc.userIds=(sc.userIds||[]).filter(uid=>!users.has(uid));});
+ Object.keys(ROLE_MEMBERS).forEach(r=>ROLE_MEMBERS[r]=ROLE_MEMBERS[r].filter(uid=>!users.has(uid)));
+ Object.values(TICKET_PERMS).forEach(p=>Object.keys(p).forEach(k=>{if(Array.isArray(p[k]))p[k]=p[k].filter(x=>!ids.has(x)&&!users.has(x));}));
+ state.userGroupFocus=(GROUPS.find(g=>g.root)||GROUPS[0]||{}).id;return true;
+}
 function groupFormDialog() {
   const f = state.groupForm;
   if (!f) return '';
-  const isNew = f.mode === 'new';
-  const members = (f.userIds || []).length;
-  if (!f.permIds) {
-    f.permIds = f.permId ? [f.permId] : [];
-  }
-  const permOpts = ROLES.filter((r) => r.status !== '無効').map((r) => [r.id, r.name]);
-  const userOpts = USERS.map((u) => [
-    u.id,
-    u.name,
-    groupsOfUser(u.id).filter((g) => g.id !== f.id).map((g) => g.name).join('、') || '他のグループなし',
-  ]);
-  /* 権限は複数持てる（操作グループの役割を複数付与できる） */
-  const permMs = groupFormMulti('gfPerm', '権限を選択してください', permOpts, f.permIds || (f.permId ? [f.permId] : []));
-  const userMs = groupFormMulti('gfUsers', 'ユーザーを選択（複数可）', userOpts, f.userIds || []);
-  const tags = CATEGORY.filter((c) => (c.groupIds || []).includes(f.id)).map((c) => c.name);
-  const tagHtml = tags.length ? tags.map((n) => `<span class="pill">${esc(n)}</span>`).join('') : '<span class="muted">—</span>';
-  return `<div class="modal-back" id="grpFormBack"><div class="modal perm-modal grp-modal">
-    <div class="modal-head"><b>${isNew ? 'グループ追加' : '編集'}</b><span class="spacer"></span><button class="icon-btn" id="grpFormClose" aria-label="閉じる"><span class="ico i-close"></span></button></div>
-    <div class="perm-body">
-      <label class="perm-row"><span class="lbl req">グループ名</span><input class="fld" id="grpFormName" value="${esc(f.name || '')}" placeholder="例：住民異動窓口" /></label>
-      <div class="perm-row is-col"><span class="lbl">権限</span>${permMs}</div>
-      <div class="perm-row is-col"><span class="lbl">所属ユーザー（${members} 名）</span>${userMs}</div>
-      <div class="perm-row is-col"><span class="lbl">帳票类别</span><div class="grp-members">${tagHtml}</div></div>
-    </div>
-    <div class="modal-foot">
-      <span class="muted">${isNew ? '未保存' : esc(f.name || '')}</span>
-    <span class="spacer"></span>
-      <button class="btn" id="grpFormCancel">キャンセル</button>
-      <button class="btn primary" id="grpFormOk">OK</button>
-  </div>
-  </div></div>`;
+  const parent = byId(GROUPS,f.parentId);
+  return `<div class="modal-back" id="grpFormBack"><div class="modal perm-modal grp-modal"><div class="modal-head"><b>${f.mode==='new'?'組織追加':'編集'}</b><span class="spacer"></span><button class="icon-btn" id="grpFormClose" aria-label="閉じる">×</button></div><div class="perm-body"><label class="perm-row"><span class="lbl">上位組織</span><input class="fld org-parent-readonly" value="${esc(parent ? parent.name : '—')}" disabled readonly aria-label="上位組織" /></label><label class="perm-row"><span class="lbl req">組織名</span><input class="fld" id="grpFormName" maxlength="30" value="${esc(f.name)}" /></label></div><div class="modal-foot"><span class="spacer"></span><button class="btn" id="grpFormCancel">キャンセル</button><button class="btn primary" id="grpFormOk">保存</button></div></div></div>`;
 }
 
 /** ノード配下のリーフ（＝実メニュー）id を集める */
@@ -5519,12 +5513,12 @@ function menuPermLeaves(node) {
   return node.children ? node.children.flatMap(menuPermLeaves) : [node.id];
 }
 
-/** 操作権限ダイアログ（システムレベル：画面到達権限のツリー） */
+/** メニュー権限ダイアログ（システムレベル：画面到達権限のツリー） */
 function menuPermDialog() {
   const m = state.menuPerm;
   if (!m) return '';
   const role = byId(ROLES, m.roleId) || {};
-  const fixedViews = PERMISSION_MODULES.map(module=>module.children[0].id);
+  const fixedViews = [];
   const checked = [...new Set((m.checked || []).concat(fixedViews))];
   const closed = m.closed || [];
   const nodeHtml = (n) => {
@@ -5546,12 +5540,12 @@ function menuPermDialog() {
         <span class="mp-sw-val">${val}</span>
       </div>`;
   return `<div class="modal-back" id="menuPermBack"><div class="modal perm-modal mp-modal">
-    <div class="modal-head"><b>操作権限</b><span class="spacer"></span><button class="icon-btn" id="menuPermClose" aria-label="閉じる"><span class="ico i-close"></span></button></div>
+    <div class="modal-head"><b>メニュー権限</b><span class="spacer"></span><button class="icon-btn" id="menuPermClose" aria-label="閉じる"><span class="ico i-close"></span></button></div>
     <div class="perm-body">
       <div class="perm-row"><span class="lbl">権限名</span><div class="mp-idchip">${esc(role.name || '')}</div></div>
       <div class="perm-row"><span class="lbl">権限ID</span><div class="mp-idchip">${esc(role.code || '')}</div></div>
       <div class="mp-block">
-        <div class="mp-block-label">操作権限</div>
+        <div class="mp-block-label">メニュー権限</div>
         <div class="mp-panel">
           <div class="mp-toolbar">
             ${mpSwitch('すべて選択/すべて解除', 'data-mpall', allOn, allOn ? 'はい' : 'いいえ')}
@@ -5611,35 +5605,35 @@ const LOG_LEVELS = [
 ];
 
 /** ログ設定 */
+const AUTH_EVENTS = ['ログイン','ログアウト','パスワード変更','パスワード再設定'];
+function logFunctions() {return ['新規アップロード','読取結果一覧','帳票タイプ設定','業務シーン設定','辞書登録','ユーザー管理','権限設定','セキュリティ設定','ログ設定','自動アップロード'];}
+function logRows() {
+ const auth = state.logTab !== 'operation';
+ const filter = state.logApplied || {};
+ const list = SECURITY.logs.filter(l=>auth ? AUTH_EVENTS.includes(l.type) : !AUTH_EVENTS.includes(l.type));
+ return list.filter(l=>(!filter.user||String(l.user).includes(filter.user))&&(auth ? (!filter.kind||l.type===filter.kind) : (!(filter.functions||[]).length || filter.functions.includes(l.feature||l.type)))&&(!filter.from||l.at.slice(0,10)>=filter.from)&&(!filter.to||l.at.slice(0,10)<=filter.to)&&(!filter.result||l.result===filter.result)).sort((a,b)=>b.at.localeCompare(a.at));
+}
 function renderLogs() {
-  const body = SECURITY.logs.map((l, i) => `<tr>
-    <td style="white-space:nowrap;color:var(--text-2)">${esc(l.at)}</td>
-    <td>${esc(l.user)}</td>
-    <td><span class="pill">${esc(l.type)}</span></td>
-    <td style="white-space:nowrap;color:var(--text-2)">${esc(l.ip)}</td>
-    <td><span class="st ${l.result === '成功' ? 'ok' : 'ng'}"><span class="dot"></span>${esc(l.result)}</span></td>
-    <td class="hist done">${esc(l.note)}</td></tr>`).join('');
-  return `${cfgHeader('ログ設定', `<button class="btn" data-logexport="1"><span class="ico i-export"></span>ダウンロード</button>`)}
-  <div class="cfg-filters log-cfg">
-    <span class="log-cfg-h">ログ出力設定</span>
-    <div class="field"><span class="lbl">詳細度</span><select class="fld" data-logcfg="level">${LOG_LEVELS.map(([v, d]) => `<option value="${esc(v)}" ${LOG_CFG.level === v ? 'selected' : ''} title="${esc(d)}">${esc(v)}</option>`).join('')}</select></div>
-    <div class="field log-cfg-path"><span class="lbl">保存先</span><input class="fld mono" data-logcfg="path" value="${esc(LOG_CFG.path)}" placeholder="\\\\filesv01\\ログ" /></div>
-    <span class="spacer"></span>
-    <span class="log-cfg-note">${esc((LOG_LEVELS.find(([v]) => v === LOG_CFG.level) || [])[1] || '')}${LOG_CFG.updatedAt ? ` ／ 最終更新 ${esc(LOG_CFG.updatedAt)}` : ''}</span>
-    <button class="btn primary" data-logsave="1"><span class="ico i-save"></span>保存</button>
-  </div>
-  <div class="cfg-filters">
-    <div class="field"><span class="lbl">期間</span><div class="di"><input class="fld date" type="date" value="2026-10-01" /><span class="sep">-</span><input class="fld date" type="date" value="2026-10-14" /></div></div>
-    <div class="field"><span class="lbl">ログインユーザー名</span><input class="fld" placeholder="入力してください" /></div>
-    <div class="field"><span class="lbl">イベント</span><select class="fld"><option>選択してください</option>${[...new Set(SECURITY.logs.map((l) => l.type))].map((t) => `<option>${esc(t)}</option>`).join('')}</select></div>
-    <div class="field"><span class="lbl">操作結果</span><select class="fld"><option>選択してください</option><option>成功</option><option>失敗</option></select></div>
-    <span class="spacer"></span>
-    <button class="btn primary"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-    <button class="btn"><span class="ico i-refresh"></span>リセット</button>
-  </div>
-  <div class="tablewrap"><table>
-    <thead><tr><th style="width:170px">操作日時</th><th>ログインユーザー名</th><th style="width:120px">イベント種別</th><th style="width:140px">IPアドレス</th><th style="width:100px">操作結果</th><th>備考</th></tr></thead>
-    <tbody>${body}</tbody></table></div>`;
+ const auth=state.logTab!=='operation';const f=state.logDraft||(state.logDraft={});
+ const rows=logRows();const per=state.logPer||10;const pages=Math.max(1,Math.ceil(rows.length/per));const page=state.logPage=Math.max(1,Math.min(pages,state.logPage||1));
+ const body=rows.slice((page-1)*per,page*per).map(l=>`<tr><td class="nowrap">${esc(l.at)}</td><td>${esc(String(l.user||'').split('@')[0])}</td>${auth?`<td>${esc(l.type)}</td><td>${esc(l.ip||'—')}</td>`:`<td>${esc(l.feature||l.type)}</td><td>${esc(l.action||l.type)}</td><td>${esc(l.target||'—')}</td>`}<td><span class="st ${l.result==='成功'?'ok':'ng'}">${esc(l.result)}</span></td><td>${esc(l.note||'')}</td></tr>`).join('');
+ return `<div class="logs-topbar"><div class="home-tabs"><button class="home-tab ${auth?'on':''}" data-logtab="auth">認証ログ一覧</button><button class="home-tab ${!auth?'on':''}" data-logtab="operation">操作ログ一覧</button></div><button class="btn" id="logsDownload">ダウンロード</button></div><div class="cfg-filters logs-filters"><div class="field"><span class="lbl">期間</span><input class="fld" type="date" data-logfilter="from" value="${esc(f.from||'')}" /> ～ <input class="fld" type="date" data-logfilter="to" value="${esc(f.to||'')}" /></div><div class="field"><span class="lbl">ユーザーID</span><input class="fld" data-logfilter="user" value="${esc(f.user||'')}" /></div><div class="field"><span class="lbl">${auth?'イベント':'機能'}</span>${auth ? `<select class="fld" data-logfilter="kind"><option value="">選択してください</option>${AUTH_EVENTS.map(v=>`<option ${f.kind===v?'selected':''}>${esc(v)}</option>`).join('')}</select>` : wizMulti('logFunctions','機能を選択してください',logFunctions().map(v=>[v,v]),f.functions||[])}</div><div class="field"><span class="lbl">操作結果</span><select class="fld" data-logfilter="result"><option value="">すべて</option>${['成功','失敗'].map(v=>`<option ${f.result===v?'selected':''}>${v}</option>`).join('')}</select></div><div class="logs-filter-actions"><button class="btn primary" id="logsSearch">検索</button><button class="btn" id="logsReset" title="条件をクリアして再表示">更新</button></div></div><div class="tablewrap"><table><thead><tr><th>操作日時</th><th>ユーザーID</th>${auth?'<th>イベント種別</th><th>IPアドレス</th>':'<th>機能</th><th>操作種別</th><th>操作対象</th>'}<th>操作結果</th><th>備考</th></tr></thead><tbody>${body||`<tr><td colspan="${auth?6:7}" class="empty-cell">データがありません</td></tr>`}</tbody></table></div><div class="pager"><span>検索結果 ${rows.length} 件中</span><select id="logsPer">${[10,20,50].map(n=>`<option value="${n}" ${per===n?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-logpage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-logpage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="logsGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>`;
+}
+function bindLogs() {
+ const functionButton=document.querySelector('[data-wmsbtn="logFunctions"]');
+ if(functionButton)functionButton.onclick=()=>{state.dd=state.dd==='logFunctions'?null:'logFunctions';render();};
+ document.querySelectorAll('[data-wmsopt="logFunctions"]').forEach(cb=>cb.onchange=()=>{const selected=new Set(state.logDraft.functions||[]);cb.checked?selected.add(cb.value):selected.delete(cb.value);state.logDraft.functions=[...selected];render();});
+ document.querySelectorAll('[data-wmsdel^="logFunctions:"]').forEach(b=>b.onclick=e=>{e.stopPropagation();const value=b.dataset.wmsdel.slice('logFunctions:'.length);state.logDraft.functions=(state.logDraft.functions||[]).filter(v=>v!==value);render();});
+ const clearFunctions=document.querySelector('[data-wmsclear="logFunctions"]');if(clearFunctions)clearFunctions.onclick=()=>{state.logDraft.functions=[];render();};
+
+ document.querySelectorAll('[data-logtab]').forEach(b=>b.onclick=()=>{state.logTab=b.dataset.logtab;state.logPage=1;state.logDraft={};state.logApplied={};render();});
+ document.querySelectorAll('[data-logfilter]').forEach(el=>el.onchange=()=>{state.logDraft[el.dataset.logfilter]=el.value;});
+ const search=$('#logsSearch');if(search)search.onclick=()=>{state.logApplied={...state.logDraft};state.logPage=1;render();};
+ const reset=$('#logsReset');if(reset)reset.onclick=()=>{state.logDraft={};state.logApplied={};state.logPage=1;render();};
+ document.querySelectorAll('[data-logpage]').forEach(b=>b.onclick=()=>{state.logPage=Number(b.dataset.logpage);render();});
+ const per=$('#logsPer');if(per)per.onchange=()=>{state.logPer=Number(per.value);state.logPage=1;render();};
+ const go=$('#logsGoto');if(go)go.onchange=()=>{state.logPage=Number(go.value)||1;render();};
+ const dl=$('#logsDownload');if(dl)dl.onclick=()=>{const auth=state.logTab!=='operation';const header=auth?['操作日時','ユーザーID','イベント種別','IPアドレス','操作結果','備考']:['操作日時','ユーザーID','機能','操作種別','操作対象','操作結果','備考'];const rows=logRows().map(l=>[l.at,String(l.user||'').split('@')[0],...(auth?[l.type,l.ip||'—']:[l.feature||l.type,l.action||l.type,l.target||'—']),l.result,l.note||'']);csvDownload((auth?'認証ログ':'操作ログ')+'.csv',[header,...rows].map(r=>r.map(v=>csvEscape(v,',')).join(',')).join('\r\n'),'UTF-8');};
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -5924,9 +5918,9 @@ let WATCH = {
   on: true,
   /* ① 監視パス。after は取り込み成功後の扱い（del=削除 / keep=そのまま） */
   roots: [
-    { id: 'r1', tenant: 'tenant1', path: '\\\\filesv01\\取込', on: true, after: 'keep' },
-    { id: 'r2', tenant: 'tenant2', path: '\\\\filesv02\\取込', on: true, after: 'keep' },
-    { id: 'r3', tenant: 'tenant3', path: '\\\\filesv03\\取込', on: false, after: 'keep' },
+    { id: 'r1', tenant: 'tenant1', path: '\\\\filesv01\\取込', on: true, after: 'move' },
+    { id: 'r2', tenant: 'tenant2', path: '\\\\filesv02\\取込', on: true, after: 'move' },
+    { id: 'r3', tenant: 'tenant3', path: '\\\\filesv03\\取込', on: false, after: 'move' },
   ],
   /* ② 帳票タイプ 1 行。フォルダ名はパス直下の名前（全パス共通） */
   rules: [],
@@ -5945,7 +5939,7 @@ WATCH.rules = CATEGORY.map((c) => ({
 function watchRuleOf(catId) {
   let r = WATCH.rules.find((q) => q.cat === catId);
   if (!r) {
-    const c = byId(CATEGORY, catId) || {};
+    const c = byId(CATEGORY, catId) || byId(TICKET_TYPES, catId) || {};
     r = { cat: catId, folder: c.name || catId, pattern: '*.pdf', on: true };
     WATCH.rules.push(r);
   }
@@ -5980,8 +5974,7 @@ function shouldNotifyUpload(success) {
 function addUploadFailure(error) {
   if (!shouldNotifyUpload(false)) return;
   WATCH_ERRORS.unshift({...error, id: error.id || 'we' + Date.now(), at: error.at || nowStamp()});
-  noticeHasNew = true;
-  toast('自動アップロードに失敗しました：' + (error.file || error.path || ''), 'error');
+  SECURITY.logs.unshift({at:error.at || nowStamp(),user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:error.file,ip:'—',result:'失敗',note:[error.file,error.path,error.reason].filter(Boolean).join(' ／ ')});
   render();
 }
 
@@ -6016,18 +6009,17 @@ function renderWatch() {
   const x = WATCH;
   const row = watchRow;
 
-  const showMovePath = x.roots.some((r) => r.after === 'move');
   const pathRows = x.roots.map((r) => `<tr class="wr-root${r.on ? '' : ' off'}">
         <td><input class="fld mono" data-wroot-path="${r.id}" value="${esc(r.path)}" placeholder="\\\\filesv01\\取込" aria-label="監視パス" /></td>
-        <td><select class="fld" data-wroot-after="${r.id}" aria-label="処理後のファイル">${Object.keys(WATCH_ROOT_AFTER).map((v) => `<option value="${v}" ${(r.after || 'keep') === v ? 'selected' : ''}>${WATCH_ROOT_AFTER[v]}</option>`).join('')}</select></td>
-        ${showMovePath ? `<td>${r.after === 'move' ? `<input class="fld mono" data-wroot-move="${r.id}" value="${esc(r.moveTo || '')}" placeholder="移動先のフォルダパス" aria-label="移動先パス" />` : '<span class="muted">—</span>'}</td>` : ''}
+        <td><select class="fld" data-wroot-after="${r.id}" aria-label="処理後のファイル">${Object.entries(WATCH_ROOT_AFTER).map(([value,label])=>`<option value="${value}" ${(r.after || 'move')===value?'selected':''}>${label}</option>`).join('')}</select></td>
+        <td><input class="fld mono" data-wroot-move="${r.id}" value="${esc(r.moveTo || '')}" placeholder="処理後の保存先パス" aria-label="処理後のファイルパス" ${(r.after || 'move') === 'move' ? '' : 'disabled'} /></td>
         <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wrooton="${r.id}" role="switch" aria-checked="${r.on}" aria-label="この監視パスを有効にする"><span class="tgl-knob"></span></button></td>
         <td class="c"><button type="button" class="wp-del" data-wrootdel="${r.id}" aria-label="この監視パスを削除"${x.roots.length > 1 ? '' : ' disabled'}>×</button></td>
       </tr>`).join('');
 
   /* 帳票タイプ（ツリー第2階層）をそのまま並べる。業務シーンの階層は作らず、
      並び順だけ業務シーンの順に揃える。フォルダ名は全監視パスで共通。 */
-  const orderedCats = CATEGORY.slice().sort((a, b) => {
+  const orderedCats = CATEGORY.concat(TICKET_TYPES.filter(t=>t.autoWatchRule)).sort((a, b) => {
     const ba = (byId(BUSINESS, a.business) || {}).order || 0;
     const bb = (byId(BUSINESS, b.business) || {}).order || 0;
     return ba - bb || (a.order || 0) - (b.order || 0);
@@ -6058,13 +6050,13 @@ function renderWatch() {
   <div class="watch-body">
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="1 行＝1 監視パス（1 台の仮想マシン上の共有フォルダ）です。帳票タイプのフォルダはこのパスの直下に置きます。行ごとに有効／無効と、取り込み成功後のファイルの扱い（削除／そのまま／移動）を選べます。移動の場合は移動先パスを指定してください。">i</span></h3>
+        <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="1 行＝1 監視パス（1 台の仮想マシン上の共有フォルダ）です。帳票タイプのフォルダはこのパスの直下に置きます。処理後のファイルは移動・削除・そのままから選びます。移動の場合のみ保存先パスを入力できます。">i</span></h3>
         <div class="watch-tablewrap">
           <table class="watch-table wr-roots">
             <thead><tr>
               <th>パス</th>
               <th style="width:150px">処理後のファイル</th>
-              ${showMovePath ? '<th>移動先パス</th>' : ''}
+              <th>処理後のファイルパス</th>
               <th class="c" style="width:52px">有効</th>
               <th class="c" style="width:40px"></th>
             </tr></thead>
@@ -6112,7 +6104,7 @@ function renderWatch() {
       </section>
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">通知設定<span class="info-i" data-tip="通知を有効にすると、条件に一致した自動アップロードの結果を「お知らせ」に表示します。">i</span></h3>
+        <h3 class="watch-sec-head">ログ記録設定<span class="info-i" data-tip="通知を有効にすると、条件に一致した自動アップロードの結果をログに記録します。">i</span></h3>
         <div class="watch-fields">
           ${row('通知する', watchToggle('notify', x.notify))}
           ${row('通知条件', `<select class="fld" data-wf="notifyOn" ${x.notify ? '' : 'disabled'}>${Object.entries(WATCH_NOTIFY_ON).map(([v,label]) => `<option value="${v}" ${x.notifyOn === v ? 'selected' : ''}>${label}</option>`).join('')}</select>`, true)}
@@ -6130,7 +6122,7 @@ function wizMulti(id, placeholder, opts, current, hint) {
   const list = current || [];
   const open = state.dd === id;
   const label = (v) => (opts.find((o) => o[0] === v) || [])[1] || v;
-  const MAX_CHIPS = 1;
+  const MAX_CHIPS = id === 'logFunctions' ? 2 : 1;
   const chips = list.slice(0, MAX_CHIPS).map((v) =>
     `<span class="mschip">${esc(label(v))}<button type="button" class="mschip-x" data-wmsdel="${id}:${v}" aria-label="${esc(label(v))}を外す">×</button></span>`).join('')
     + (list.length > MAX_CHIPS ? `<span class="mschip more">+${list.length - MAX_CHIPS}</span>` : '');
@@ -6231,6 +6223,33 @@ function sceneRenameDialog() {
 }
 
 /** 業務シーンの編集（① AI分類設定 → ② 効果テスト／原型 ClassificationWizardPage 準拠） */
+function sceneForLayout(layoutId) {
+ const layout=byId(LAYOUT,layoutId);
+ const type=TICKET_TYPES.find(t=>layoutIdOfTicketType(t)===layoutId);
+ return BIZ_SCENES.find(sc=>(sc.formIds||[]).some(id=>{
+   const form=byId(CLASSIFY_FORMS,id);
+   return id===(type&&type.id) || (form && ((type&&form.name===type.name)||(layout&&form.name===layout.name)));
+ })) || null;
+}
+function sceneCanAccessFile(file,uid) {
+ const me=uid || state.currentUser;
+ if(isTenantAdmin(me))return true;
+ const scene=sceneForLayout(file.layout);
+ if(!scene)return false;
+ return (scene.userIds||[]).includes(me) && sceneAccessUsers(scene).some(u=>u.id===me);
+}
+function sceneAccessUsers(sc) {
+ const ids = expandGroupSelection(sc.departmentIds || []);
+ return USERS.filter(u=>GROUPS.some(g=>ids.includes(g.id) && (g.userIds||[]).includes(u.id)));
+}
+function renderSceneAccess(sc) {
+ return `<div class="wiz-field"><span class="wl req">データ権限組織</span>${wizMulti('sceneDepartments','組織を選択してください',groupOptsWithDepth(),sc.departmentIds || [])}</div><div class="wiz-field"><span class="wl req">データ権限ユーザー</span>${(sc.departmentIds||[]).length ? wizMulti('sceneUsers','ユーザーを選択してください',sceneAccessUsers(sc).map(u=>[u.id,u.name]),sc.userIds||[]) : '<input class="fld" disabled placeholder="先に組織を選択してください" />'}</div>`;
+}
+function bindSceneAccess() {
+ document.querySelectorAll('[data-wmsbtn]').forEach(b=>{if(!b.dataset.wmsbtn.startsWith('scene'))return;b.onclick=()=>{state.dd=state.dd===b.dataset.wmsbtn?null:b.dataset.wmsbtn;render();placeOpenDropdown();};});
+ document.querySelectorAll('[data-wmsopt]').forEach(cb=>{if(!cb.dataset.wmsopt.startsWith('scene'))return;cb.onchange=()=>{const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;const key=cb.dataset.wmsopt==='sceneDepartments'?'departmentIds':'userIds'; const set=new Set(sc[key]||[]);cb.checked?set.add(cb.value):set.delete(cb.value);sc[key]=[...set]; if(key==='departmentIds')sc.userIds=(sc.userIds||[]).filter(id=>sceneAccessUsers(sc).some(u=>u.id===id));render();placeOpenDropdown();};});
+ ['wmsclear','wmsdel'].forEach(attr=>document.querySelectorAll('[data-'+attr+']').forEach(b=>{if(!b.dataset[attr].startsWith('scene'))return;b.onclick=e=>{e.stopPropagation();const [id,value]=b.dataset[attr].split(':');const sc=byId(BIZ_SCENES,state.sceneId);const key=id==='sceneDepartments'?'departmentIds':'userIds';sc[key]=value?(sc[key]||[]).filter(v=>v!==value):[];if(key==='departmentIds')sc.userIds=(sc.userIds||[]).filter(uid=>sceneAccessUsers(sc).some(u=>u.id===uid));render();};}));
+}
 function sceneEditor(sc) {
   const stepNo = state.sceneStep || 1;
   const bar = '<div class="wiz">' + ['AI分類設定', '効果テスト'].map((lb, i) =>
@@ -6243,6 +6262,7 @@ function sceneEditor(sc) {
     + `<div class="wiz-field"><span class="wl">業務シーン ID</span><div class="wv code">${esc(sc.sceneId)}</div></div>`
     + `<label class="wiz-field"><span class="wl req">業務シーン名</span><input class="fld w100" id="scName" value="${esc(sc.name)}" /></label>`
     + `<label class="wiz-field"><span class="wl">業務シーンの説明</span><input class="fld w100" id="scDesc" placeholder="業務シーンの説明を入力してください" value="${esc(sc.desc || '')}" /></label>`
+    + renderSceneAccess(sc)
     + '</div>'
     : sceneTestPane(sc);
 
@@ -6294,6 +6314,8 @@ function renderBizScenes() {
 function validateSceneStep1(sc) {
   if (!sc) return false;
   if (!(sc.name || '').trim()) { toast('業務シーン名を入力してください'); return false; }
+  if (!(sc.departmentIds||[]).length) { toast('データ権限組織を選択してください'); return false; }
+  if (!(sc.userIds||[]).length) { toast('データ権限ユーザーを選択してください'); return false; }
   return true;
 }
 
@@ -6723,7 +6745,7 @@ function typePane(step, t) {
       '<button type="button" class="fab" id="tpDescAi" title="AIで説明文を生成"><span class="ico i-scan"></span></button>',
       '<button type="button" class="fab plain" id="tpDescClear" title="クリア"><span class="ico i-delete"></span></button>',
       '</div></div></label>',
-      groupBlock,
+      '',
     ].join('');
   }
   if (step === 2) {
@@ -7236,7 +7258,7 @@ function bindTicketDetail() {
         if (saved) state.exportCfg = Object.assign({}, state.exportCfg, saved);
         /* キャンセルで戻せるように、開いた時点の設定を控えておく */
         state.exportCfgSnapshot = Object.assign({}, state.exportCfg);
-        state.exportOpen = true; render(); toast('エクスポート設定を開きました（帳票タイプのフィールドマッピング）'); return;
+        state.exportOpen = true; render(); return;
       }
       const msgs = {
         'dl-tpl': 'テンプレートをダウンロードしました（Demo）',
@@ -7461,7 +7483,7 @@ function renderPermissions() {
   }).join('');
 
   /* 上表：フォルダ（業務シーン → 帳票タイプ）単位で「閲覧→修正→確認」。
-   * 下表：業務シーン単位のアップロード。セルクリックで編集。操作権限とは別テーブル。 */
+   * 下表：業務シーン単位のアップロード。セルクリックで編集。メニュー権限とは別テーブル。 */
   return `${cfgHeader('帳票権限管理', '')}
   <h3 class="cfg-sub">フォルダ権限（業務シーン → 帳票タイプ）<span class="info-i" data-tip="ファイルツリーのフォルダがそのまま権限の単位です。業務シーンの行は配下の帳票タイプすべてに同じ値を書き込み、帳票タイプの行で個別に変えられます。閲覧を外すと、そのフォルダの帳票は一覧にも出ません。">i</span></h3>
   <div class="tablewrap"><table class="fp-table">
@@ -7972,8 +7994,8 @@ function render() {
   const prevMainEl = app.querySelector('.maincol');
   const prevMainTop = prevMainEl ? prevMainEl.scrollTop : 0;
   const prevWinY = window.scrollY || 0;
-  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
-  /* 操作権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
+  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
+  /* メニュー権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
   if (route !== 'review' && !canReachPage(route)) {
     const fallback = ['home', 'upload', 'result', 'myTasks', 'ticketDetail', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].find((p) => canReachPage(p)) || 'home';
     state.page = fallback;
@@ -7991,7 +8013,7 @@ function render() {
   }
   const isTypeList = false;
   const isTypeDetail = route === 'ticketDetail';      // 左：タイプ一覧／右：Step1〜4
-  const isCfg = ['permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices'].includes(route);
+  const isCfg = ['permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(route);
   const isScene = route === 'bizScenes';        // 業務シーン設定（左：業務シーンリスト／右：ガイド or 編集）
   const isFullPane = isTypeDetail || isScene || route === 'notices';
   const noSidePane = CFG_NO_SIDEBAR.includes(route);   // 利用設定の各画面：左の設定メニューを出さず全幅で見せる
@@ -8003,7 +8025,7 @@ function render() {
       ${renderTopNav()}
     </nav>
     <div class="topright">
-      <button type="button" class="notice-bell" id="noticeBell" aria-label="お知らせ${noticeHasNew ? '（新しいエラーがあります）' : ''}" title="お知らせ"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 17h14l-2-3V9a5 5 0 0 0-10 0v5z"/><path d="M10 20h4"/></svg>${noticeHasNew ? '<span class="notice-dot"></span>' : ''}</button>
+
       ${(() => {
         const me = currentProfile();
         const actors = DEMO_ACTORS.map((a) => {
@@ -8042,7 +8064,6 @@ function render() {
       })()}
     </div>
   </header>
-  ${renderDemoBar()}
   ${renderTabbar()}
   <main class="layout ${(isHome || isUpload || isMyTasks || isFullPane) ? 'layout-home' : (noSidePane || isTypeList ? 'layout-pane layout-noside' : 'layout-pane')}">
     ${(isHome || isUpload || isMyTasks || isReview || isFullPane || noSidePane || isTypeList) ? '' : (isCfg ? renderCfgNav() : renderSidebarPane())}
@@ -8069,6 +8090,7 @@ function render() {
   ${renderDlMenu()}
   ${renderFlowDialog()}
   ${renderAccessKeyDialog()}
+  ${renderOrganizationDelete()}
   ${renderUserAddDialog()}
   ${renderReviewConfirmLockDialog()}
   ${renderReviewRequiredDialog()}
@@ -8082,6 +8104,8 @@ function render() {
   }
   bind();
   applyActionPermissions();
+  bindSceneAccess();
+  bindLogs();
 }
 
 /* ============================== 6. イベント ============================== */
@@ -8239,6 +8263,7 @@ function bindTree(treeEl) {
     const type = node.dataset.type, id = node.dataset.id, key = type + ':' + id;
     if (e.target.closest('[data-rename]')) {
       e.stopPropagation();
+      if (!canRenameTree()) { toast('名称を変更する権限がありません','error'); return; }
       if (type !== 'file') { toast('業務シーン・帳票タイプ名は変更できません'); return; }
       startRename(node, type, id);
       return;
@@ -9179,7 +9204,7 @@ function bindCfgPages() {
     document.querySelectorAll('[data-wroot-move]').forEach((el) => {
       el.oninput = () => {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootMove);
-        if (r) r.moveTo = el.value;
+        if (r) { r.moveTo = el.value; r.after = 'move'; }
       };
     });
     document.querySelectorAll('[data-wroot-after]').forEach((el) => {
@@ -9207,7 +9232,7 @@ function bindCfgPages() {
     if (addRoot) addRoot.onclick = () => {
       /* 1 行＝1 監視パス。テナントは既存行の紐付けを引き継ぐ */
       const t = (WATCH.roots[0] && WATCH.roots[0].tenant) || (TENANTS[0] || {}).id || 'tenant1';
-      WATCH.roots.push({ id: `r${Date.now()}`, tenant: t, path: '', on: true, after: 'keep' });
+      WATCH.roots.push({ id: `r${Date.now()}`, tenant: t, path: '', moveTo: '', on: true, after: 'move' });
       render();
     };
     /* 帳票タイプ別ルール：入力は即時反映（描き直すとフォーカスが飛ぶ）、トグル類は描き直す */
@@ -9389,6 +9414,8 @@ function bindCfgPages() {
     if (back) back.onclick = (e) => { if (e.target === back) closeDlg(); };
     const x = $('#userAddClose'); if (x) x.onclick = closeDlg;
     const cancel = $('#userAddCancel'); if (cancel) cancel.onclick = closeDlg;
+    const org = $('#userOrganization');
+    if (org) org.onchange = () => { USER_ADD_DRAFT.groupIds = [org.value]; };
     const nm = $('#userAddName'); if (nm) nm.oninput = () => { USER_ADD_DRAFT.name = nm.value; };
     const em = $('#userAddEmail'); if (em) em.oninput = () => { USER_ADD_DRAFT.email = em.value; };
     /* 個人の権限：ドロップダウンで複数選択（グループ継承分は別表示なので触らない） */
@@ -9417,11 +9444,13 @@ function bindCfgPages() {
     const ok = $('#userAddOk');
     if (ok) ok.onclick = () => {
       const d = USER_ADD_DRAFT;
+      const orgSelect = $('#userOrganization');
+      if (orgSelect) d.groupIds = [orgSelect.value];
       if (!d.name.trim()) { toast('ユーザー名を入力してください'); return; }
-      if (!d.email.trim()) { toast('ログインユーザー名を入力してください'); return; }
+      if (!d.email.trim()) { toast('ユーザーIDを入力してください'); return; }
       const saveGroups = (uid) => {
         if (!d.groupIds) return;
-        const ids = expandGroupSelection(d.groupIds);
+        const ids = d.groupIds;
         GROUPS.forEach((g) => {
           g.userIds = (g.userIds || []).filter((id) => id !== uid);
           if (ids.includes(g.id)) g.userIds.push(uid);
@@ -9446,7 +9475,7 @@ function bindCfgPages() {
         return;
       }
       /* 追加：帳票権限側のユーザー（USERS）にも同じ人物を登録して uid で結ぶ。
-       * 所属・操作権限はユーザーグループ側で後から付ける。 */
+       * 所属・メニュー権限はユーザーグループ側で後から付ける。 */
       const uid = 'u' + Date.now();
       USERS.push({ id: uid, name: d.name.trim() });
       const ent = {
@@ -9455,6 +9484,7 @@ function bindCfgPages() {
         name: d.name.trim(),
         email: d.email.trim(),
         role: role ? role.name : 'アップロード者',
+        soloPermIds: (d.soloPermIds || []).slice(),
         dataPerm: d.dataPerm,
         created: nowStamp(),
         status: d.status,
@@ -9504,9 +9534,10 @@ function bindCfgPages() {
         mode: 'edit',
         id: u.id,
         uid: u.uid,
+        groupIds: GROUPS.filter(g=>(g.userIds||[]).includes(u.uid)).map(g=>g.id),
         name: u.name,
         email: String(u.email || '').split('@')[0],
-        soloPermIds: u.soloPermIds || [],
+        soloPermIds: (u.soloPermIds || []).slice(),
         dataPerm: u.dataPerm || DATA_PERMISSIONS[0],
         status: u.status,
       };
@@ -9600,7 +9631,7 @@ function bindCfgPages() {
     render();
     toast('絞り込み条件をリセットしました');
   };
-  /* 操作権限（システムレベル）ダイアログ */
+  /* メニュー権限（システムレベル）ダイアログ */
   document.querySelectorAll('[data-rolemenu]').forEach((b) => {
     b.onclick = () => {
       const id = b.dataset.rolemenu;
@@ -9737,28 +9768,9 @@ function bindCfgPages() {
       render();
     };
   });
-  document.querySelectorAll('[data-grpdel]').forEach((b) => {
-    b.onclick = () => {
-      const g = byId(GROUPS, b.dataset.grpdel);
-      if (!g) return;
-      /* 最上位（電算）は消せない */
-      if (g.root) { toast('最上位の「電算」は削除できません'); return; }
-      const used = groupTickets(g.id).length;
-      const msg = used
-        ? `「${g.name}」を削除しますか？\n${used} 件の帳票タイプで担当に設定されています。削除するとそれらは未設定になります。`
-        : `「${g.name}」を削除しますか？`;
-      if (!window.confirm(msg)) return;
-      /* 帳票権限表からも参照を外す（宙に浮いた担当を残さない） */
-      Object.keys(TICKET_PERMS).forEach((lid) => {
-        const p = TICKET_PERMS[lid];
-        Object.keys(p).forEach((k) => { p[k] = (p[k] || []).filter((x) => x !== g.id); });
-      });
-      const i = GROUPS.findIndex((x) => x.id === g.id);
-      if (i >= 0) GROUPS.splice(i, 1);
-      render();
-      toast('グループを削除しました');
-    };
-  });
+  document.querySelectorAll('[data-grpdel]').forEach(b=>b.onclick=()=>{const g=byId(GROUPS,b.dataset.grpdel);if(!g||g.root)return;state.organizationDelete=g.id;state.groupMenu=null;render();});
+  const orgCancel=$('#orgDeleteCancel');if(orgCancel)orgCancel.onclick=()=>{state.organizationDelete=null;render();};
+  const orgOk=$('#orgDeleteOk');if(orgOk)orgOk.onclick=()=>{deleteOrganization(state.organizationDelete);state.organizationDelete=null;render();toast('組織を削除しました');};
 
   /* グループ作成／編集ダイアログ */
   if (state.groupForm) {
@@ -9815,22 +9827,20 @@ function bindCfgPages() {
     const gok = $('#grpFormOk');
     if (gok) gok.onclick = () => {
       const f = state.groupForm;
-      if (!String(f.name || '').trim()) { toast('グループ名を入力してください'); return; }
+      if (!String(f.name || '').trim()) { toast('組織名を入力してください'); return; }
       const exist = byId(GROUPS, f.id);
       const permIds = (f.permIds || []).slice();
       const permId = permIds[0] || 'R4';
       if (exist) {
         exist.name = f.name.trim();
         exist.desc = f.desc || '';
-        exist.userIds = (f.userIds || []).slice();
-        exist.permIds = permIds;
-        exist.permId = permId;
+
       } else {
-        GROUPS.push({ id: f.id, name: f.name.trim(), kind: '閲覧', desc: f.desc || '', userIds: (f.userIds || []).slice(), permIds, permId, parentId: f.parentId || null });
+        GROUPS.push({ id: f.id, name: f.name.trim(), kind: '閲覧', desc: f.desc || '', userIds: [], permIds: [], permId: null, parentId: f.parentId || null });
       }
       state.groupForm = null;
       render();
-      toast('グループを保存しました');
+      toast('部門を保存しました');
     };
   }
 
@@ -9909,7 +9919,7 @@ function bindCfgPages() {
       const idx = (arr) => arr.findIndex((x) => x.id === id);
       if (act === 'addType') {
         cfgState.ticketQ = '';
-        const nt = { id: 'T' + Date.now(), name: `新規タイプ_${TICKET_TYPES.length + 1}`, type: '非定型帳票', project: 0, updatedAt: nowStamp(), user: '佐藤 美子' };
+        const nt = { id: 'T' + Date.now(), autoWatchRule: true, name: `新規タイプ_${TICKET_TYPES.length + 1}`, type: '非定型帳票', project: 0, updatedAt: nowStamp(), user: '佐藤 美子' };
         TICKET_TYPES.unshift(nt);
         state.typeId = nt.id;
         state.typeStep = 1;
@@ -9934,7 +9944,7 @@ function bindCfgPages() {
   });
 }
 
-/** 権限系ダイアログ（権限作成／編集・操作権限・帳票権限セル）のイベント */
+/** 権限系ダイアログ（権限作成／編集・メニュー権限・帳票権限セル）のイベント */
 function bindPermDialogs() {
   const closeAll = () => { state.permForm = null; state.menuPerm = null; state.permCell = null; render(); };
   const wire = (backId, closeIds) => {
@@ -9977,7 +9987,7 @@ function bindPermDialogs() {
     };
   }
 
-  /* ── 操作権限（システムレベルの画面到達権限ツリー） ── */
+  /* ── メニュー権限（システムレベルの画面到達権限ツリー） ── */
   const m = state.menuPerm;
   if (m) {
     wire('#menuPermBack', ['menuPermClose', 'menuPermCancel']);
@@ -9989,7 +9999,7 @@ function bindPermDialogs() {
     document.querySelectorAll('[data-mpall]').forEach((b) => {
       b.onclick = () => {
         const allOn = MENU_LEAVES.length > 0 && MENU_LEAVES.every((id) => m.checked.includes(id));
-        m.checked = allOn ? PERMISSION_MODULES.map(module=>module.children[0].id) : MENU_LEAVES.slice();
+        m.checked = allOn ? [] : MENU_LEAVES.slice();
     render();
       };
     });
@@ -10024,9 +10034,9 @@ function bindPermDialogs() {
   });
     const ok = $('#menuPermOk');
     if (ok) ok.onclick = () => {
-      MENU_PERMS[m.roleId] = [...syncOpFixConfirm(m.checked.concat(PERMISSION_MODULES.map(module=>module.children[0].id)))];
+      MENU_PERMS[m.roleId] = [...syncOpFixConfirm(m.checked)];
       state.menuPerm = null; render();
-      toast('操作権限を保存しました');
+      toast('メニュー権限を保存しました');
     };
   }
 
@@ -10450,7 +10460,9 @@ function bindUploadPanel() {
   // 展開／折りたたみ・フィルタ開閉・ドロワー
 }
 
+function canRenameTree(uid) { return canReachMenu('settings-scenes',uid); }
 function startRename(nodeEl, type, id) {
+  if (!canRenameTree()) { toast('名称を変更する権限がありません','error'); return; }
   /* ツリーではファイル名のみ変更可（業務シーン・帳票タイプはマスタ固定） */
   if (type !== 'file') {
     toast('業務シーン・帳票タイプ名は変更できません');
@@ -10463,7 +10475,7 @@ function startRename(nodeEl, type, id) {
   input.className = 'rename'; input.value = current;
   label.replaceWith(input); input.focus(); input.select();
   const commit = (save) => {
-    if (save && input.value.trim()) {
+    if (save && canRenameTree() && input.value.trim()) {
       state.rename[key] = input.value.trim();
       toast('ファイル表示名を変更しました（表示のみ）');
     }
@@ -10492,7 +10504,7 @@ function applyHash() {
     else if (k === 'rename') { const [target, text] = val.split('|'); state.rename[target] = text; }
     else if (k === 'f') { const [key, v2] = val.split(':'); state.filters[key] = v2; }
     else if (k === 'open') state.filterOpen = true;
-    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices'].includes(val) ? val : 'result';
+    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(val) ? val : 'result';
     else if (k === 'review' && val) {
       state.reviewId = val;
       state.page = 'review';
@@ -10562,13 +10574,32 @@ function seedAdditionalDemoData() {
   });
 }
 
+function initializePhaseOneAccess() {
+ if(state.phaseOneInitialized)return;state.phaseOneInitialized=true;
+ DEMO_ACTORS.forEach(a=>{a.hint='割り当てられたメニューにアクセスできます';});
+ ENT_USERS.forEach(u=>{u.soloPermIds=rolesFromOrganizationSeed(u.uid);});
+ const departmentNames={gu:'受付部',gc:'確認部',gb:'業務管理部',gv:'総務部',gk:'分類担当部',gr:'読取担当部',ge:'出力担当部',gf:'データ修正部',gm:'システム管理部'};
+ GROUPS.forEach(g=>{g.permIds=[];g.permId=null;g.kind='';g.roles=[];if(departmentNames[g.id])g.name=departmentNames[g.id];});
+ const assigned=new Set();GROUPS.slice().sort((a,b)=>Number(!!a.root)-Number(!!b.root)).forEach(g=>{g.userIds=(g.userIds||[]).filter(uid=>{if(assigned.has(uid))return false;assigned.add(uid);return true;});});
+ const rootOrg=GROUPS.find(g=>g.root)||GROUPS[0];if(rootOrg)ENT_USERS.forEach(u=>{if(!assigned.has(u.uid)){rootOrg.userIds.push(u.uid);assigned.add(u.uid);}});
+ for(let i=0;i<24;i++){SECURITY.logs.push({at:`2026-10-30 09:${String(59-i).padStart(2,'0')}:00`,user:['admin','sato','suzuki'][i%3],type:AUTH_EVENTS[i%4],ip:'172.16.10.'+(20+i),result:i%7===0?'失敗':'成功',note:i%7===0?'ユーザー名またはパスワードを確認してください。':''});}
+ SECURITY.logs.forEach(l=>{l.user=String(l.user||'').split('@')[0];if(!AUTH_EVENTS.includes(l.type)){l.feature=logFunctions().includes(l.type)?l.type:'読取結果一覧';l.action=l.type;l.target=l.target||'';}});
+ WATCH_ERRORS.forEach(e=>{if(!SECURITY.logs.some(l=>l.uploadErrorId===e.id))SECURITY.logs.push({uploadErrorId:e.id,at:e.at,user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:e.file,ip:'—',result:'失敗',note:[e.file,e.path,e.reason].join(' ／ ')});});
+ BIZ_SCENES.forEach(sc=>{sc.departmentIds=GROUPS.filter(g=>(g.userIds||[]).some(uid=>(sc.userIds||[]).includes(uid))).map(g=>g.id);});
+}
+function rolesFromOrganizationSeed(uid) {
+ const user=entUserByUid(uid);return [...new Set(((user&&user.soloPermIds)||[]).concat((ROLE_MEMBERS.R1||[]).includes(uid)?['R1']:[],GROUPS.filter(g=>(g.userIds||[]).includes(uid)).flatMap(g=>permIdsOfGroup(g))))];
+}
+
 applyHash();
 seedAdditionalDemoData();
+initializePhaseOneAccess();
 window.addEventListener('hashchange', () => { applyHash(); render(); });
 if (state._seedClassify) { const c = state._seedClassify; delete state._seedClassify; startClassifying(c); }
 render();
 window.__demo = {
   state,
+  sceneCanAccessFile,
   WATCH,
   watchRuleOf,
   FILES_DATA,

@@ -165,8 +165,8 @@ test('served bundle: 自動アップロードは監視パスごとの処理後�
   const run = servedApp();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', '通知設定']);
-  assert.equal((html.match(/data-wroot-after=/g) || []).length, run('WATCH.roots.length'));
+  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'ログ記録設定']);
+  assert.equal((html.match(/data-wroot-move=/g) || []).length, run('WATCH.roots.length'));
   assert.doesNotMatch(html, /data-wroot-tenant=|data-wroot-done=|宛先メール|data-wf="notifyMail"/);
   assert.doesNotMatch(html, /通知方法|data-wf-check/);
   assert.doesNotMatch(html, /Webhook URL/);
@@ -208,60 +208,14 @@ test('served bundle: ホームに自動アップロードのダッシュボー�
   assert.doesNotMatch(html, /既読|未読|対応済み/);
 });
 
-test('served operation policy keeps 55 unique actions and confirmation dependencies', () => {
-  const run = servedApp();
-  assert.equal(run('PERMISSION_MODULES.flatMap(m=>m.children).length'),55);
-  assert.equal(run('new Set(PERMISSION_MODULES.flatMap(m=>m.children.map(c=>c.id))).size'),55);
-  assert.equal(run("[...syncOpFixConfirm(['op-confirm'])].includes('op-fix')"),true);
-  assert.equal(run("[...syncOpFixConfirm(['op-confirm'])].includes('op-history')"),false);
-  assert.equal(run("[...syncOpFixConfirm(['op-confirm'])].includes('op-export')"),false);
-  assert.equal(run("GROUPS.filter(g=>g.root).some(g=>g.permId==='R1')"),false);
-});
-test('served policy honors custom read, edit and confirm roles after runtime patches', () => {
-  const run = servedApp();
-  run("GROUPS.forEach(g=>g.userIds=(g.userIds||[]).filter(id=>id!=='u5')); entUserByUid('u5').soloPermIds=['custom']; MENU_PERMS.custom=['result-view']; state.currentUser='u5';");
-  assert.equal(run("canReachPage('result')"),true);
-  assert.equal(run("userHasOp('fix') || userHasOp('confirm') || userHasOp('export')"),false);
-  run("MENU_PERMS.custom=['op-fix']");
-  assert.equal(run("userHasOp('fix')"),true);
-  assert.equal(run("userHasOp('confirm')"),false);
-  run("MENU_PERMS.custom=['op-confirm']");
-  assert.equal(run("userHasOp('fix') && userHasOp('confirm')"),true);
-  assert.equal(run("userHasOp('history') || userHasOp('export')"),false);
-});
-
-test('default mock roles use canonical grants; confirmation, history and download are distinct', () => {
-  const run = servedApp();
-  const grants = JSON.parse(run('JSON.stringify(defaultOperationGrants())'));
-  assert.ok(grants.R3.includes('op-confirm') && grants.R3.includes('op-fix') && grants.R3.includes('op-history'));
-  assert.ok(!grants.R3.includes('op-export'));
-  assert.ok(grants.R11.includes('op-fix') && !grants.R11.includes('op-confirm'));
-  assert.ok(grants.R10.includes('op-export') && !grants.R10.includes('op-fix'));
-  assert.ok(grants.R6.includes('result-view') && !grants.R6.includes('op-history'));
-  assert.ok(grants.R7.includes('op-classify') && !grants.R7.includes('op-upload'));
-  for (const ids of Object.values(grants)) for (const id of ids) assert.ok(run(`MENU_LEAVES.includes(${JSON.stringify(id)})`), id);
-});
-
-test('demo viewer has read access to every configured menu without write or download actions', () => {
-  const run = servedApp();
-  assert.equal(run("PERMISSION_MODULES.every(m=>defaultOperationGrants().R6.includes(m.children[0].id))"),true);
-  assert.equal(run("defaultOperationGrants().R6.length"),12);
-  assert.equal(run("defaultOperationGrants().R6.some(id=>['op-fix','op-confirm','op-export','op-delete','permission-assign'].includes(id))"),false);
-  assert.equal(run("GROUPS.find(g=>g.id==='gv').userIds.join(',')"),'u4');
-});
-
-test('business administrator sees all menus while operational actions remain ungranted', () => {
-  const run = servedApp();
-  assert.equal(run('PERMISSION_MODULES.every(m=>defaultOperationGrants().R2.includes(m.children[0].id))'),true);
-  assert.equal(run("defaultOperationGrants().R2.some(id=>['op-upload','op-read','op-fix','op-confirm','op-export','op-delete'].includes(id))"),false);
-  assert.equal(run("defaultOperationGrants().R2.includes('watch-edit')"),true);
-});
-
-test('every demo role can enter every menu without gaining settings or business operations', () => {
-  const run = servedApp();
-  for (const uid of ['u1','u2','u3','u4','u5','u6','u7','u8','u10']) {
-    assert.equal(run(`PERMISSION_MODULES.every(m=>canReachMenu(m.id,'${uid}'))`),true,uid);
-  }
-  assert.equal(run("userHasOp('settings','u4')"),false);
-  assert.equal(run("userHasOp('confirm','u4') || userHasOp('export','u4')"),false);
+test('served phase-one menus omit business buttons and use user-level grants and organization fields', () => {
+ const run=servedApp();
+ const leaves=JSON.parse(run('JSON.stringify(MENU_LEAVES)'));
+ assert.ok(leaves.includes('usage-groups-edit'));
+ assert.ok(!leaves.includes('op-confirm'));
+ const menu=run("state.menuPerm={roleId:'R1',checked:MENU_LEAVES.slice(),closed:[]};menuPermDialog()");
+ assert.match(menu,/メニュー権限/);assert.match(menu,/部門編集/);assert.doesNotMatch(menu,/data-mpnode="op-export"/);
+ const org=run("state.groupForm={mode:'edit',name:'総務部',parentId:'groot'};groupFormDialog()");
+ assert.match(org,/org-parent-readonly/);assert.doesNotMatch(org,/data-gfopt/);
+ const logs=run('renderLogs()');assert.match(logs,/認証ログ一覧/);assert.match(logs,/操作ログ一覧/);
 });

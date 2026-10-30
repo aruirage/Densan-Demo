@@ -1629,7 +1629,7 @@ def apply_roles_9(src):
     # テナントは 1 つに固定（客户：既定は 1 つでよい）
     src = re.sub(r"const TENANTS = \[[\s\S]*?\];", "const TENANTS = [ { id: 'tenant1', name: '青葉市', note: '本番' } ];", src, count=1)
     # 監視パスは 1 つだけ（客户）。処理後のファイルはパス行ごとに持つ
-    src = re.sub(r"roots: \[[\s\S]*?\],\n", "roots: [ { id: 'r1', tenant: 'tenant1', path: '\\\\\\\\filesv01\\取込', on: true, after: 'keep' }, ],\n", src, count=1)
+    src = re.sub(r"roots: \[[\s\S]*?\],\n", "roots: [ { id: 'r1', tenant: 'tenant1', path: '\\\\\\\\filesv01\\取込', on: true, after: 'move' }, ],\n", src, count=1)
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
@@ -2701,6 +2701,7 @@ def patched_app_js(path):
     patched = apply_group_role_label(patched)
     patched = apply_default_admin_user(patched)
     patched = apply_menu_tree_groups(patched)
+    # phase one: organizations do not grant roles
     patched = apply_group_nodes(patched)
     patched = apply_export_filename(patched)
     patched = apply_export_foot(patched)
@@ -2710,7 +2711,7 @@ def patched_app_js(path):
     patched = apply_grp_attr(patched)
     patched = apply_menu_label_fix(patched)
     patched = apply_menu_trim(patched)
-    patched = apply_group_kind_input(patched)
+    # organization form is name-only
     patched = apply_full_perm_acts(patched)
     # 権限でメニューを出し分けるので、ナビの到達判定は無効化しない（旧: apply_admin_nav）
     patched = apply_user_group_checks(patched)
@@ -2795,6 +2796,14 @@ MENU_PERMS = defaultOperationGrants();
             patched = patched + "\n" + _fn + "\n"
     except Exception:
         pass
+    # Legacy mock patches run after the initial render; finalize phase-one organization names.
+    patched += """
+if (typeof initializePhaseOneAccess === 'function') {
+  const names = {gu:'受付部',gc:'確認部',gb:'業務管理部',gv:'総務部',gk:'分類担当部',gr:'読取担当部',ge:'出力担当部',gf:'データ修正部',gm:'システム管理部'};
+  GROUPS.forEach(g=>{if(names[g.id])g.name=names[g.id];g.permId=null;g.permIds=[];g.kind='';g.roles=[];});
+  if (typeof document !== 'undefined' && document.getElementById('app')) render();
+}
+"""
     return patched.encode('utf-8')
 
 
