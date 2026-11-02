@@ -4419,18 +4419,19 @@ function seedExportSnapshots() {
     ids.forEach((id) => {
       const f = byId(FILES_DATA, id);
       if (!f) return;
-      const key = f.layout || '';
+      const key = (byId(LAYOUT, f.layout) || {}).category || f.layout || '';
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(f);
     });
     let count = 0;
     const entries = [];
     const usedNames = new Set();
-    groups.forEach((files) => {
+    groups.forEach((files, categoryId) => {
       const built = buildExportCsv(files.map((f) => f.id));
       if (!built) return;
       const type = ticketTypeOfFile(files[0]);
-      const label = String(type && type.name || files[0].layout || '未分類').replace(/[\\/:*?"<>|]/g, '_');
+      const category = byId(CATEGORY, categoryId);
+      const label = String(category && category.name || type && type.name || files[0].layout || '未分類').replace(/[\\/:*?"<>|]/g, '_');
       const base = exportMergedFileName(files) + (groups.size > 1 ? '_' + label : '');
       let name = base;
       let n = 2;
@@ -5919,16 +5920,12 @@ let WATCH = {
   /* ① 監視パス。after は取り込み成功後の扱い（del=削除 / keep=そのまま） */
   roots: [
     { id: 'r1', tenant: 'tenant1', path: '\\\\filesv01\\取込', on: true, after: 'move' },
-    { id: 'r2', tenant: 'tenant2', path: '\\\\filesv02\\取込', on: true, after: 'move' },
-    { id: 'r3', tenant: 'tenant3', path: '\\\\filesv03\\取込', on: false, after: 'move' },
   ],
   /* ② 帳票タイプ 1 行。フォルダ名はパス直下の名前（全パス共通） */
   rules: [],
   /* ③ 共通設定。エラー通知は Webhook URL のみ（メール通知は廃止） */
   dupGuard: true, dupMethod: 'meta',
   retry: 3, retryGap: 5,
-  notify: true, notifyOn: 'fail',
-  notifyUrl: '',
   updatedAt: '2026-10-16 09:12:30',
 };
 /* 帳票タイプの数だけルール行を作る（帳票タイプを増やしたら行も増える） */
@@ -5969,12 +5966,12 @@ function renderNotices() {
   </section>`;
 }
 function shouldNotifyUpload(success) {
-  return !!WATCH.notify && (!success || WATCH.notifyOn === 'always');
+  return !success;
 }
 function addUploadFailure(error) {
   if (!shouldNotifyUpload(false)) return;
   WATCH_ERRORS.unshift({...error, id: error.id || 'we' + Date.now(), at: error.at || nowStamp()});
-  SECURITY.logs.unshift({at:error.at || nowStamp(),user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:error.file,ip:'—',result:'失敗',note:[error.file,error.path,error.reason].filter(Boolean).join(' ／ ')});
+  SECURITY.logs.unshift({at:error.at || nowStamp(),user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:error.file,ip:'—',result:'失敗',note:[watchPathDisplay(error.path),error.reason].filter(Boolean).join(' ／ ')});
   render();
 }
 
@@ -6005,16 +6002,17 @@ const watchRow = (label, inner, wide) => `<div class="wf"><span class="wf-label"
  *  ① 監視パス ② 帳票タイプ別ルール ③ 共通設定 の 3 段で見せる。
  *  監視する実パスは「監視パス × 帳票タイプのフォルダ」で決まる。
  *  取り込み成功後のファイルは、監視パス行ごとの「削除 / そのまま」に従う。 */
+const watchPathDisplay = (value) => String(value || '').split('\\').join('¥');
+const watchPathValue = (value) => String(value || '').split('¥').join('\\');
 function renderWatch() {
   const x = WATCH;
   const row = watchRow;
 
   const pathRows = x.roots.map((r) => `<tr class="wr-root${r.on ? '' : ' off'}">
-        <td><input class="fld mono" data-wroot-path="${r.id}" value="${esc(r.path)}" placeholder="\\\\filesv01\\取込" aria-label="監視パス" /></td>
+        <td><input class="fld mono" data-wroot-path="${r.id}" value="${esc(watchPathDisplay(r.path))}" placeholder="監視パスを入力してください" aria-label="監視パス" /></td>
         <td><select class="fld" data-wroot-after="${r.id}" aria-label="処理後のファイル">${Object.entries(WATCH_ROOT_AFTER).map(([value,label])=>`<option value="${value}" ${(r.after || 'move')===value?'selected':''}>${label}</option>`).join('')}</select></td>
-        <td><input class="fld mono" data-wroot-move="${r.id}" value="${esc(r.moveTo || '')}" placeholder="処理後の保存先パス" aria-label="処理後のファイルパス" ${(r.after || 'move') === 'move' ? '' : 'disabled'} /></td>
+        <td><input class="fld mono" data-wroot-move="${r.id}" value="${esc(watchPathDisplay(r.moveTo))}" placeholder="処理後の保存先パス" aria-label="処理後のファイルパス" ${(r.after || 'move') === 'move' ? '' : 'disabled'} /></td>
         <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wrooton="${r.id}" role="switch" aria-checked="${r.on}" aria-label="この監視パスを有効にする"><span class="tgl-knob"></span></button></td>
-        <td class="c"><button type="button" class="wp-del" data-wrootdel="${r.id}" aria-label="この監視パスを削除"${x.roots.length > 1 ? '' : ' disabled'}>×</button></td>
       </tr>`).join('');
 
   /* 帳票タイプ（ツリー第2階層）をそのまま並べる。業務シーンの階層は作らず、
@@ -6029,7 +6027,6 @@ function renderWatch() {
     return `<tr class="wr-rule${r.on ? '' : ' off'}">
         <td class="wr-cat">${esc(c.name)}</td>
         <td><input class="fld mono" data-wrule-folder="${c.id}" value="${esc(r.folder)}" placeholder="フォルダ名" aria-label="フォルダ名" /></td>
-        <td><input class="fld mono" data-wrule-pattern="${c.id}" value="${esc(r.pattern)}" list="watchPatternList" aria-label="ファイル名パターン" /></td>
         <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wruleon="${c.id}" role="switch" aria-checked="${r.on}" aria-label="この帳票タイプを自動で取り込む"><span class="tgl-knob"></span></button></td>
       </tr>`;
   }).join('');
@@ -6039,18 +6036,18 @@ function renderWatch() {
   const liveRules = x.rules.filter((r) => r.on && String(r.folder || '').trim());
   const combos = livePaths.length * liveRules.length;
   const sample = (livePaths[0] && liveRules[0])
-    ? `${String(livePaths[0].path).replace(/[\\/]+$/, '')}\\${liveRules[0].folder}\\${liveRules[0].pattern}`
+    ? `${String(livePaths[0].path).replace(/[\\/]+$/, '')}\\${liveRules[0].folder}`
     : '';
 
   return `<div class="cfg-head">
-    <h1 class="cfg-title">自動アップロード <span class="info-i" data-tip="監視パス（共有フォルダ）の直下にある帳票タイプ別フォルダを見張り、条件に合うファイルを自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。">i</span></h1>
+    <h1 class="cfg-title">自動アップロード <span class="info-i" data-tip="監視パス（共有フォルダ）の直下にある帳票タイプ別フォルダを見張り、条件に合うファイルを自動で取り込みます。設定済みの帳票タイプで自動的にアップロードと読み取りを実行します。">i</span></h1>
     <span class="spacer"></span>
     <span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>
   </div>
   <div class="watch-body">
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="1 行＝1 監視パス（1 台の仮想マシン上の共有フォルダ）です。帳票タイプのフォルダはこのパスの直下に置きます。処理後のファイルは移動・削除・そのままから選びます。移動の場合のみ保存先パスを入力できます。">i</span></h3>
+        <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="テナントの仮想マシンごとに監視パスを 1 つ設定します。帳票タイプのフォルダはこのパスの直下に置きます。処理後のファイルは移動・削除・そのままから選びます。移動の場合のみ保存先パスを入力できます。">i</span></h3>
         <div class="watch-tablewrap">
           <table class="watch-table wr-roots">
             <thead><tr>
@@ -6058,32 +6055,26 @@ function renderWatch() {
               <th style="width:150px">処理後のファイル</th>
               <th>処理後のファイルパス</th>
               <th class="c" style="width:52px">有効</th>
-              <th class="c" style="width:40px"></th>
             </tr></thead>
             <tbody>${pathRows}</tbody>
           </table>
         </div>
-        <div class="watch-sec-foot">
-          <button type="button" class="btn wp-add" data-wrootadd="1"><span class="ico i-add"></span>監視パスを追加</button>
-        </div>
       </section>
 
       <section class="watch-sec">
-        <h3 class="watch-sec-head">帳票タイプ別ルール<span class="info-i" data-tip="帳票タイプ（ツリー第2階層）をそのまま並べています。フォルダ名は全監視パスで共通です。自動取込が不要な帳票タイプは「自動取込」を切ってください。">i</span></h3>
+        <h3 class="watch-sec-head">帳票タイプ別ルール<span class="info-i" data-tip="帳票タイプ（ツリー第2階層）をそのまま並べています。フォルダは監視パスの直下に配置します。フォルダ名と拡張子は大文字・小文字を区別せず、アップロード対応形式を取り込みます。自動取込が不要な帳票タイプは「自動取込」を切ってください。">i</span></h3>
         <div class="watch-tablewrap">
           <table class="watch-table wr-rules">
             <thead><tr>
               <th style="width:180px">帳票タイプ</th>
               <th style="width:190px">フォルダ名</th>
-              <th style="width:140px">ファイル名</th>
               <th class="c" style="width:64px">自動取込</th>
             </tr></thead>
             <tbody>${ruleRows}</tbody>
           </table>
         </div>
-        <datalist id="watchPatternList">${WATCH_PATTERNS.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</datalist>
         <div class="watch-sec-foot">
-          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本（有効な監視パス ${livePaths.length} × 帳票タイプ ${liveRules.length}）${sample ? `<span class="mono">${esc(sample)}</span>` : ''}</p>
+          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本（有効な監視パス ${livePaths.length} × 帳票タイプ ${liveRules.length}）${sample ? `<span class="mono">${esc(watchPathDisplay(sample))}</span>` : ''}</p>
         </div>
       </section>
 
@@ -6103,13 +6094,6 @@ function renderWatch() {
         </div>
       </section>
 
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">ログ記録設定<span class="info-i" data-tip="通知を有効にすると、条件に一致した自動アップロードの結果をログに記録します。">i</span></h3>
-        <div class="watch-fields">
-          ${row('通知する', watchToggle('notify', x.notify))}
-          ${row('通知条件', `<select class="fld" data-wf="notifyOn" ${x.notify ? '' : 'disabled'}>${Object.entries(WATCH_NOTIFY_ON).map(([v,label]) => `<option value="${v}" ${x.notifyOn === v ? 'selected' : ''}>${label}</option>`).join('')}</select>`, true)}
-        </div>
-      </section>
 
 
 
@@ -6675,7 +6659,7 @@ function renderTypeTablePane() {
         <span class="spacer"></span>
         <label class="tb-limit">
           <span>最大列数</span>
-          <span class="info-i" data-tip="このテーブルの各列を最大何列まで横に展開するか（1〜20）。超えた分は出力されません" aria-label="最大列数の説明">i</span>
+          <span class="info-i" data-tip="このテーブルの各列を設定数まで横に展開します（1〜20）。不足分は空欄、超過分は先頭から設定数まで出力します" aria-label="最大列数の説明">i</span>
           <input class="fld" type="number" min="1" max="20" step="1" data-tb-limit="${esc(tb.id)}" value="${tb.exportMax || 3}" aria-label="最大列数" />
         </label>
         <button type="button" class="tb-icon" data-tb-del="${esc(tb.id)}" title="削除" aria-label="テーブルを削除"><span class="ico i-delete" aria-hidden="true"></span></button>
@@ -7874,13 +7858,13 @@ function renderSidebarPane() {
 }
 
 function renderUpload() {
-  const uploadsForBiz = state.uploads.filter((u) => !u.biz || u.biz === state.upBiz);
+  const uploadsForBiz = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && ['classifying', 'waiting'].includes(u.status));
   const selectableUp = uploadsForBiz.filter((u) => u.status === 'waiting' || u.status === 'failed');
   const upAllChecked = selectableUp.length > 0 && selectableUp.every((u) => state.upPicked[u.id]);
   const picked = uploadsForBiz.filter((u) => state.upPicked[u.id]).length;
   const stMap = {
     classifying: ['判別中', 'mid'],
-    waiting: ['分類完了', 'ok'],
+    waiting: ['読取待ち', 'ok'],
     reading: ['読取中', 'mid'],
     done: ['読取完了', 'ok'],
     failed: ['読取失敗', 'ng'],
@@ -9198,13 +9182,13 @@ function bindCfgPages() {
     document.querySelectorAll('[data-wroot-path]').forEach((el) => {
       el.oninput = () => {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootPath);
-        if (r) r.path = el.value;
+        if (r) r.path = watchPathValue(el.value);
       };
     });
     document.querySelectorAll('[data-wroot-move]').forEach((el) => {
       el.oninput = () => {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootMove);
-        if (r) { r.moveTo = el.value; r.after = 'move'; }
+        if (r) { r.moveTo = watchPathValue(el.value); r.after = 'move'; }
       };
     });
     document.querySelectorAll('[data-wroot-after]').forEach((el) => {
@@ -9221,27 +9205,11 @@ function bindCfgPages() {
         r.on = !r.on; render();
       };
     });
-    document.querySelectorAll('[data-wrootdel]').forEach((btn) => {
-      btn.onclick = () => {
-        if (WATCH.roots.length <= 1) return;
-        WATCH.roots = WATCH.roots.filter((q) => q.id !== btn.dataset.wrootdel);
-        render();
-      };
-    });
-    const addRoot = document.querySelector('[data-wrootadd]');
-    if (addRoot) addRoot.onclick = () => {
-      /* 1 行＝1 監視パス。テナントは既存行の紐付けを引き継ぐ */
-      const t = (WATCH.roots[0] && WATCH.roots[0].tenant) || (TENANTS[0] || {}).id || 'tenant1';
-      WATCH.roots.push({ id: `r${Date.now()}`, tenant: t, path: '', moveTo: '', on: true, after: 'move' });
-      render();
-    };
     /* 帳票タイプ別ルール：入力は即時反映（描き直すとフォーカスが飛ぶ）、トグル類は描き直す */
     document.querySelectorAll('[data-wrule-folder]').forEach((el) => {
       el.oninput = () => { watchRuleOf(el.dataset.wruleFolder).folder = el.value; };
     });
-    document.querySelectorAll('[data-wrule-pattern]').forEach((el) => {
-      el.oninput = () => { watchRuleOf(el.dataset.wrulePattern).pattern = el.value; };
-    });
+
     document.querySelectorAll('[data-wruleon]').forEach((btn) => {
       btn.onclick = () => {
         const r = watchRuleOf(btn.dataset.wruleon);
@@ -10584,7 +10552,7 @@ function initializePhaseOneAccess() {
  const rootOrg=GROUPS.find(g=>g.root)||GROUPS[0];if(rootOrg)ENT_USERS.forEach(u=>{if(!assigned.has(u.uid)){rootOrg.userIds.push(u.uid);assigned.add(u.uid);}});
  for(let i=0;i<24;i++){SECURITY.logs.push({at:`2026-10-30 09:${String(59-i).padStart(2,'0')}:00`,user:['admin','sato','suzuki'][i%3],type:AUTH_EVENTS[i%4],ip:'172.16.10.'+(20+i),result:i%7===0?'失敗':'成功',note:i%7===0?'ユーザー名またはパスワードを確認してください。':''});}
  SECURITY.logs.forEach(l=>{l.user=String(l.user||'').split('@')[0];if(!AUTH_EVENTS.includes(l.type)){l.feature=logFunctions().includes(l.type)?l.type:'読取結果一覧';l.action=l.type;l.target=l.target||'';}});
- WATCH_ERRORS.forEach(e=>{if(!SECURITY.logs.some(l=>l.uploadErrorId===e.id))SECURITY.logs.push({uploadErrorId:e.id,at:e.at,user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:e.file,ip:'—',result:'失敗',note:[e.file,e.path,e.reason].join(' ／ ')});});
+ WATCH_ERRORS.forEach(e=>{if(!SECURITY.logs.some(l=>l.uploadErrorId===e.id))SECURITY.logs.push({uploadErrorId:e.id,at:e.at,user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:e.file,ip:'—',result:'失敗',note:[watchPathDisplay(e.path),e.reason].join(' ／ ')});});
  BIZ_SCENES.forEach(sc=>{sc.departmentIds=GROUPS.filter(g=>(g.userIds||[]).some(uid=>(sc.userIds||[]).includes(uid))).map(g=>g.id);});
 }
 function rolesFromOrganizationSeed(uid) {

@@ -1082,7 +1082,7 @@ test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 
   const run = app();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行', 'ログ記録設定']);
+  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行']);
   /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
   assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit/);
 
@@ -1090,8 +1090,9 @@ test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 
   assert.equal((html.match(/class="wr-root/g) || []).length, run('WATCH.roots.length'));
   assert.equal((html.match(/data-wrooton=/g) || []).length, run('WATCH.roots.length'));
   assert.equal((html.match(/data-wroot-path=/g) || []).length, run('WATCH.roots.length'));
-  assert.match(html, /data-wrootadd/);
-  assert.match(html, /監視パスを追加/);
+  assert.doesNotMatch(html, /data-wrootadd|data-wrootdel/);
+  assert.equal((html.match(/data-wroot-path=/g) || []).length, 1);
+  assert.doesNotMatch(html, /監視パスを追加/);
   assert.doesNotMatch(html, /data-wroot-tenant=|>テナント</);
   assert.match(html, /data-wroot-path=/);
   assert.match(html, /data-wroot-move=/);
@@ -1101,15 +1102,15 @@ test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 
   assert.equal(run('CATEGORY.length'), 9);
   assert.equal((html.match(/class="wr-rule/g) || []).length, run('CATEGORY.length'));
   assert.equal((html.match(/data-wruleon=/g) || []).length, run('CATEGORY.length'));
-  for (const t of ['帳票タイプ', 'フォルダ名', 'ファイル名', '監視対象']) {
+  for (const t of ['帳票タイプ', 'フォルダ名', '監視対象']) {
     assert.ok(html.includes(t), t);
   }
   assert.match(html, /data-wrule-folder=/);
-  assert.match(html, /data-wrule-pattern=/);
+  assert.doesNotMatch(html, /data-wrule-pattern=/);
   /* 処理開始・大小区別は削除済み */
   assert.doesNotMatch(html, /処理開始|大小区別|data-wrule-start|data-wrule-case/);
   const ruleRow = (html.match(/<tr class="wr-rule[\s\S]*?<\/tr>/) || [])[0] || '';
-  assert.equal((ruleRow.match(/<td/g) || []).length, 4);
+  assert.equal((ruleRow.match(/<td/g) || []).length, 3);
 
   /* 業務シーンの階層は作らない（帳票タイプをそのまま並べる） */
   assert.doesNotMatch(html, /data-wf="biz"|data-wf="pattern"|data-wf="startFile"|data-wf="afterDir"/);
@@ -1118,7 +1119,7 @@ test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 
 
   /* 実際に監視する本数＝有効ルート × 有効カテゴリ */
   assert.match(html, /監視対象 <b>\d+<\/b> 本/);
-  assert.equal(run('WATCH.roots.filter((r) => r.on).length * WATCH.rules.filter((r) => r.on).length'), 18);
+  assert.equal(run('WATCH.roots.filter((r) => r.on).length * WATCH.rules.filter((r) => r.on).length'), 9);
 
   /* 共通設定（メール通知・宛先メール・通知方法の選択は廃止。Webhook URL を直接入力） */
   for (const t of ['同一ファイルを除外', '再実行回数']) {
@@ -1302,7 +1303,7 @@ test('帳票タイプ設定: 各テーブルに最大列数を設定できる', 
     assert.match(html, new RegExp(`data-tb-limit="${t.id}"[^>]*value="${t.max || 3}"`), t.id);
   }
   assert.match(html, /最大列数/);
-  assert.match(html, /class="info-i" data-tip="このテーブルの各列を最大何列まで横に展開するか/);
+  assert.match(html, /class="info-i" data-tip="このテーブルの各列を設定数まで横に展開します/);
 });
 
 test('CSV 出力: テーブル列を上限まで横展開し、複数ファイルを 1 行ずつ出力', () => {
@@ -1359,14 +1360,14 @@ test('group selection cascades through descendants and inherited permissions inc
 
 
 
-test('upload notices require enabled switch and matching notification condition', () => {
+test('automatic upload failures are always logged without notification settings', () => {
   const run = app();
-  assert.equal(run('WATCH.notify = false; shouldNotifyUpload(false)'), false);
+  assert.equal(run('shouldNotifyUpload(false)'), true);
   assert.equal(run('WATCH.notify = true; WATCH.notifyOn = "fail"; shouldNotifyUpload(false)'), true);
   assert.equal(run('shouldNotifyUpload(true)'), false);
-  assert.equal(run('WATCH.notifyOn = "always"; shouldNotifyUpload(true)'), true);
-  assert.match(run('renderWatch()'), /data-wf-toggle="notify"/);
-  assert.match(run('renderWatch()'), /data-wf="notifyOn"/);
+  assert.equal(run('WATCH.notifyOn = "always"; shouldNotifyUpload(true)'), false);
+  assert.doesNotMatch(run('renderWatch()'), /data-wf-toggle="notify"/);
+  assert.doesNotMatch(run('renderWatch()'), /data-wf="notifyOn"/);
   assert.doesNotMatch(run('renderWatch()'), /Webhook URL/);
 });
 
@@ -1481,3 +1482,17 @@ test('new ticket types default automatic-upload folder name to their name withou
  run("watchRuleOf('new-watch-type').folder='custom-folder';TICKET_TYPES.find(t=>t.id==='new-watch-type').name='変更後'");
  assert.equal(run("watchRuleOf('new-watch-type').folder"),'custom-folder');
 });
+
+ test('scene selection merges CSV by category across different layouts', () => {
+ const run = app();
+ const result = JSON.parse(run(`
+ const sample = FILES_DATA[0];
+ const ids = [];
+ for(let i=0;i<10;i++){const id='scene-export-'+i; ids.push(id); FILES_DATA.push({...sample,id,name:id+'.pdf',layout:i<3?'l1':i<6?'l2':'l3'});}
+ let archive; downloadZip = entries => {archive=entries};
+ const count=downloadGroupedCsv(ids);
+ JSON.stringify({count,entries:archive.map(e=>({name:e.name,rows:e.text.trim().split('\\r\\n').length-1}))});
+ `));
+ assert.equal(result.count,2);
+ assert.deepEqual(result.entries.map(e=>e.rows),[3,7]);
+ });
