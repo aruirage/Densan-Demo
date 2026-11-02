@@ -610,3 +610,9 @@
 .watch-resolve b { color: var(--accent); font-weight: 700; }
 .watch-resolve .mono { margin-left: 8px; color: var(--text-3); font-size: 11px; }
 
+
+/* Global switch keeps settings visible while disabling native controls. */
+fieldset.watch-body{border:0;padding:0;margin:0;min-width:0}
+fieldset.watch-body:disabled{opacity:.5}
+fieldset.watch-body:disabled .watch-sec{pointer-events:none}
+fieldset.watch-body:disabled input,fieldset.watch-body:disabled select{background:#f2f4f7;cursor:not-allowed}

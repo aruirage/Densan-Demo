@@ -6042,7 +6042,7 @@ function renderWatch() {
     <span class="spacer"></span>
     <span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>
   </div>
-  <div class="watch-body">
+  <fieldset class="watch-body" ${x.on ? '' : 'disabled'} aria-label="自動アップロード設定">
 
       <section class="watch-sec">
         <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="テナントの仮想マシンごとに監視パスを 1 つ設定します。帳票タイプのフォルダはこのパスの直下に置きます。処理後のファイルは移動・削除・そのままから選びます。移動の場合のみ保存先パスを入力できます。">i</span></h3>
@@ -6095,7 +6095,7 @@ function renderWatch() {
 
 
 
-  </div>`;
+  </fieldset>`;
 }
 
 /** 複数選択。選択値はチップで表示し、あふれた分は「+N」にまとめる。

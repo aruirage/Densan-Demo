@@ -1501,3 +1501,13 @@ test('new ticket types default automatic-upload folder name to their name withou
  assert.equal(result.count,2);
  assert.deepEqual(result.entries.map(e=>e.rows),[3,7]);
  });
+
+test('automatic upload global switch disables all settings and retains values',()=>{
+ const run=app();
+ const before=run('JSON.stringify(WATCH.roots)');
+ const off=run('WATCH.on=false;renderWatch()');
+ assert.match(off,/<fieldset class="watch-body" disabled/);
+ assert.ok(off.indexOf('data-wf-toggle="on"')<off.indexOf('<fieldset'));
+ assert.equal(run('JSON.stringify(WATCH.roots)'),before);
+ assert.doesNotMatch(run('WATCH.on=true;renderWatch()'),/<fieldset class="watch-body" disabled/);
+});
