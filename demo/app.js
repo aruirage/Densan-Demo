@@ -6074,7 +6074,7 @@ function renderWatch() {
           </table>
         </div>
         <div class="watch-sec-foot">
-          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本（有効な監視パス ${livePaths.length} × 帳票タイプ ${liveRules.length}）${sample ? `<span class="mono">${esc(watchPathDisplay(sample))}</span>` : ''}</p>
+          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本${sample ? `<span class="mono">${esc(watchPathDisplay(sample))}</span>` : ''}</p>
         </div>
       </section>
 
