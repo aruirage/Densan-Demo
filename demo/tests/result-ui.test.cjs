@@ -1202,7 +1202,7 @@ test('出力設定は帳票タイプごとに独立している', () => {
   assert.equal(run('exportCfgOf(TICKET_TYPES[1]).record'), 'perTicket');
 });
 
-test('エクスポートダイアログ: 管理者は列設定を編集できる（出力形式は廃止）', () => {
+test('エクスポートダイアログ: 既存のファイル名と変換方式を表示する', () => {
   const run = app();
   run('var window={DEMO_FULL_ADMIN:true}; state.exportOpen=true; state.picked={}; state.picked[FILES_DATA[0].id]=true; visibleFiles=function(){ return FILES_DATA; };');
   const html = run('renderExportDialog()');
@@ -1211,9 +1211,10 @@ test('エクスポートダイアログ: 管理者は列設定を編集できる
   /* まとめて出力・必須項目のみのスイッチも廃止 */
   assert.doesNotMatch(html, /data-expcfg="combineFiles"|data-expcfg="requiredOnly"|まとめて出力|必須項目のみ/);
   /* 列設定：出力項目（一般 8 件）のトグル行＋初期化ボタン */
-  assert.ok(html.includes('列設定（出力項目・列順）'));
-  assert.ok(html.includes('id="expColReset"'));
-  assert.ok((html.match(/data-colact="on"/g) || []).length >= 8);
+  assert.match(html, /id="expFileName"/);
+  assert.ok(html.indexOf('id="expFileName"') < html.indexOf('data-expcfg="encoding"'));
+  assert.match(html, /ファイル名の説明/);
+  assert.match(html, /id="expSave">OK/);
 });
 
 test('エクスポートダイアログ: 管理者以外は列設定を変更できない', () => {
@@ -1403,7 +1404,7 @@ test('additional demo samples cover statuses and provide upload pagination witho
 
 test('phase one: menu rights contain only page access plus user department and role management children', () => {
  const run=app();const ids=JSON.parse(run('JSON.stringify(MENU_LEAVES)'));
- for(const id of ['home','upload','result','settings-type','settings-scenes','users-view','groups-view','usage-groups-edit','permissions-query'])assert.ok(ids.includes(id),id);
+ for(const id of ['home','upload','result','settings-type','settings-scenes-add','settings-scenes-edit','settings-scenes-del','users-view','groups-view','usage-groups-edit','permissions-query'])assert.ok(ids.includes(id),id);
  for(const id of ['op-fix','op-confirm','op-export','type-data-permission','dict-vectorize'])assert.ok(!ids.includes(id),id);
 });
 test('phase one: organization edit only exposes name and disabled parent, never role assignment', () => {
@@ -1461,8 +1462,9 @@ test('tree folders and files share scene department-user data scope', () => {
  assert.equal(run("canSeeCategory('c1','u5')"),true);
  assert.equal(run("canSeeCategory('c2','u5')"),false);
  assert.equal(run("sceneCanAccessFile({layout:'l1'},'u5')"),true);
+ run("MENU_PERMS.mockResult=['home','result'];entUserByUid('u5').soloPermIds=['mockResult']");
  assert.equal(run("canRenameTree('u5')"),false);
- run("MENU_PERMS.customScene=['settings-scenes'];entUserByUid('u5').soloPermIds=['customScene']");
+ run("MENU_PERMS.customScene=['settings-scenes-edit'];entUserByUid('u5').soloPermIds=['customScene']");
  assert.equal(run("canRenameTree('u5')"),true);
  run('BIZ_SCENES[0].userIds=[]');
  assert.equal(run("canSeeCategory('c1','u5')"),false);
@@ -1511,3 +1513,9 @@ test('automatic upload global switch disables all settings and retains values',(
  assert.equal(run('JSON.stringify(WATCH.roots)'),before);
  assert.doesNotMatch(run('WATCH.on=true;renderWatch()'),/<fieldset class="watch-body" disabled/);
 });
+
+test('export naming retains name field with input-name toggle',()=>{const run=app();const html=run('state.exportOpen=true;renderExportDialog()');assert.match(html,/id="expFileName"/);assert.match(html,/data-expcfg="fileNameFromInput" checked/);});
+
+test('CSV naming supports original single name and configured merged name',()=>{const run=app();run('state.exportCfg={fileNameFromInput:true,fileName:"指定名"}');assert.equal(run('exportMergedFileName([FILES_DATA[0]])'),run('dispFileName(FILES_DATA[0].id).replace(/\\.[^.]+$/, "")'));assert.equal(run('exportMergedFileName([FILES_DATA[0],FILES_DATA[1]])'),'指定名');assert.equal(run('state.exportCfg.fileNameFromInput=false;exportMergedFileName([FILES_DATA[0]])'),'指定名');});
+
+test('menu role mocks use valid menu leaves and personal assignments',()=>{const run=app();const grants=JSON.parse(run('JSON.stringify(defaultOperationGrants())'));const leaves=JSON.parse(run('JSON.stringify(MENU_LEAVES)'));Object.values(grants).flat().forEach(id=>assert.ok(leaves.includes(id),id));assert.ok(grants.R7.includes('settings-scenes-edit'));assert.ok(!grants.R8.includes('settings-scenes-edit'));assert.equal(run('initializePhaseOneAccess();entUserByUid("u8").soloPermIds.includes("R8")'),true);});

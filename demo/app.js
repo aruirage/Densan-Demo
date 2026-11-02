@@ -361,17 +361,17 @@ const ENT_USERS = [
 ];
 /** システム権限（メニュー到達）。業務のメニュー権限はユーザーグループの役割で付与する */
 let ROLES = [
-  { id: 'R1', name: 'システム管理者', code: 'tenant_admin', desc: '万能権限。メニュー全到達に加え、帳票／アップロード権限表をバイパスして全業務を実行できる', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R2', name: '運用管理者', code: 'operation_admin', desc: '帳票設定＋利用設定＋ユーザー管理。日常運用の管理者', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R3', name: '確認者', code: 'confirmer', desc: '読取結果の閲覧・編集・保存・確認・履歴閲覧。ダウンロード不可', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R4', name: '承認者', code: 'approver', desc: '確認済み帳票の承認・再承認。マイタスクの承認作業', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R5', name: 'アップロード者', code: 'uploader', desc: 'ファイルのアップロードと読取結果の閲覧', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R1', name: 'システム管理者', code: 'tenant_admin', desc: 'すべてのメニューと管理機能を利用', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R2', name: '運用管理者', code: 'operation_admin', desc: '帳票設定、ユーザー・部門管理、辞書、自動アップロード、ログを利用', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R3', name: '帳票業務担当', code: 'document_operator', desc: '新規アップロードと読取結果一覧を利用', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R4', name: '帳票設定担当', code: 'form_manager', desc: '帳票タイプ、業務シーン、辞書を管理', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R5', name: 'アップロード担当', code: 'upload_operator', desc: '新規アップロードを利用', created: '2025-10-01 00:00:00', status: '有効' },
   /* 9 ロール設計で追加した分。メニュー権限は MENU_PERMS 側で付ける */
-  { id: 'R6', name: '閲覧', code: 'viewer', desc: 'すべてのメニューを閲覧可能。編集・確認・履歴閲覧・ダウンロードは不可', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R8', name: '読取', code: 'reader', desc: 'アップロード済ファイルの読取実行・再読取・削除', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R10', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の編集・保存・履歴閲覧。確認とダウンロードは不可', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R6', name: '読取結果担当', code: 'result_operator', desc: '読取結果一覧を利用', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R7', name: '業務シーン管理者', code: 'scene_manager', desc: '業務シーンの追加・編集・削除を利用', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R8', name: '自動アップロード管理者', code: 'watch_manager', desc: '自動アップロード設定とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R10', name: '辞書管理者', code: 'dictionary_manager', desc: '辞書登録とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R11', name: 'ユーザー管理者', code: 'user_manager', desc: 'ユーザー・部門管理とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
 ];
 /** システム管理者ロール ID（メニュー全許可＋業務権限バイパス） */
 const TENANT_ADMIN_ROLE = 'R1';
@@ -430,6 +430,7 @@ function hasActionPermission(id, uid) {
   const page = state.page;
   const module = PERMISSION_MODULES.find(m=>m.children.some(c=>c.id===id));
   const menu = module && module.id;
+  if (id.startsWith('settings-scenes-')) return canReachMenu(id,uid);
   if (id.startsWith('usage-users-') || id.startsWith('usage-groups-') || id.startsWith('permissions-')) return isTenantAdmin(uid || state.currentUser) || groupLeafSet(uid || state.currentUser).has(id);
   return !menu || canReachMenu(menu,uid);
 }
@@ -1046,7 +1047,12 @@ const MENU_TREE = [
           },
           {
             "id": "settings-scenes",
-            "label": "業務シーン"
+            "label": "業務シーン",
+            "children": [
+              {"id":"settings-scenes-add","label":"業務シーン追加"},
+              {"id":"settings-scenes-edit","label":"業務シーン編集"},
+              {"id":"settings-scenes-del","label":"業務シーン削除"}
+            ]
           }
         ]
       },
@@ -1146,9 +1152,22 @@ const MENU_LEAVES = (() => {
    （操作ボタンが一つも無ければ操作列ごと隠すので、閲覧＝到達で足りる）。 */
 const BIZ_MENU_BASE = ['home', 'result'];
 function defaultOperationGrants() {
-  const business = ['home','upload','result'];
-  return {R1:MENU_LEAVES.slice(), R2:MENU_LEAVES.slice(), R3:business.slice(), R4:['home','result'], R5:business.slice(), R6:['home','result'], R7:business.slice(), R8:business.slice(), R10:['home','result'], R11:['home','result']};
+  const scene = ['settings-scenes-add','settings-scenes-edit','settings-scenes-del'];
+  const users = ['users-view','usage-users-add','usage-users-edit','usage-users-del','groups-view','usage-groups-add','usage-groups-edit','usage-groups-del'];
+  return {
+    R1: MENU_LEAVES.slice(),
+    R2: ['home','upload','result','settings-type',...scene,'usage-dict',...users,'usage-watch','usage-logs'],
+    R3: ['home','upload','result'],
+    R4: ['home','settings-type',...scene,'usage-dict'],
+    R5: ['home','upload'],
+    R6: ['home','result'],
+    R7: ['home',...scene],
+    R8: ['home','usage-watch','usage-logs'],
+    R10: ['home','usage-dict','usage-logs'],
+    R11: ['home',...users,'usage-logs']
+  };
 }
+
 let MENU_PERMS = { ...defaultOperationGrants() };
 
 /* ── 帳票設定系のモック（実機の一覧列に合わせる） ── */
@@ -1474,11 +1493,8 @@ function layoutIdOfTicketType(t) {
 
 /** 権限者（ロール）に属するユーザー。組織グループは持たない。 */
 const ROLE_MEMBERS = {
-  R1: ['u1'],                 /* システム管理者 */
-  R2: ['u3'],                 /* 運用管理者 */
-  R3: ['u2', 'u6', 'u8'],     /* 確認者 */
-  R4: ['u4', 'u5'],           /* 承認者 */
-  R5: ['u7'],                 /* アップロード者 */
+  R1:['u1'], R2:['u3'], R3:['u2'], R4:['u4'], R5:['u7'],
+  R6:['u6'], R7:['u5'], R8:['u8'], R10:[], R11:['u10']
 };
 const roleMemberIds = (roleId) => ROLE_MEMBERS[roleId] || [];
 
@@ -4140,7 +4156,7 @@ function commitExport(id, fmt) {
     toast('前回出力以降の差分がないため、同一データの重複出力をスキップしました');
     return false;
   }
-  const base = dispFileName(id).replace(/\.[^.]+$/, '');
+  const base = fmt === 'csv' ? exportMergedFileName([f]) : dispFileName(id).replace(/\.[^.]+$/, '');
   const suffix = delta.first ? '' : '_差分';
   if (fmt === 'json') {
     const fields = OCR_FIELDS.b6.filter((x) => delta.changed.includes(x.key));
@@ -4362,13 +4378,11 @@ function seedExportSnapshots() {
   }
   function exportMergedFileName(files) {
     const C = state.exportCfg || {};
-    if (C.fileNameFromInput && files[0]) {
-      const base = dispFileName(files[0].id).replace(/\.[^.]+$/, '');
-      return base + '_結合' + (files.length > 1 ? files.length : '');
-    }
-    if (C.fileName) return C.fileName;
-    const base = (files[0] && files[0].name || '出力データ').replace(/\.[^.]+$/, '');
-    return base + '_結合';
+    const clean = value => String(value || '').replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, '_');
+    if (files.length === 1 && C.fileNameFromInput !== false) return clean(dispFileName(files[0].id));
+    if (String(C.fileName || '').trim()) return clean(C.fileName.trim());
+    const cat = files[0] && byId(CATEGORY, (byId(LAYOUT, files[0].layout) || {}).category);
+    return clean(cat && cat.name || '出力データ');
   }
 
   // ZIP (UTF-8 filenames, STORE): offline, no external dependency.
@@ -4430,7 +4444,7 @@ function seedExportSnapshots() {
       const type = ticketTypeOfFile(files[0]);
       const category = byId(CATEGORY, categoryId);
       const label = String(category && category.name || type && type.name || files[0].layout || '未分類').replace(/[\\/:*?"<>|]/g, '_');
-      const base = exportMergedFileName(files) + (groups.size > 1 ? '_' + label : '');
+      const base = exportMergedFileName(files);
       let name = base;
       let n = 2;
       while (usedNames.has(name)) name = base + '_' + n++;
@@ -4670,77 +4684,23 @@ function exportFileName() {
 function renderExportDialog() {
   if (!state.exportOpen) return '';
   const C = state.exportCfg;
-  const fromInput = C.fileNameFromInput !== false;
-  const enc = C.encoding || 'UTF-8';
   const encodings = ['UTF-8', 'UTF-8（BOMなし）', 'Shift_JIS'];
-  /* 選択中の代表ファイルから、出力設定を決める帳票タイプを求める */
-  const pickedFiles = (typeof visibleFiles === 'function' ? visibleFiles() : [])
-    .filter((f) => state.picked && state.picked[f.id]);
-  const pickedLayouts = [...new Set(pickedFiles.map((f) => f.layout))];
-  const exportType = TICKET_TYPES.find((x) => layoutIdOfTicketType(x) === pickedLayouts[0]);
-  const exportCfg = exportType ? exportCfgOf(exportType) : null;
-  const admin = isTenantAdmin(state.currentUser);
-  const expCols = exportCfg && exportCfg.cols && exportCfg.cols.length ? exportCfg.cols : (exportCfg ? defaultExportCols() : []);
-  const expRecord = exportCfg ? (exportCfg.record || 'perTicket') : 'perTicket';
-  const summary = exportCfg
-    ? `${(exportCfg.formats.join(' / ') || '—').toUpperCase()} ／ ${expRecord === 'perRow' ? '竖向' : expRecord === 'combine' ? '結合' : '横向'} ／ 出力項目 ${expCols.filter((c) => c.on).length} 件`
-    : '';
-  const sw = (key, on, label) => `
-    <label class="switch exp-switch">
-      <span class="switch-text">${esc(label)}</span>
-      <input type="checkbox" data-expcfg="${key}" ${on ? 'checked' : ''} />
-      <span class="switch-track" aria-hidden="true"></span>
-    </label>`;
-  const nameField = fromInput ? '' : `
-        <label class="exp-stack-field">
-          <span class="exp-field-label"><i class="req">*</i>ファイル名</span>
-          <span class="exp-filename">
-            <input class="fld exp-name-input" id="expFileName" type="text" value="${esc(C.fileName || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" />
-            <span class="exp-file-ext">.csv</span>
-          </span>
-        </label>`;
-
-  return `
-  <div class="modal-back" id="expBack">
-    <div class="modal exp-modal" style="width:min(440px,100%)">
-      <div class="modal-head"><b>エクスポート設定</b><span class="spacer"></span><button class="icon-btn" id="expClose"><span class="ico i-close"></span></button></div>
+  return `<div class="modal-back" id="expBack">
+    <div class="modal exp-modal" style="width:min(400px,100%)">
+      <div class="modal-head"><b>エクスポート設定</b><span class="spacer"></span><button class="icon-btn" id="expClose" aria-label="閉じる">×</button></div>
       <div class="modal-canvas exp-canvas">
-        ${summary ? `<div class="exp-src-line"><span class="exp-src-k">帳票タイプの出力設定</span><b>${esc(summary)}</b></div>` : ''}
+        <label class="switch exp-switch"><span class="switch-text">入力ファイル名を使用</span><input type="checkbox" data-expcfg="fileNameFromInput" ${C.fileNameFromInput !== false ? 'checked' : ''} /><span class="switch-track" aria-hidden="true"></span></label>
+        <label class="exp-stack-field">
+          <span class="exp-field-label"><i class="req">*</i>ファイル名 <span class="info-i" data-tip="「入力ファイル名を使用」が有効な場合、単一ファイルは入力名を使用します。無効な場合と同じ帳票タイプの複数ファイルを結合する場合は、ここで設定した名前を使用します。" aria-label="ファイル名の説明">i</span></span>
+          <span class="exp-filename"><input class="fld exp-name-input" id="expFileName" type="text" value="${esc(C.fileName || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span>
+        </label>
         <label class="exp-stack-field">
           <span class="exp-field-label"><i class="req">*</i>変換方式</span>
-          <select class="fld exp-control" data-expcfg="encoding">${encodings.map((o) => `<option ${enc === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
+          <select class="fld exp-control" data-expcfg="encoding">${encodings.map(o=>`<option ${(C.encoding || 'UTF-8') === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
         </label>
-        <div class="exp-switches">
-          <div class="exp-name-group">
-            ${sw('fileNameFromInput', fromInput, '入力名と同じ')}
-            ${nameField}
-        </div>
       </div>
-      ${(() => {
-        if (!admin || !expCols.length) return '';
-        const rows = expCols.map((c, i) => `
-          <div class="exp-col-row" data-colid="${esc(c.id)}">
-            <label class="switch sm exp-col-on"><input type="checkbox" data-colact="on" data-colid="${esc(c.id)}" ${c.on ? 'checked' : ''} /><span></span></label>
-            <input class="fld exp-col-label" data-colact="label" data-colid="${esc(c.id)}" value="${esc(c.label)}" />
-            <span class="exp-col-move">
-              <button type="button" class="exp-col-btn" data-colact="up" data-colid="${esc(c.id)}" ${i === 0 ? 'disabled' : ''} aria-label="上へ">▲</button>
-              <button type="button" class="exp-col-btn" data-colact="down" data-colid="${esc(c.id)}" ${i === expCols.length - 1 ? 'disabled' : ''} aria-label="下へ">▼</button>
-            </span>
-          </div>`).join('');
-        return `
-      <div class="exp-cols-wrap">
-        <div class="exp-cols-head"><span class="exp-cols-title">列設定（出力項目・列順）</span><button type="button" class="btn sm" id="expColReset">初期化</button></div>
-        <div class="exp-cols">${rows}</div>
-      </div>`;
-      })()}
-      </div>
-      <div class="modal-foot exp-foot">
-        <span class="spacer"></span>
-        <button class="btn" id="expCancel">キャンセル</button>
-        <button class="btn primary" id="expSave"><span class="ico i-save"></span>保存</button>
-      </div>
-    </div>
-  </div>`;
+      <div class="modal-foot exp-foot"><span class="spacer"></span><button class="btn" id="expCancel">キャンセル</button><button class="btn primary" id="expSave">OK</button></div>
+    </div></div>`;
 }
 
 /** ページプレビューのモーダル。帳票のページ画像だけを見せる（操作ボタンのバーは置かない） */
@@ -6345,6 +6305,7 @@ function bindBizScenes() {
   document.querySelectorAll('[data-scenerename]').forEach((b) => {
     b.onclick = (e) => {
       e.stopPropagation();
+      if (!canReachMenu('settings-scenes-edit')) return;
       const sc = byId(BIZ_SCENES, b.dataset.scenerename);
       state.sceneMenu = null;
       if (sc) state.sceneRename = { id: sc.id, value: sc.name };
@@ -6354,6 +6315,7 @@ function bindBizScenes() {
   document.querySelectorAll('[data-scenedel]').forEach((b) => {
     b.onclick = (e) => {
       e.stopPropagation();
+      if (!canReachMenu('settings-scenes-del')) return;
       const id = b.dataset.scenedel;
       const sc = byId(BIZ_SCENES, id);
       if (!ask(`「${sc ? sc.name : id}」を削除しますか？`)) return;
@@ -6367,6 +6329,7 @@ function bindBizScenes() {
   });
   const add = $('#sceneAdd');
   if (add) add.onclick = () => {
+    if (!canReachMenu('settings-scenes-add')) return;
     cfgState.sceneQ = '';
     const ns = {
       id: 'cls-' + Date.now(), name: '新規業務シーン',
@@ -6466,6 +6429,7 @@ function bindBizScenes() {
   /* ── 保存／完成 ── */
   const sv = $('#scSave');
   if (sv) sv.onclick = () => {
+    if (!canReachMenu('settings-scenes-edit')) return;
     const sc = cur(); if (!sc) return;
     const nm = $('#scName'); const ds = $('#scDesc');
     if (nm) { if (!nm.value.trim()) { toast('業務シーン名を入力してください'); return; } sc.name = nm.value.trim(); }
@@ -10426,7 +10390,7 @@ function bindUploadPanel() {
   // 展開／折りたたみ・フィルタ開閉・ドロワー
 }
 
-function canRenameTree(uid) { return canReachMenu('settings-scenes',uid); }
+function canRenameTree(uid) { return canReachMenu('settings-scenes-edit',uid); }
 function startRename(nodeEl, type, id) {
   if (!canRenameTree()) { toast('名称を変更する権限がありません','error'); return; }
   /* ツリーではファイル名のみ変更可（業務シーン・帳票タイプはマスタ固定） */
@@ -10543,7 +10507,7 @@ function seedAdditionalDemoData() {
 function initializePhaseOneAccess() {
  if(state.phaseOneInitialized)return;state.phaseOneInitialized=true;
  DEMO_ACTORS.forEach(a=>{a.hint='割り当てられたメニューにアクセスできます';});
- ENT_USERS.forEach(u=>{u.soloPermIds=rolesFromOrganizationSeed(u.uid);});
+ ENT_USERS.forEach(u=>{u.soloPermIds=Object.keys(ROLE_MEMBERS).filter(rid=>(ROLE_MEMBERS[rid]||[]).includes(u.uid));u.role=u.soloPermIds.map(rid=>(byId(ROLES,rid)||{}).name).filter(Boolean).join("、");});
  const departmentNames={gu:'受付部',gc:'確認部',gb:'業務管理部',gv:'総務部',gk:'分類担当部',gr:'読取担当部',ge:'出力担当部',gf:'データ修正部',gm:'システム管理部'};
  GROUPS.forEach(g=>{g.permIds=[];g.permId=null;g.kind='';g.roles=[];if(departmentNames[g.id])g.name=departmentNames[g.id];});
  const assigned=new Set();GROUPS.slice().sort((a,b)=>Number(!!a.root)-Number(!!b.root)).forEach(g=>{g.userIds=(g.userIds||[]).filter(uid=>{if(assigned.has(uid))return false;assigned.add(uid);return true;});});
