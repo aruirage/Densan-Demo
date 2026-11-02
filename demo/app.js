@@ -4308,25 +4308,23 @@ function seedExportSnapshots() {
       return { text, enc, delim };
     }
     /* 横向出力（既定）：1 帳票 1 行。一般項目の後ろにテーブル列を上限まで横展開する。 */
-    const headerCells = (withFileCol ? ['入力ファイル名'] : []);
+    const expanded = [];
+    const seenTables = new Set();
+    let generalIndex = 0;
     parts.forEach((p) => {
-      if (p.tb) {
-        for (let i = 1; i <= p.max; i++) headerCells.push(`${p.tb.name}_${p.tc.name}_${i}`);
-      } else {
-        headerCells.push(p.c.label);
+      if (!p.tb) { expanded.push({p, gi: generalIndex++}); return; }
+      if (seenTables.has(p.tb.id)) return;
+      seenTables.add(p.tb.id);
+      const fields = parts.filter(q => q.tb && q.tb.id === p.tb.id);
+      for (let row = 0; row < p.max; row++) {
+        fields.forEach(field => expanded.push({p:field, row}));
       }
     });
+    const headerCells = (withFileCol ? ['入力ファイル名'] : []).concat(expanded.map(({p,row}) =>
+      p.tb ? `${p.tb.name}_${p.tc.name}_${row + 1}` : p.c.label));
     const rows = files.map((f) => {
-      const out = withFileCol ? [dispFileName(f.id)] : [];
-      let gi = 0;
-      parts.forEach((p) => {
-        if (p.tb) {
-          for (let i = 0; i < p.max; i++) out.push(tableCellValue(p.tb, p.tc, i));
-        } else {
-          out.push(generalCellValue(f, p.c, gi));
-          gi += 1;
-        }
-      });
+      const out = (withFileCol ? [dispFileName(f.id)] : []).concat(expanded.map(({p,row,gi}) =>
+        p.tb ? tableCellValue(p.tb,p.tc,row) : generalCellValue(f,p.c,gi)));
       return out.map((v) => formatDateValue(v, dateFmt)).map((v) => (v === '' ? emptyMode : v));
     });
     const all = withHeader ? [headerCells].concat(rows) : rows;

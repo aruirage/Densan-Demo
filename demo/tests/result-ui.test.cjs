@@ -1316,6 +1316,11 @@ test('CSV 出力: テーブル列を上限まで横展開し、複数ファイ�
   /* 氏名_1／氏名_2 まで横展開し、上限 2 を超える 氏名_3 は出さない */
   assert.match(out.head, /世帯員テーブル_氏名_1/);
   assert.match(out.head, /世帯員テーブル_氏名_2/);
+  const memberColumns = out.head.split(',').filter(c => c.includes('世帯員テーブル_'));
+  const secondRecord = memberColumns.findIndex(c => /_2$/.test(c));
+  assert.ok(secondRecord > 1);
+  assert.ok(memberColumns.slice(0,secondRecord).every(c => /_1$/.test(c)));
+  assert.ok(memberColumns.slice(secondRecord).every(c => /_2$/.test(c)));
   assert.doesNotMatch(out.head, /世帯員テーブル_氏名_3/);
   assert.equal(out.rows, 2);
   assert.match(out.first, /小林 陸/);
