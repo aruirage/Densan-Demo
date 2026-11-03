@@ -1030,7 +1030,7 @@ test('security settings keep only the three modules from the design', () => {
 
 
 
-test('demo actor switcher lets you change currentUser from the header menu', () => {
+test('header profile menu only exposes account and logout', () => {
   const run = app();
   assert.equal(run('DEMO_ACTORS.length'), 9);
   assert.deepEqual(JSON.parse(run('JSON.stringify(DEMO_ACTORS.map((a) => a.id))')), ['u1', 'u3', 'u8', 'u7', 'u6', 'u5', 'u2', 'u10', 'u4']);
@@ -1046,8 +1046,10 @@ test('demo actor switcher lets you change currentUser from the header menu', () 
   assert.match(run('currentProfile().hint'), /全メニュー/);
   /* ソースにデモ切替 UI／ハンドラがある */
   assert.match(source, /data-demo-actor/);
-  assert.match(source, /デモ：担当者を切替え/);
-  assert.match(source, /demo-badge/);
+  assert.doesNotMatch(source, /デモ：担当者を切替え/);
+  assert.doesNotMatch(source, /class="demo-badge"/);
+  assert.match(source, /data-user-act="account"/);
+  assert.match(source, /data-user-act="logout"/);
 });
 test('tenant admin role bypasses ticket and upload permission tables', () => {
   const run = app();
@@ -1519,3 +1521,5 @@ test('export naming retains name field with input-name toggle',()=>{const run=ap
 test('CSV naming supports original single name and configured merged name',()=>{const run=app();run('state.exportCfg={fileNameFromInput:true,fileName:"指定名"}');assert.equal(run('exportMergedFileName([FILES_DATA[0]])'),run('dispFileName(FILES_DATA[0].id).replace(/\\.[^.]+$/, "")'));assert.equal(run('exportMergedFileName([FILES_DATA[0],FILES_DATA[1]])'),'指定名');assert.equal(run('state.exportCfg.fileNameFromInput=false;exportMergedFileName([FILES_DATA[0]])'),'指定名');});
 
 test('menu role mocks use valid menu leaves and personal assignments',()=>{const run=app();const grants=JSON.parse(run('JSON.stringify(defaultOperationGrants())'));const leaves=JSON.parse(run('JSON.stringify(MENU_LEAVES)'));Object.values(grants).flat().forEach(id=>assert.ok(leaves.includes(id),id));assert.ok(grants.R7.includes('settings-scenes-edit'));assert.ok(!grants.R8.includes('settings-scenes-edit'));assert.equal(run('initializePhaseOneAccess();entUserByUid("u8").soloPermIds.includes("R8")'),true);});
+
+test('account page and dialogs are available to every logged-in role',()=>{const run=app();assert.equal(run('canReachPage("account","u7")'),true);assert.match(run('renderAccount()'),/ユーザーID/);const password=run('state.accountPasswordOpen=true;renderAccountDialogs()');assert.equal((password.match(/type="password"/g)||[]).length,3);assert.match(password,/旧パスワード/);assert.match(password,/確認パスワード/);const logout=run('state.logoutConfirm=true;renderAccountDialogs()');assert.match(logout,/ログアウトしますか/);assert.match(logout,/id="logoutCancel"/);assert.match(logout,/id="logoutOk"/);});

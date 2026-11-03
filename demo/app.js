@@ -1728,6 +1728,7 @@ function canReachMenu(nodeId, uid) {
 
 /** 画面ルートを開けるか */
 function canReachPage(page, uid) {
+  if (page === 'account') return true;
   if (page === 'notices') return true;
   const node = PAGE_MENU_NODE[page];
   if (!node) return isTenantAdmin(uid || state.currentUser);
@@ -3448,6 +3449,7 @@ function renderTable() {
 /* ===================== 5-b2. タブ（ホーム／新規アップロード／ファイル一覧／マイタスク） ===================== */
 
 const TABS_DEF = {
+  account: {id:'account',label:'アカウント情報',route:'account'},
   home: { id: 'home', label: 'ホーム', route: 'home' },
   upload: { id: 'upload', label: '新規アップロード', route: 'upload' },
   result: { id: 'result', label: '読取結果一覧', route: 'result' },
@@ -7932,6 +7934,43 @@ function renderUpload() {
 }
 
 
+function renderAccount() {
+  const me = currentProfile();
+  const user = entUserByUid(state.currentUser) || {};
+  const roleNames = (user.soloPermIds || []).map(id => (byId(ROLES,id)||{}).name).filter(Boolean).join('、') || me.roleLabel;
+  const tenant = byId(TENANTS,state.tenant) || TENANTS[0];
+  return `<section class="account-page"><div class="account-cards">
+    <div class="account-banner"><span class="account-avatar">●</span><div><h1>${esc(me.name)}</h1><p>企業名：${esc(tenant.name)}</p><p>権限：${esc(roleNames)}</p></div></div>
+    <div class="account-card"><h2>ユーザーID</h2><p>${esc(String(user.email || me.id).split('@')[0])}</p></div>
+    <div class="account-card account-password"><h2>ログインパスワード</h2><button type="button" class="link" id="accountPasswordEdit">編集</button></div>
+  </div></section>`;
+}
+function accountPasswordEye(visible) {
+  return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'+(visible?'':'<path d="m3 3 18 18"/>')+'</svg>';
+}
+function renderAccountDialogs() {
+  if(state.logoutConfirm) return `<div class="modal-back" id="logoutBack"><div class="modal account-logout" role="dialog" aria-modal="true" aria-labelledby="logoutTitle"><div class="modal-head"><b id="logoutTitle">ご注意</b></div><div class="account-logout-body"><span class="account-warning">!</span>ログアウトしますか？</div><div class="modal-foot"><span class="spacer"></span><button class="btn" id="logoutCancel">キャンセル</button><button class="btn primary" id="logoutOk">OK</button></div></div></div>`;
+  if(!state.accountPasswordOpen)return '';
+  return `<div class="modal-back" id="accountPasswordBack"><form class="modal account-password-modal" id="accountPasswordForm" role="dialog" aria-modal="true" aria-labelledby="accountPasswordTitle"><div class="modal-head"><b id="accountPasswordTitle">パスワード変更</b><span class="spacer"></span><button type="button" class="icon-btn" id="accountPasswordClose" aria-label="閉じる">×</button></div><div class="account-password-fields">${[['old','旧パスワード','current-password'],['new','新パスワード','new-password'],['confirm','確認パスワード','new-password']].map(([key,label,auto])=>`<label><span><i class="req">*</i>${label}</span><div class="account-password-input"><input class="fld" type="password" id="accountPassword-${key}" autocomplete="${auto}" placeholder="入力してください" required /><button type="button" class="icon-btn" data-password-eye="${key}" aria-label="${label}を表示" aria-pressed="false">${accountPasswordEye(false)}</button></div></label>`).join('')}<p class="account-form-error" id="accountPasswordError" role="alert"></p></div><div class="modal-foot"><span class="spacer"></span><button type="button" class="btn" id="accountPasswordCancel">キャンセル</button><button type="submit" class="btn primary">OK</button></div></form></div>`;
+}
+function bindAccount() {
+  const close=()=>{state.accountPasswordOpen=false;state.logoutConfirm=false;render();};
+  const edit=$('#accountPasswordEdit');if(edit)edit.onclick=()=>{state.accountPasswordOpen=true;render();$('#accountPassword-old').focus();};
+  ['accountPasswordClose','accountPasswordCancel','logoutCancel'].forEach(id=>{const el=$('#'+id);if(el)el.onclick=close;});
+  ['accountPasswordBack','logoutBack'].forEach(id=>{const el=$('#'+id);if(el)el.onclick=e=>{if(e.target===el)close();};});
+  document.querySelectorAll('[data-password-eye]').forEach(b=>b.onclick=()=>{const input=$('#accountPassword-'+b.dataset.passwordEye);const show=input.type==='password';input.type=show?'text':'password';b.setAttribute('aria-pressed',String(show));b.setAttribute('aria-label',show?'パスワードを隠す':'パスワードを表示');b.innerHTML=accountPasswordEye(show);});
+  const form=$('#accountPasswordForm');if(form)form.onsubmit=e=>{
+    e.preventDefault();const old=$('#accountPassword-old').value,next=$('#accountPassword-new').value,confirm=$('#accountPassword-confirm').value;
+    const error=$('#accountPasswordError');
+    if(!old||!next||!confirm){error.textContent='すべての項目を入力してください';return;}
+    if(next!==confirm){error.textContent='新パスワードと確認パスワードが一致しません';return;}
+    if(old===next){error.textContent='旧パスワードと異なるパスワードを入力してください';return;}
+    SECURITY.logs.unshift({at:nowStamp(),user:String((entUserByUid(state.currentUser)||{}).email||state.currentUser).split('@')[0],type:'パスワード変更',result:'成功',ip:'—',note:''});
+    close();toast('パスワードを変更しました（デモ）');
+  };
+  const logout=$('#logoutOk');if(logout)logout.onclick=()=>{SECURITY.logs.unshift({at:nowStamp(),user:String((entUserByUid(state.currentUser)||{}).email||state.currentUser).split('@')[0],type:'ログアウト',result:'成功',ip:'—',note:''});close();toast('ログアウトしました（デモ）');};
+}
+
 function render() {
   const app = $('#app');
   /* innerHTML を丸ごと差し替えるので、同じ画面を描き直すときはスクロール位置を戻す。
@@ -7940,7 +7979,7 @@ function render() {
   const prevMainEl = app.querySelector('.maincol');
   const prevMainTop = prevMainEl ? prevMainEl.scrollTop : 0;
   const prevWinY = window.scrollY || 0;
-  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
+  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
   /* メニュー権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
   if (route !== 'review' && !canReachPage(route)) {
     const fallback = ['home', 'upload', 'result', 'myTasks', 'ticketDetail', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].find((p) => canReachPage(p)) || 'home';
@@ -7959,9 +7998,9 @@ function render() {
   }
   const isTypeList = false;
   const isTypeDetail = route === 'ticketDetail';      // 左：タイプ一覧／右：Step1〜4
-  const isCfg = ['permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(route);
+  const isCfg = ['permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(route);
   const isScene = route === 'bizScenes';        // 業務シーン設定（左：業務シーンリスト／右：ガイド or 編集）
-  const isFullPane = isTypeDetail || isScene || route === 'notices';
+  const isFullPane = isTypeDetail || isScene || route === 'notices' || route === 'account';
   const noSidePane = CFG_NO_SIDEBAR.includes(route);   // 利用設定の各画面：左の設定メニューを出さず全幅で見せる
   app.dataset.page = route;
   app.innerHTML = `
@@ -7987,20 +8026,9 @@ function render() {
         <button type="button" class="userpick-trigger" id="userMenuBtn" aria-expanded="${state.userMenuOpen ? 'true' : 'false'}" aria-haspopup="menu">
           <span class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
           <span class="userpick-name">${esc(me.name)}</span>
-          <span class="demo-badge" title="デモ用の担当切替">デモ</span>
           <span class="ico ${state.userMenuOpen ? 'i-caret-up' : 'i-caret-down'} userpick-caret" aria-hidden="true"></span>
         </button>
         <div class="usermenu" role="menu">
-          <div class="usermenu-head">
-            <div class="usermenu-name">${esc(me.name)}</div>
-            <div class="usermenu-email">${esc(String(me.email || '').split('@')[0])}</div>
-            <span class="usermenu-role">権限：${esc(me.roleLabel)}</span>
-            ${me.hint ? `<p class="usermenu-hint">${esc(me.hint)}</p>` : ''}
-        </div>
-          <div class="usermenu-switch">
-            <div class="usermenu-switch-h">デモ：担当者を切替え</div>
-            ${actors}
-      </div>
           <div class="usermenu-acts">
             <button type="button" class="usermenu-item" role="menuitem" data-user-act="account">アカウント情報</button>
             <button type="button" class="usermenu-item" role="menuitem" data-user-act="logout">ログアウト</button>
@@ -8015,7 +8043,7 @@ function render() {
     ${(isHome || isUpload || isMyTasks || isReview || isFullPane || noSidePane || isTypeList) ? '' : (isCfg ? renderCfgNav() : renderSidebarPane())}
     <div class="maincol ${(isHome || isUpload || isMyTasks || isReview) ? 'wide' : ''}">
       ${'' /* 読取結果一覧はステータスタブを先頭に置く */}
-      ${route === 'notices' ? renderNotices() : isHome ? renderHome()
+      ${route === 'account' ? renderAccount() : route === 'notices' ? renderNotices() : isHome ? renderHome()
         : isMyTasks ? renderMyTasks()
           : isScene ? renderBizScenes()
             : isTypeDetail ? renderTicketDetail()
@@ -8041,6 +8069,7 @@ function render() {
   ${renderReviewConfirmLockDialog()}
   ${renderReviewRequiredDialog()}
   ${renderSaveHistoryDialog()}
+  ${renderAccountDialogs()}
   ${renderExportDialog()}`;
   /* 同じ画面のままの再描画なら、退避したスクロール位置へ戻す */
   if (route === prevDomPage) {
@@ -8052,6 +8081,7 @@ function render() {
   applyActionPermissions();
   bindSceneAccess();
   bindLogs();
+  bindAccount();
 }
 
 /* ============================== 6. イベント ============================== */
@@ -8094,9 +8124,9 @@ function bind() {
       e.stopPropagation();
       const act = b.dataset.userAct;
       state.userMenuOpen = false;
+      if (act === 'account') {state.page='account';if(!state.tabs.includes('account'))state.tabs.push('account');}
+      else if(act === 'logout')state.logoutConfirm=true;
       render();
-      if (act === 'account') toast('アカウント情報（モック）');
-      else if (act === 'logout') toast('ログアウトしました（モック）');
     };
   });
   /* デモ：現在ユーザを切替えて閲覧／マイタスクの違いを見せる */
@@ -10434,7 +10464,7 @@ function applyHash() {
     else if (k === 'rename') { const [target, text] = val.split('|'); state.rename[target] = text; }
     else if (k === 'f') { const [key, v2] = val.split(':'); state.filters[key] = v2; }
     else if (k === 'open') state.filterOpen = true;
-    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(val) ? val : 'result';
+    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(val) ? val : 'result';
     else if (k === 'review' && val) {
       state.reviewId = val;
       state.page = 'review';

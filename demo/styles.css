@@ -457,7 +457,7 @@ input:focus,select:focus,button:focus-visible{
 .userpick-name{font-weight:500;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .userpick-caret{font-size:10px;color:var(--text-3)}
 .demo-badge{flex:0 0 auto;padding:1px 6px;border-radius:999px;background:#fff3e0;color:#b86a00;font-size:10px;font-weight:700;letter-spacing:.02em;line-height:1.4}
-.usermenu{display:none;position:absolute;right:0;top:calc(100% + 8px);width:320px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(24,29,39,.12);z-index:80;overflow:hidden}
+.usermenu{display:none;position:absolute;right:0;top:calc(100% + 8px);width:160px;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(24,29,39,.12);z-index:80;overflow:hidden}
 .userpick.open .usermenu{display:block}
 .usermenu-head{padding:16px 16px 14px;display:flex;flex-direction:column;gap:4px}
 .usermenu-name{font-size:14px;font-weight:600;color:var(--text);line-height:1.35}
@@ -1980,3 +1980,8 @@ th .ico{font-size:11px;color:var(--accent)}
 .logs-filters{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .logs-filter-actions{display:flex;gap:8px;margin-left:auto;justify-content:flex-end}
 .watch-table [data-wroot-move]:disabled{background:#f3f4f6;color:#9ca3af;cursor:not-allowed;opacity:1}
+
+.account-page{display:flex;justify-content:center;padding:100px 24px 60px;min-height:75vh}.account-cards{width:608px;max-width:100%;display:flex;flex-direction:column;gap:24px}.account-banner{display:flex;gap:18px;padding:24px;background:linear-gradient(105deg,#7e93fa,#4ec4cd);color:white;border-radius:8px;min-height:160px}.account-banner h1{font-size:23px;margin:5px 0 14px}.account-banner p{margin:8px 0;font-size:15px}.account-avatar{width:48px;height:48px;border-radius:50%;background:#c5d5ff;display:grid;place-items:center;color:white;font-size:28px}.account-card{min-height:120px;background:white;border:1px solid var(--line);border-radius:6px;padding:24px 28px}.account-card h2{font-size:17px;margin:0 0 12px}.account-card p{color:var(--muted);margin:0}.account-password{display:flex;justify-content:space-between;align-items:flex-start}.account-password-modal{width:min(468px,calc(100vw - 32px))}.account-password-fields{padding:24px 38px}.account-password-fields>label{display:block;margin-bottom:20px}.account-password-fields>label>span{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}.account-password-input{display:flex;position:relative}.account-password-input input{width:100%;padding-right:38px}.account-password-input button{position:absolute;right:5px;top:3px;color:var(--muted)}.account-form-error{color:#e34c57;font-size:13px;min-height:18px}.account-logout{width:min(420px,calc(100vw - 32px))}.account-logout .modal-head{border:0}.account-logout-body{padding:4px 18px 30px;display:flex;align-items:center;gap:10px;font-size:16px}.account-warning{background:#e7a132;color:white;border-radius:50%;width:21px;height:21px;display:grid;place-items:center}.account-logout .modal-foot{border:0}
+.account-password-input button{border:0;box-shadow:none;background:transparent;display:grid;place-items:center;width:28px;height:26px}
+.account-password-input button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.account-password-fields .req{color:#f56c6c;font-style:normal;margin-right:4px}
