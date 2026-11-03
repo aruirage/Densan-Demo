@@ -414,6 +414,8 @@ Home 沿用现有利用履历与计费内容。
 
 ### 6.12 部署与多租户（F12）
 
+![LLMOCR 系统架构图（本地部署）](prd/assets/system-architecture.png)
+
 #### 部署边界
 
 客户架构图为本地私有化部署。每个租户使用一台独立部署的专属 VM，登录入口、配置和业务数据各自独立。每台 VM 配置一个监视根路径，各帳票类别分别对应该路径下的唯一子文件夹。VM 内部署 Nginx、Vue 3／TypeScript前端、Java／Spring Boot后端、Python／PyTorch AI Service、MySQL 8.4、Redis 7.2及 MinIO。
