@@ -362,14 +362,14 @@ const ENT_USERS = [
 /** システム権限（メニュー到達）。業務のメニュー権限はユーザーグループの役割で付与する */
 let ROLES = [
   { id: 'R1', name: 'システム管理者', code: 'tenant_admin', desc: 'すべてのメニューと管理機能を利用', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R2', name: '運用管理者', code: 'operation_admin', desc: '帳票設定、ユーザー・部門管理、辞書、自動アップロード、ログを利用', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R2', name: '運用管理者', code: 'operation_admin', desc: '帳票設定、ユーザー・部門管理、辞書、自動取込、ログを利用', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R3', name: '帳票業務担当', code: 'document_operator', desc: '新規アップロードと読取結果一覧を利用', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R4', name: '帳票設定担当', code: 'form_manager', desc: '帳票タイプ、業務シーン、辞書を管理', created: '2025-10-01 00:00:00', status: '有効' },
   { id: 'R5', name: 'アップロード担当', code: 'upload_operator', desc: '新規アップロードを利用', created: '2025-10-01 00:00:00', status: '有効' },
   /* 9 ロール設計で追加した分。メニュー権限は MENU_PERMS 側で付ける */
   { id: 'R6', name: '読取結果担当', code: 'result_operator', desc: '読取結果一覧を利用', created: '2026-01-01 00:00:00', status: '有効' },
   { id: 'R7', name: '業務シーン管理者', code: 'scene_manager', desc: '業務シーンの追加・編集・削除を利用', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R8', name: '自動アップロード管理者', code: 'watch_manager', desc: '自動アップロード設定とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R8', name: '自動取込管理者', code: 'watch_manager', desc: '自動取込設定とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
   { id: 'R10', name: '辞書管理者', code: 'dictionary_manager', desc: '辞書登録とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
   { id: 'R11', name: 'ユーザー管理者', code: 'user_manager', desc: 'ユーザー・部門管理とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
 ];
@@ -523,7 +523,7 @@ let USER_ADD_DRAFT = null;
 
 const SECURITY = {
   /* セキュリティ設定は 3 モジュールだけ（データ保存期限／IPアドレスホワイトリスト／アイドルセッション） */
-  retention: '12ヶ月',      // 7日 / 14日 / 1ヶ月 / 2ヶ月 / 3ヶ月 / 6ヶ月 / 12ヶ月
+  retention: '6ヶ月',       // 7日 / 14日 / 1ヶ月 / 2ヶ月 / 3ヶ月 / 6ヶ月 / 12ヶ月
   ipEnabled: '無効',        // 無効 / 有効
   idle: '制限なし',         // 15分 / 30分 / 60分 / 2時間 / 制限なし
   logs: [
@@ -533,10 +533,9 @@ const SECURITY = {
     { at: '2026-10-14 17:44:02', user: 'misaki.nakamura', type: 'ログイン', ip: '172.16.51.33', result: '失敗', note: 'パスワード誤り' },
     { at: '2026-10-14 15:10:40', user: 'minoru.tanaka', type: '設定変更', ip: '172.16.51.44', result: '成功', note: 'エクスポート設定' },
     { at: '2026-10-14 09:12:00', user: 'miko.sato', type: 'アップロード', ip: '172.16.51.8', result: '成功', note: '3ファイル' },
-    { at: '2026-10-15 08:02:11', user: 'システム', type: '自動取込', ip: '—', result: '成功', note: '監視「窓口共有」 2件 / 10_住民異動関係' },
-    { at: '2026-10-15 08:04:40', user: 'システム', type: '自動取込失敗', ip: '—', result: '失敗', note: '対象外の拡張子' },
-    { at: '2026-10-15 09:10:00', user: 'miko.sato', type: '監視設定変更', ip: '172.16.51.8', result: '成功', note: '分類順を変更' },
-    { at: '2026-10-15 09:11:20', user: 'システム', type: 'エラー通知', ip: '—', result: '成功', note: 'Webhook へ通知' },
+    { at: '2026-10-15 08:02:11', user: 'システム', type: '自動取込', feature: '自動取込設定', action: '自動取込', target: 'scan001.pdf', ip: '—', result: '成功', note: '¥¥filesv01¥取込¥税務課¥住民税' },
+    { at: '2026-10-15 08:04:40', user: 'システム', type: '自動取込', feature: '自動取込設定', action: '自動取込', target: 'scan002.pdf', ip: '—', result: '失敗', note: '¥¥filesv01¥取込¥福祉課¥申請書 ／ 読取失敗' },
+    { at: '2026-10-15 09:10:00', user: 'miko.sato', type: '設定変更', feature: '自動取込設定', action: '設定変更', target: '自動取込設定', ip: '172.16.51.8', result: '成功', note: '実行間隔を変更' },
   ],
 };
 
@@ -1007,7 +1006,7 @@ const PERMISSION_MODULES = [
   },
   {
     "id": "usage-watch",
-    "label": "自動アップロード",
+    "label": "自動取込設定",
     "children": [
       {
         "id": "watch-view",
@@ -1134,7 +1133,7 @@ const MENU_TREE = [
           },
           {
             "id": "usage-watch",
-            "label": "自動アップロード"
+            "label": "自動取込設定"
           }
         ]
       }
@@ -1355,7 +1354,9 @@ function makeUpload(name, sizeBytes) {
     status: 'classifying',                  // ①アップロード → 要確認（自動分類中・タイプ確認が必要）
     history: '帳票タイプを自動分類しています（要確認）',
     layout: guess.id,
-    auto: true,
+    /* この関数は画面からの手動アップロード用。監視フォルダー取込のモックは
+       initializeDemoData() で auto=true を明示する。 */
+    auto: false,
     error: '',
     biz: state.upBiz,
   };
@@ -1667,7 +1668,7 @@ const HEADER_MENUS = {
     { id: 'roles', label: '権限設定', menuNode: 'usage-permissions' },
     { id: 'security', label: 'セキュリティ設定', menuNode: 'usage-security' },
     { id: 'logs', label: 'ログ設定', menuNode: 'usage-logs' },
-    { id: 'watch', label: '自動アップロード', menuNode: 'usage-watch' },
+    { id: 'watch', label: '自動取込設定', menuNode: 'usage-watch' },
   ] },
 };
 
@@ -1763,7 +1764,7 @@ const state = {
   tenantOpen: false,
   tabs: ['home', 'upload', 'result'], // 開いているタブ。×で閉じられる
   resultPage: 1,                  // 読取結果一覧のページ番号
-  homeTab: 'history',             // ホーム：'history'（ご利用履歴） / 'dashboard'（自動アップロード）
+  homeTab: 'history',             // ホーム：'history'（ご利用履歴） / 'dashboard'（自動取込）
   hFilters: { from: HOME_FROM, to: HOME_TO, layout: [], user: '', biz: [] },
   hPage: 1,
   hPerPage: 10,
@@ -3462,6 +3463,7 @@ const TABS_DEF = {
   roles: { id: 'roles', label: '権限設定', route: 'roles' },
   security: { id: 'security', label: 'セキュリティ設定', route: 'security' },
   logs: { id: 'logs', label: 'ログ設定', route: 'logs' },
+  watch: { id: 'watch', label: '自動取込設定', route: 'watch' },
 };
 
 /** 确认／详情タブ ID（ファイルごとに1タブ） */
@@ -4678,6 +4680,9 @@ function saveExportCfg() {
 function exportFileName() {
   const files = visibleFiles();
   if (!files.length) return '出力データ';
+  /* 初期値は帳票カテゴリ名。カテゴリが解決できない場合だけ入力名を使う。 */
+  const category = catOf(files[0].layout);
+  if (category && category.name) return category.name;
   /* ファイルツリーの名前から拡張子だけ落として .csv にする */
   const base = (name) => String(name || '').replace(/\.[A-Za-z0-9]+$/, '');
   return base(files[0].name);
@@ -4686,15 +4691,16 @@ function exportFileName() {
 function renderExportDialog() {
   if (!state.exportOpen) return '';
   const C = state.exportCfg;
+  const defaultName = exportFileName();
+  const fileName = C.fileName || defaultName;
   const encodings = ['UTF-8', 'UTF-8（BOMなし）', 'Shift_JIS'];
   return `<div class="modal-back" id="expBack">
     <div class="modal exp-modal" style="width:min(400px,100%)">
       <div class="modal-head"><b>エクスポート設定</b><span class="spacer"></span><button class="icon-btn" id="expClose" aria-label="閉じる">×</button></div>
       <div class="modal-canvas exp-canvas">
-        <label class="switch exp-switch"><span class="switch-text">入力ファイル名を使用</span><input type="checkbox" data-expcfg="fileNameFromInput" ${C.fileNameFromInput !== false ? 'checked' : ''} /><span class="switch-track" aria-hidden="true"></span></label>
         <label class="exp-stack-field">
-          <span class="exp-field-label"><i class="req">*</i>ファイル名 <span class="info-i" data-tip="「入力ファイル名を使用」が有効な場合、単一ファイルは入力名を使用します。無効な場合と同じ帳票タイプの複数ファイルを結合する場合は、ここで設定した名前を使用します。" aria-label="ファイル名の説明">i</span></span>
-          <span class="exp-filename"><input class="fld exp-name-input" id="expFileName" type="text" value="${esc(C.fileName || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span>
+          <span class="exp-field-label"><i class="req">*</i>ファイル名 <span class="info-i" data-tip="初期値は入力ファイル名です。必要に応じてこの欄で変更できます。" aria-label="ファイル名の説明">i</span></span>
+          <span class="exp-filename"><input class="fld exp-name-input" id="expFileName" type="text" value="${esc(fileName)}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span>
         </label>
         <label class="exp-stack-field">
           <span class="exp-field-label"><i class="req">*</i>変換方式</span>
@@ -4857,7 +4863,7 @@ function renderAccessKeysTab() {
           <th style="width:90px">ステータス</th><th style="width:180px">作成者</th>
           <th style="width:170px">操作・処理</th>
         </tr></thead>
-        <tbody>${rows || '<tr><td colspan="9" class="empty-cell">データなし</td></tr>'}</tbody>
+        <tbody>${rows || '<tr><td colspan="10" class="empty-cell">データなし</td></tr>'}</tbody>
       </table>
     </div>
   </section>`;
@@ -5549,11 +5555,11 @@ function renderSecurity() {
       <p class="cfg-note">設定が有効になると、すべてのオンラインユーザーは次回のログイン時に新しいポリシーが適用されます。</p>
     </section>
   </div>
-  <div class="cfg-actions sec-actions"><button class="btn" id="secClose">閉じる</button><button class="btn primary" id="secSave"><span class="ico i-save"></span>保存</button></div>
+  <div class="cfg-actions sec-actions"><button class="btn" id="secClose">閉じる</button><button class="btn primary" id="secSave">保存</button></div>
   </div>`;
 }
 
-/** ログ出力の設定。自動アップロードの設定から切り離し、この画面で管理する。 */
+/** ログ出力の設定。自動取込の設定から切り離し、この画面で管理する。 */
 let LOG_CFG = {
   level: '標準',
   path: '\\\\filesv01\\ログ',
@@ -5567,7 +5573,7 @@ const LOG_LEVELS = [
 
 /** ログ設定 */
 const AUTH_EVENTS = ['ログイン','ログアウト','パスワード変更','パスワード再設定'];
-function logFunctions() {return ['新規アップロード','読取結果一覧','帳票タイプ設定','業務シーン設定','辞書登録','ユーザー管理','権限設定','セキュリティ設定','ログ設定','自動アップロード'];}
+function logFunctions() {return ['新規アップロード','読取結果一覧','帳票タイプ設定','業務シーン設定','辞書登録','ユーザー管理','権限設定','セキュリティ設定','ログ設定','自動取込設定'];}
 function logRows() {
  const auth = state.logTab !== 'operation';
  const filter = state.logApplied || {};
@@ -5861,13 +5867,13 @@ function renderDictDialogs() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   11. 自動アップロード
+   11. 自動取込
    設定画面のみ（監視コンソール・API 連動は持たない）。
    監視で取り込んだファイルは、手動アップロードと同じく「新規アップロード」の
    未処理テーブルに溜まり、「選択帳票読取」で初めて読取結果一覧へ入る。
    ══════════════════════════════════════════════════════════════════════════ */
 
-/** 自動アップロードの設定。
+/** 自動取込の設定。
  *  ① 監視パス＝共有フォルダの UNC パス。1 行＝1 パス。行ごとに有効／無効と、
  *     取り込み成功後のファイルの扱い（削除／そのまま）を持つ
  *     （tenant は取り込み先の紐付け属性で、行の単位ではない）
@@ -5879,13 +5885,13 @@ let WATCH = {
   on: true,
   /* ① 監視パス。after は取り込み成功後の扱い（del=削除 / keep=そのまま） */
   roots: [
-    { id: 'r1', tenant: 'tenant1', path: '\\\\filesv01\\取込', on: true, after: 'move' },
+    { id: 'r1', tenant: 'tenant1', path: '\\\\filesv01\\取込', on: true, after: 'move', moveTo: '\\\\filesv01\\処理済' },
   ],
   /* ② 帳票タイプ 1 行。フォルダ名はパス直下の名前（全パス共通） */
   rules: [],
   /* ③ 共通設定。エラー通知は Webhook URL のみ（メール通知は廃止） */
   dupGuard: true, dupMethod: 'meta',
-  retry: 3, retryGap: 5,
+  retry: 3, retryGap: 5, retryUnit: '分',
   updatedAt: '2026-10-16 09:12:30',
 };
 /* 帳票タイプの数だけルール行を作る（帳票タイプを増やしたら行も増える） */
@@ -5903,7 +5909,7 @@ function watchRuleOf(catId) {
   return r;
 }
 
-/* ── ホームのダッシュボード用モック（自動アップロード） ────────────────
+/* ── ホームのダッシュボード用モック（自動取込） ────────────────
  *  実際の取込ログの代わりに、直近のエラーと日別実績を固定データで持つ。 */
 const WATCH_ERRORS = [
   { id: 'we1', at: '2026-10-20 09:12:30', path: '\\\\filesv01\\取込', cat: '個人住民税申告', file: '01_令和8年度分市民税・県民税申告書（兼・国保税申告書）.pdf', reason: '文字が薄く読み取れませんでした', handled: false },
@@ -5931,7 +5937,7 @@ function shouldNotifyUpload(success) {
 function addUploadFailure(error) {
   if (!shouldNotifyUpload(false)) return;
   WATCH_ERRORS.unshift({...error, id: error.id || 'we' + Date.now(), at: error.at || nowStamp()});
-  SECURITY.logs.unshift({at:error.at || nowStamp(),user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:error.file,ip:'—',result:'失敗',note:[watchPathDisplay(error.path),error.reason].filter(Boolean).join(' ／ ')});
+  SECURITY.logs.unshift({at:error.at || nowStamp(),user:'システム',type:'自動取込',feature:'自動取込設定',action:'自動取込',target:error.file,ip:'—',result:'失敗',note:[watchPathDisplay(error.path),error.reason].filter(Boolean).join(' ／ ')});
   render();
 }
 
@@ -5954,110 +5960,194 @@ const WATCH_PATTERNS = [
 ];
 
 /* フォーム部品（この画面だけで使う） */
-const watchSelect = (key, opts, cur) => `<select class="fld" data-wf="${key}">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+const watchSelect = (key, opts, cur, disabled) => `<select class="fld" data-wf="${key}" ${disabled ? 'disabled' : ''}>${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
 const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-checked="${on}"><span class="tgl-txt">${on ? 'する' : 'しない'}</span><span class="tgl-knob"></span></button>`;
-const watchRow = (label, inner, wide) => `<div class="wf"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
+const watchRow = (label, inner, wide, off) => `<div class="wf${off ? ' is-off' : ''}"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
 
-/** 自動アップロード設定。
+/** 自動取込設定。
  *  ① 監視パス ② 帳票タイプ別ルール ③ 共通設定 の 3 段で見せる。
  *  監視する実パスは「監視パス × 帳票タイプのフォルダ」で決まる。
  *  取り込み成功後のファイルは、監視パス行ごとの「削除 / そのまま」に従う。 */
 const watchPathDisplay = (value) => String(value || '').split('\\').join('¥');
 const watchPathValue = (value) => String(value || '').split('¥').join('\\');
-function renderWatch() {
-  const x = WATCH;
-  const row = watchRow;
-
-  const pathRows = x.roots.map((r) => `<tr class="wr-root${r.on ? '' : ' off'}">
-        <td><input class="fld mono" data-wroot-path="${r.id}" value="${esc(watchPathDisplay(r.path))}" placeholder="監視パスを入力してください" aria-label="監視パス" /></td>
-        <td><select class="fld" data-wroot-after="${r.id}" aria-label="処理後のファイル">${Object.entries(WATCH_ROOT_AFTER).map(([value,label])=>`<option value="${value}" ${(r.after || 'move')===value?'selected':''}>${label}</option>`).join('')}</select></td>
-        <td><input class="fld mono" data-wroot-move="${r.id}" value="${esc(watchPathDisplay(r.moveTo))}" placeholder="処理後の保存先パス" aria-label="処理後のファイルパス" ${(r.after || 'move') === 'move' ? '' : 'disabled'} /></td>
-        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wrooton="${r.id}" role="switch" aria-checked="${r.on}" aria-label="この監視パスを有効にする"><span class="tgl-knob"></span></button></td>
-      </tr>`).join('');
-
-  /* 帳票タイプ（ツリー第2階層）をそのまま並べる。業務シーンの階層は作らず、
-     並び順だけ業務シーンの順に揃える。フォルダ名は全監視パスで共通。 */
-  const orderedCats = CATEGORY.concat(TICKET_TYPES.filter(t=>t.autoWatchRule)).sort((a, b) => {
-    const ba = (byId(BUSINESS, a.business) || {}).order || 0;
-    const bb = (byId(BUSINESS, b.business) || {}).order || 0;
-    return ba - bb || (a.order || 0) - (b.order || 0);
-  });
-  const ruleRows = orderedCats.map((c) => {
-    const r = watchRuleOf(c.id);
-    return `<tr class="wr-rule${r.on ? '' : ' off'}">
-        <td class="wr-cat">${esc(c.name)}</td>
-        <td><input class="fld mono" data-wrule-folder="${c.id}" value="${esc(r.folder)}" placeholder="フォルダ名" aria-label="フォルダ名" /></td>
-        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wruleon="${c.id}" role="switch" aria-checked="${r.on}" aria-label="この帳票タイプを自動で取り込む"><span class="tgl-knob"></span></button></td>
-      </tr>`;
+function watchDeptScenes(groupId) {
+  if(!groupId)return [];
+  return BIZ_SCENES.filter(sc=>expandGroupSelection(sc.departmentIds||[]).includes(groupId));
+}
+function watchDeptTypes(dept) {
+  const names = (dept.sceneIds || []).flatMap(id => ((byId(BIZ_SCENES,id)||{}).formIds||[]).map(fid => (byId(CLASSIFY_FORMS,fid)||{}).name)).filter(Boolean);
+  const ids = new Set(LAYOUT.filter(l=>names.includes(l.name)).map(l=>l.category));
+  return CATEGORY.filter(c=>ids.has(c.id));
+}
+/** 監視パス配下の部門フォルダー（多階層）。デモ用の固定ツリー。 */
+const WATCH_FOLDERS = [
+  { name: '税務課', children: [
+    { name: '個人住民税', children: [{ name: '令和8年度' }] },
+    { name: '特別徴収' },
+  ] },
+  { name: '福祉課', children: [
+    { name: '保育所等入所' },
+    { name: '児童手当' },
+  ] },
+  { name: '総務部' },
+  { name: '住民課', children: [
+    { name: '住民異動' },
+  ] },
+];
+/** 部門フォルダー選択用のツリー（単一選択）。親フォルダーも選択できる。 */
+function renderWatchFolderNodes(nodes, parent, selected, depth) {
+  const expanded = state.watchFolderExpanded || {};
+  return (nodes || []).map((n) => {
+    const path = parent ? parent + '/' + n.name : n.name;
+    const hasKids = !!(n.children && n.children.length);
+    const open = hasKids && expanded[path] !== false;
+    const isSel = selected === path;
+    const caret = hasKids
+      ? `<button type="button" class="watch-folder-caret" data-wdept-folder-toggle="${esc(path)}" aria-label="${open ? '折りたたむ' : '展開'}">${open ? '▾' : '▸'}</button>`
+      : '<span class="watch-folder-caret is-leaf" aria-hidden="true"></span>';
+    const row = `<div class="watch-folder-node" style="padding-left:${depth * 16}px" role="presentation">${caret}<button type="button" class="watch-folder-pick${isSel ? ' is-selected' : ''}" data-wdept-folder-pick="${esc(path)}" role="option" aria-selected="${isSel}"><span class="watch-folder-name">${esc(n.name)}</span>${isSel ? '<span class="watch-folder-check" aria-hidden="true">✓</span>' : ''}</button></div>`;
+    return row + (open ? renderWatchFolderNodes(n.children, path, selected, depth + 1) : '');
   }).join('');
+}
+function watchDeptSync(dept) {
+  dept.sceneIds=(dept.sceneIds||[]).filter(id=>watchDeptScenes(dept.groupId).some(sc=>sc.id===id));
+  const types=watchDeptTypes(dept);
+  dept.mappings=(dept.mappings||[]).filter(m=>types.some(c=>c.id===m.cat));
+  types.forEach(c=>{if(!dept.mappings.some(m=>m.cat===c.id))dept.mappings.push({cat:c.id,folders:[''],on:true});});
+}
+function ensureWatchDepartments() {
+  if(WATCH.departments){WATCH.departments.forEach(watchDeptSync);return WATCH.departments;}
+  const available=GROUPS.filter(g=>!g.root);
+  const tax=byId(GROUPS,((byId(BIZ_SCENES,'cls-zeimu')||{}).departmentIds||[])[0])||byId(GROUPS,'g4')||available[0]||{};const welfare=byId(GROUPS,((byId(BIZ_SCENES,'cls-hoiku')||{}).departmentIds||[])[0])||byId(GROUPS,'g6')||available[1]||available[0]||{};
+  WATCH.departments=[{id:'wd-tax',groupId:tax.id||'',folder:'税務課',sceneIds:['cls-zeimu'],on:true,mappings:[]},{id:'wd-welfare',groupId:welfare.id||'',folder:'福祉課',sceneIds:['cls-hoiku'],on:true,mappings:[]}];
+  WATCH.departments.forEach(d=>{watchDeptSync(d);d.mappings.forEach(m=>m.folders=[(byId(CATEGORY,m.cat)||{}).name||'']);});
+  const r=WATCH.roots[0];if(r&&!r.moveTo)r.moveTo='\\\\filesv01\\処理済';
+  return WATCH.departments;
+}
+function watchFolderKey(value) {return String(value||'').trim().replace(/[\\/¥]+/g,'/').replace(/^\/+|\/+$/g,'').toLowerCase();}
+function watchValidateSettings() {
+  const root=WATCH.roots[0]||{};
+  const normalize=v=>watchPathValue(v).trim().replace(/[\\/]+/g,'/').replace(/\/$/,'').toLowerCase();
+  const source=normalize(root.path),target=normalize(root.moveTo);
+  if(!source)return '監視フォルダーを入力してください';
+  if(!target)return '処理後フォルダーを入力してください';
+  if(source===target||source.startsWith(target+'/')||target.startsWith(source+'/'))return '監視フォルダーと処理後フォルダーは別の階層に設定してください';
+  const depts=ensureWatchDepartments().filter(d=>d.on),used=new Set();
+  if(!depts.length)return '有効な部門を設定してください';
+  const validName=n=>n&&n!=='.'&&n!=='..'&&!/[\\/¥:*?"<>|]/.test(n);
+  const validPath=p=>{const parts=String(p||'').split(/[\\/¥]+/).filter(Boolean);return parts.length>0&&parts.every(validName);};
+  for(const d of depts){
+    if(!byId(GROUPS,d.groupId))return '部門を選択してください';
+    if(!validPath(d.folder))return '部門フォルダーを確認してください';
+    const folder=watchFolderKey(d.folder);
+    if([...used].some(k=>k===folder||folder.startsWith(k+'/')||k.startsWith(folder+'/')))return '部門フォルダーが重複しています';used.add(folder);
+    if(!(d.sceneIds||[]).length)return '業務シーンを選択してください';
+    const folders=new Set();
+    for(const m of d.mappings.filter(m=>m.on)){
+      if(!watchDeptTypes(d).some(t=>t.id===m.cat))return '帳票タイプを業務シーンの範囲内に設定してください';
+      for(const raw of m.folders){const n=watchFolderKey(raw);if(!validName(n))return '帳票フォルダー名を入力してください';if(folders.has(n))return '同じ部門内でフォルダー名が重複しています';folders.add(n);}
+    }
+  }
+  return '';
+}
+function watchResolveFile(relativePath, aiCategoryId) {
+  const segments=String(relativePath||'').split(/[\\/¥]+/).filter(Boolean);
+  if(segments.some(s=>s==='.'||s==='..'))return {error:'監視フォルダー外のパスです'};
+  const dept=ensureWatchDepartments().find(d=>{
+    if(!d.on)return false;
+    const parts=String(d.folder||'').split(/[\\/¥]+/).filter(Boolean);
+    return parts.length>0&&parts.length<=segments.length&&parts.every((p,i)=>watchFolderKey(p)===watchFolderKey(segments[i]));
+  });
+  if(!dept)return {error:'部門の取込設定が見つかりません',source:relativePath};
+  const deptParts=String(dept.folder||'').split(/[\\/¥]+/).filter(Boolean);
+  const names=segments.slice(deptParts.length,-1).map(watchFolderKey);
+  const expected=dept.mappings.find(m=>m.on&&m.folders.some(f=>watchFolderKey(f)&&names.includes(watchFolderKey(f))));
+  if(!watchDeptTypes(dept).some(c=>c.id===aiCategoryId))return {error:'部門の業務シーン内で帳票タイプを判別できません',departmentId:dept.groupId,source:relativePath};
+  return {departmentId:dept.groupId,expectedCategoryId:expected?expected.cat:null,categoryId:aiCategoryId,corrected:!!expected&&expected.cat!==aiCategoryId,archiveRelativePath:segments.join('¥'),dedupScope:dept.groupId+'|'+aiCategoryId};
+}
 
-  /* 実際に監視する本数＝有効な監視パス × 有効な帳票タイプ */
-  const livePaths = x.roots.filter((r) => r.on && String(r.path || '').trim());
-  const liveRules = x.rules.filter((r) => r.on && String(r.folder || '').trim());
-  const combos = livePaths.length * liveRules.length;
-  const sample = (livePaths[0] && liveRules[0])
-    ? `${String(livePaths[0].path).replace(/[\\/]+$/, '')}\\${liveRules[0].folder}`
-    : '';
-
-  return `<div class="cfg-head">
-    <h1 class="cfg-title">自動アップロード <span class="info-i" data-tip="監視パス（共有フォルダ）の直下にある帳票タイプ別フォルダを見張り、条件に合うファイルを自動で取り込みます。設定済みの帳票タイプで自動的にアップロードと読み取りを実行します。">i</span></h1>
-    <span class="spacer"></span>
-    <span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>
-  </div>
-  <fieldset class="watch-body" ${x.on ? '' : 'disabled'} aria-label="自動アップロード設定">
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="テナントの仮想マシンごとに監視パスを 1 つ設定します。帳票タイプのフォルダはこのパスの直下に置きます。処理後のファイルは移動・削除・そのままから選びます。移動の場合のみ保存先パスを入力できます。">i</span></h3>
-        <div class="watch-tablewrap">
-          <table class="watch-table wr-roots">
-            <thead><tr>
-              <th>パス</th>
-              <th style="width:150px">処理後のファイル</th>
-              <th>処理後のファイルパス</th>
-              <th class="c" style="width:52px">有効</th>
-            </tr></thead>
-            <tbody>${pathRows}</tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">帳票タイプ別ルール<span class="info-i" data-tip="帳票タイプ（ツリー第2階層）をそのまま並べています。フォルダは監視パスの直下に配置します。フォルダ名と拡張子は大文字・小文字を区別せず、アップロード対応形式を取り込みます。自動取込が不要な帳票タイプは「自動取込」を切ってください。">i</span></h3>
-        <div class="watch-tablewrap">
-          <table class="watch-table wr-rules">
-            <thead><tr>
-              <th style="width:180px">帳票タイプ</th>
-              <th style="width:190px">フォルダ名</th>
-              <th class="c" style="width:64px">自動取込</th>
-            </tr></thead>
-            <tbody>${ruleRows}</tbody>
-          </table>
-        </div>
-        <div class="watch-sec-foot">
-          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本${sample ? `<span class="mono">${esc(watchPathDisplay(sample))}</span>` : ''}</p>
-        </div>
-      </section>
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">二重取込防止</h3>
-        <div class="watch-fields">
-          ${row('同一ファイルを除外', watchToggle('dupGuard', x.dupGuard))}
-          ${row('判定方法', watchSelect('dupMethod', Object.keys(WATCH_DUP).map((k) => [k, WATCH_DUP[k]]), x.dupMethod), true)}
-        </div>
-      </section>
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">失敗時の再実行</h3>
-        <div class="watch-fields">
-          ${row('再実行回数', `<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span class="muted">回</span></div>`)}
-          ${row('実行間隔', `<div class="watch-inline"><input class="fld" type="number" min="1" max="120" data-wf="retryGap" value="${esc(x.retryGap)}" /><span class="muted">分</span></div>`)}
-        </div>
-      </section>
-
-
-
-
-  </fieldset>`;
+function renderWatch() {
+  const x=WATCH,row=watchRow,root=x.roots[0],depts=ensureWatchDepartments();
+  const departmentCards=depts.map((d,di)=>{
+    const group=byId(GROUPS,d.groupId),types=watchDeptTypes(d),scenes=watchDeptScenes(d.groupId);
+    const scope=(d.sceneIds||[]).map(id=>(byId(BIZ_SCENES,id)||{}).name).filter(Boolean);
+    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu" role="listbox" aria-label="部門フォルダー">${renderWatchFolderNodes(WATCH_FOLDERS,'',d.folder,0)}</div>`:'';
+    return `<div class="watch-dept-card watch-dept-row${d.on?'':' is-off'}" data-watch-dept="${d.id}">
+      <div class="watch-dept-fields">
+        <select class="fld" data-wdept-group="${d.id}"><option value="">選択してください</option>${GROUPS.filter(g=>!g.root).map(g=>`<option value="${g.id}" ${g.id===d.groupId?'selected':''}>${esc(g.name)}</option>`).join('')}</select>
+        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}" title="${esc(String(d.folder||'').split('/').join(' / '))}"><span class="watch-folder-value">${d.folder?esc(String(d.folder).split('/').join(' / ')):(x.pathVerified?'選択してください':'接続確認後に選択できます')}</span><span class="watch-folder-arrow" aria-hidden="true">▾</span></button>${folderMenu}</div>
+        <details class="watch-scene-picker" ${state.watchSceneOpen===d.id?'open':''}><summary>${esc(scope.join('、')||'業務シーンを選択してください')}<span>⌄</span></summary><div class="watch-scene-options">${scenes.map(sc=>`<label><input type="checkbox" data-wdept-scene="${d.id}" value="${sc.id}" ${(d.sceneIds||[]).includes(sc.id)?'checked':''} />${esc(sc.name)}</label>`).join('')||'<span class="watch-scope-line">この部門に許可された業務シーンがありません</span>'}</div></details>
+        <button type="button" class="icon-btn watch-dept-delete" data-wdept-del="${d.id}" title="部門設定を削除" aria-label="部門設定を削除">×</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="watch-page"><div class="cfg-head"><h1 class="cfg-title">自動取込設定</h1></div>
+    <section class="watch-sec"><h3 class="watch-sec-head">監視・処理後パス <span class="spacer"></span><span class="watch-master-toggle"><span class="watch-head-lab">有効</span>${watchToggle('on',x.on)}</span></h3>
+    <p class="watch-sec-desc">監視パス（取込元）と処理後パス（分離先）を設定します。</p>
+    <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="監視・処理後パス設定"><div class="watch-root-fields">
+      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>監視パス（取込元） <span class="info-i" data-tip="テナントごとに1つ設定します。配下の全階層のファイルが対象です。">i</span><span class="watch-path-valid ${x.pathVerified?'is-valid':''}">${x.pathVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-path="${root.id}" value="${esc(watchPathDisplay(root.path))}" placeholder="監視パスを入力してください" /><button type="button" class="btn sm" data-wroot-test="path">接続テスト</button></div></div>
+      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>処理後パス（分離先） <span class="info-i" data-tip="監視パスとは別の場所に設定します。処理後ファイルは元の相対フォルダー構成を保ったまま保存します。">i</span><span class="watch-path-valid ${x.moveVerified?'is-valid':''}">${x.moveVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-move="${root.id}" value="${esc(watchPathDisplay(root.moveTo))}" placeholder="処理後パスを入力してください" /><button type="button" class="btn sm" data-wroot-test="move">接続テスト</button></div></div>
+    </div></fieldset></section>
+  <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="自動取込設定">
+    <section class="watch-sec"><h3 class="watch-sec-head">部門別取込設定 <span class="spacer"></span><button class="btn primary sm" type="button" data-wdept-add="1">＋ 部門を追加</button></h3>
+    <p class="watch-sec-desc">部門フォルダー配下を再帰的に読み取り、選択した業務シーンの帳票タイプをAI分類します。分類や確認は該当部門の権限に従います。</p>
+    <div class="watch-dept-gate-note" ${x.pathVerified?'hidden':''}><span class="info-i" aria-hidden="true">i</span><span>部門フォルダーを選択するには、上の「監視パス（取込元）」の接続テストを実行してください。</span></div>
+    <div class="watch-dept-columns"><span>部門</span><span>部門フォルダー</span><span>業務シーン</span><span></span></div>${departmentCards}</section>
+    <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法 <span class="info-i" data-tip="部門・帳票タイプごとに判定します。同じファイルでも部門が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
+  </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div></div>`;
+}
+function bindWatchDepartments() {
+  const depts=ensureWatchDepartments();const get=id=>depts.find(d=>d.id===id);
+  document.querySelectorAll('[data-watch-category]').forEach(el=>el.ontoggle=()=>{if(!el.isConnected)return;state.watchMapExpanded=state.watchMapExpanded||{};state.watchMapExpanded[el.dataset.watchCategory]=el.open;});
+  document.querySelectorAll('.watch-scene-picker').forEach(el=>el.ontoggle=()=>{if(!el.isConnected)return;if(el.open){state.watchSceneOpen=el.querySelector('[data-wdept-scene]')?.dataset.wdeptScene||null;}else state.watchSceneOpen=null;});
+  if(!document._watchSceneOutside){document._watchSceneOutside=true;document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.watch-scene-picker'))return;document.querySelectorAll('.watch-scene-picker[open]').forEach(el=>el.open=false);state.watchSceneOpen=null;});}
+  const mapping=key=>{const [id,cat,index]=key.split('|');const dept=get(id);return {dept,map:dept&&dept.mappings.find(m=>m.cat===cat),index:Number(index)};};
+  document.querySelectorAll('[data-wdept-add]').forEach(b=>b.onclick=()=>{depts.push({id:'wd-'+Date.now(),groupId:'',folder:'',sceneIds:[],mappings:[],on:true});render();});
+  document.querySelectorAll('[data-wdept-del]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();WATCH.departments=depts.filter(d=>d.id!==b.dataset.wdeptDel);render();});
+  document.querySelectorAll('[data-wdept-on]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const d=get(b.dataset.wdeptOn);d.on=!d.on;render();});
+  document.querySelectorAll('[data-wdept-group]').forEach(el=>el.onchange=()=>{const d=get(el.dataset.wdeptGroup);d.groupId=el.value;watchDeptSync(d);render();});
+  document.querySelectorAll('[data-wdept-folder-trigger]').forEach(b=>b.onclick=()=>{
+    if(b.disabled)return;
+    const id=b.dataset.wdeptFolderTrigger;
+    state.watchFolderMenu=state.watchFolderMenu===id?null:id;
+    render();
+  });
+  document.querySelectorAll('[data-wdept-folder-toggle]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const path=b.dataset.wdeptFolderToggle;
+    state.watchFolderExpanded=state.watchFolderExpanded||{};
+    state.watchFolderExpanded[path]=state.watchFolderExpanded[path]===false;
+    render();
+  });
+  document.querySelectorAll('[data-wdept-folder-pick]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const row=b.closest('[data-watch-dept]');
+    const d=row&&get(row.dataset.watchDept);
+    if(!d)return;
+    d.folder=b.dataset.wdeptFolderPick;
+    state.watchFolderMenu=null;
+    render();
+  });
+  if(!document._watchFolderOutside){
+    document._watchFolderOutside=true;
+    document.addEventListener('click',e=>{
+      if(e.target.closest&&e.target.closest('.watch-folder-picker'))return;
+      if(state.watchFolderMenu){state.watchFolderMenu=null;render();}
+    });
+  }
+  document.querySelectorAll('[data-wdept-test]').forEach(b=>b.onclick=()=>{
+    const d=get(b.dataset.wdeptTest), root=WATCH.roots[0]||{};
+    const folder=String(d&&d.folder||'').trim();
+    const path=watchPathValue(root.path).trim();
+    const parts=folder.split(/[\\/¥]+/).filter(Boolean);
+    const valid=!!path&&parts.length>0&&parts.every(p=>p!=='.'&&p!=='..'&&!/[\\/¥:*?"<>|]/.test(p));
+    toast(valid?'部門フォルダーのパスは有効です':'部門フォルダーのパスを確認してください',valid?'success':'error');
+  });
+  document.querySelectorAll('[data-wdept-scene]').forEach(el=>el.onchange=()=>{const d=get(el.dataset.wdeptScene);if(!watchDeptScenes(d.groupId).some(sc=>sc.id===el.value))return;d.sceneIds=el.checked?[...new Set(d.sceneIds.concat(el.value))]:d.sceneIds.filter(id=>id!==el.value);state.watchSceneOpen=d.id;watchDeptSync(d);render();});
+  document.querySelectorAll('[data-wmap-folder]').forEach(el=>el.oninput=()=>{const {map,index}=mapping(el.dataset.wmapFolder);map.folders[index]=el.value;});
+  document.querySelectorAll('[data-wmap-add]').forEach(b=>b.onclick=()=>{mapping(b.dataset.wmapAdd).map.folders.push('');render();});
+  document.querySelectorAll('[data-wmap-remove]').forEach(b=>b.onclick=()=>{const {map,index}=mapping(b.dataset.wmapRemove);map.folders.splice(index,1);if(!map.folders.length)map.folders=[''];render();});
+  document.querySelectorAll('[data-wmap-on]').forEach(b=>b.onclick=()=>{const {map}=mapping(b.dataset.wmapOn);map.on=!map.on;render();});
 }
 
 /** 複数選択。選択値はチップで表示し、あふれた分は「+N」にまとめる。
@@ -7525,7 +7615,7 @@ function historyRows() {
     && (!uq || String(h.user || '').toLowerCase().includes(uq)));
 }
 
-/** ホームのサブタブ（ご利用履歴 / 自動アップロードのダッシュボード） */
+/** ホームのサブタブ（ご利用履歴 / 自動取込のダッシュボード） */
 function homeTabsHtml(active) {
   const items = [['history', 'ご利用履歴']];
   return `<div class="home-tabs" role="tablist" aria-label="ホーム">
@@ -7533,7 +7623,7 @@ function homeTabsHtml(active) {
   </div>`;
 }
 
-/** ホーム：自動アップロードのダッシュボード（サマリー＋エラー一覧） */
+/** ホーム：自動取込のダッシュボード（サマリー＋エラー一覧） */
 function renderAutoDashboard() {
   const ok = WATCH_SUMMARY.ok;
   const ng = WATCH_SUMMARY.ng;
@@ -7561,7 +7651,7 @@ function renderAutoDashboard() {
     </div>
 
     <section class="auto-card">
-      <div class="auto-card-head"><h3>自動アップロードのエラー</h3><span class="muted">未対応 ${open} 件 / 全 ${WATCH_ERRORS.length} 件</span></div>
+      <div class="auto-card-head"><h3>自動取込のエラー</h3><span class="muted">未対応 ${open} 件 / 全 ${WATCH_ERRORS.length} 件</span></div>
       <div class="tablewrap">
         <table class="auto-table">
           <thead><tr><th style="width:140px">発生日時</th><th style="width:150px">監視パス</th><th style="width:130px">帳票タイプ</th><th>ファイル名</th><th>エラー内容</th><th style="width:84px">状態</th></tr></thead>
@@ -7793,7 +7883,7 @@ function renderCfgNav() {
       ['roles', '権限設定'],
       ['security', 'セキュリティ設定'],
       ['logs', 'ログ設定'],
-      ['watch', '自動アップロード'],
+      ['watch', '自動取込設定'],
     ] },
   ];
   return `
@@ -7861,6 +7951,7 @@ function renderUpload() {
         <td class="nowrap">${fmtSize(u.size)}</td>
         <td class="nowrap muted">${esc(u.uploadedAt)}</td>
         <td class="nowrap">${esc(upUser)}</td>
+        <td><span class="upload-source ${u.auto ? 'is-auto' : 'is-manual'}">${u.auto ? '自動' : '手動'}</span></td>
         <td><span class="st ${cls}"><span class="dot"></span>${label}${u.status === 'classifying' || u.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td>
         <td class="up-type">${typeCell}</td>
         <td class="hist ${u.error ? 'cur' : 'done'}">${esc(u.error || '—')}</td>
@@ -7912,7 +8003,7 @@ function renderUpload() {
     <table>
       <thead><tr>
         <th style="width:36px"><input type="checkbox" class="cb" data-upall="1" aria-label="読取待ちを全選択" ${upAllChecked ? 'checked' : ''} /></th>
-            <th>ファイル名</th><th>ファイルサイズ</th><th>アップロード日時</th><th>ユーザー</th><th>ステータス</th><th>帳票タイプ</th><th>エラー理由</th><th class="up-ops-cell" style="width:88px">操作・処理</th>
+            <th>ファイル名</th><th>ファイルサイズ</th><th>アップロード日時</th><th>ユーザー</th><th>取込</th><th>ステータス</th><th>帳票タイプ</th><th>エラー理由</th><th class="up-ops-cell" style="width:88px">操作・処理</th>
       </tr></thead>
       <tbody>${rows || '<tr><td colspan="9" class="empty-cell">データなし</td></tr>'}</tbody>
     </table>
@@ -9156,17 +9247,13 @@ function bindCfgPages() {
     }
   }
 
-  /* ── 自動アップロード（監視設定） ──────────────────────────────────── */
+  /* ── 自動取込（監視設定） ──────────────────────────────────── */
   if (state.page === 'watch') {
+    bindWatchDepartments();
+    document.querySelectorAll('[data-watchclose]').forEach((b) => { b.onclick = () => { closeTab('watch'); }; });
     document.querySelectorAll('[data-watchsave]').forEach((b) => {
       b.onclick = () => {
-        if (!WATCH.roots.some((r) => String(r.path || '').trim())) { toast('監視パスを入力してください'); return; }
-        /* 無効行も含めて重複を見る（あとで有効にしたときに二重取込になるため） */
-        const folders = WATCH.rules.map((r) => String(r.folder || '').trim());
-        if (folders.some((n) => !n)) { toast('フォルダ名を入力してください'); return; }
-        const lower = folders.map((n) => n.toLowerCase());
-        const dupAt = lower.findIndex((n, i) => lower.indexOf(n) !== i);
-        if (dupAt >= 0) { toast(`フォルダ名が重複しています：${folders[dupAt]}`); return; }
+        const error=WATCH.on?watchValidateSettings():'';if(error){toast(error,'error');return;}
         WATCH.updatedAt = nowStamp(); render(); toast('設定を保存しました');
       };
     });
@@ -9175,12 +9262,42 @@ function bindCfgPages() {
       el.oninput = () => {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootPath);
         if (r) r.path = watchPathValue(el.value);
+        WATCH.pathVerified = false;
+        document.querySelector('.watch-path-field [data-wroot-path]')?.closest('.watch-path-field')?.querySelector('.watch-path-valid')?.classList.remove('is-valid');
+        document.querySelectorAll('.watch-folder-select').forEach(select=>{select.disabled=true;select.classList.add('is-locked');});
+        const gateNote=document.querySelector('.watch-dept-gate-note');if(gateNote)gateNote.hidden=false;
       };
     });
     document.querySelectorAll('[data-wroot-move]').forEach((el) => {
       el.oninput = () => {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootMove);
-        if (r) { r.moveTo = watchPathValue(el.value); r.after = 'move'; }
+        if (r) { r.moveTo = watchPathValue(el.value); r.after = 'move'; WATCH.moveVerified = false; }
+        el.closest('.watch-path-field')?.querySelector('.watch-path-valid')?.classList.remove('is-valid');
+      };
+    });
+    document.querySelectorAll('[data-wroot-test]').forEach((btn) => {
+      btn.onclick = () => {
+        const r = WATCH.roots[0] || {};
+        const kind = btn.dataset.wrootTest;
+        const value = kind === 'path' ? r.path : r.moveTo;
+        const source = watchPathValue(r.path).trim().replace(/[\\/]+$/,'').toLowerCase();
+        const target = watchPathValue(r.moveTo).trim().replace(/[\\/]+$/,'').toLowerCase();
+        const valid = !!value && (kind === 'path' || (source && target && source !== target && !source.startsWith(target+'/') && !target.startsWith(source+'/')));
+        if(kind==='path')WATCH.pathVerified=valid;
+        else WATCH.moveVerified=valid;
+        toast(valid ? '接続確認が完了しました' : 'パスを確認してください', valid ? 'success' : 'error');
+        render();
+      };
+    });
+    document.querySelectorAll('[data-wroot-test-all]').forEach((btn) => {
+      btn.onclick = () => {
+        const r = WATCH.roots[0] || {};
+        const source = watchPathValue(r.path).trim().replace(/[\\/]+$/,'').toLowerCase();
+        const target = watchPathValue(r.moveTo).trim().replace(/[\\/]+$/,'').toLowerCase();
+        const valid = !!source && !!target && source !== target && !source.startsWith(target+'/') && !target.startsWith(source+'/');
+        WATCH.pathVerified = valid;
+        toast(valid ? '接続確認が完了しました' : '監視パスと処理後パスを確認してください', valid ? 'success' : 'error');
+        render();
       };
     });
     document.querySelectorAll('[data-wroot-after]').forEach((el) => {
@@ -10543,8 +10660,8 @@ function initializePhaseOneAccess() {
  const assigned=new Set();GROUPS.slice().sort((a,b)=>Number(!!a.root)-Number(!!b.root)).forEach(g=>{g.userIds=(g.userIds||[]).filter(uid=>{if(assigned.has(uid))return false;assigned.add(uid);return true;});});
  const rootOrg=GROUPS.find(g=>g.root)||GROUPS[0];if(rootOrg)ENT_USERS.forEach(u=>{if(!assigned.has(u.uid)){rootOrg.userIds.push(u.uid);assigned.add(u.uid);}});
  for(let i=0;i<24;i++){SECURITY.logs.push({at:`2026-10-30 09:${String(59-i).padStart(2,'0')}:00`,user:['admin','sato','suzuki'][i%3],type:AUTH_EVENTS[i%4],ip:'172.16.10.'+(20+i),result:i%7===0?'失敗':'成功',note:i%7===0?'ユーザー名またはパスワードを確認してください。':''});}
- SECURITY.logs.forEach(l=>{l.user=String(l.user||'').split('@')[0];if(!AUTH_EVENTS.includes(l.type)){l.feature=logFunctions().includes(l.type)?l.type:'読取結果一覧';l.action=l.type;l.target=l.target||'';}});
- WATCH_ERRORS.forEach(e=>{if(!SECURITY.logs.some(l=>l.uploadErrorId===e.id))SECURITY.logs.push({uploadErrorId:e.id,at:e.at,user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:e.file,ip:'—',result:'失敗',note:[watchPathDisplay(e.path),e.reason].join(' ／ ')});});
+ SECURITY.logs.forEach(l=>{l.user=String(l.user||'').split('@')[0];if(!AUTH_EVENTS.includes(l.type)){l.feature=l.feature||({'アップロード':'新規アップロード','自動取込':'自動取込設定','設定変更':'帳票タイプ設定'}[l.type]||'読取結果一覧');l.action=l.action||({'帳票読取':'読取'}[l.type]||l.type);l.target=l.target||'';}});
+ WATCH_ERRORS.forEach(e=>{if(!SECURITY.logs.some(l=>l.uploadErrorId===e.id))SECURITY.logs.push({uploadErrorId:e.id,at:e.at,user:'システム',type:'自動取込',feature:'自動取込設定',action:'自動取込',target:e.file,ip:'—',result:'失敗',note:[watchPathDisplay(e.path),e.reason].join(' ／ ')});});
  BIZ_SCENES.forEach(sc=>{sc.departmentIds=GROUPS.filter(g=>(g.userIds||[]).some(uid=>(sc.userIds||[]).includes(uid))).map(g=>g.id);});
 }
 function rolesFromOrganizationSeed(uid) {

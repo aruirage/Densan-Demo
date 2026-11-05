@@ -1629,7 +1629,6 @@ def apply_roles_9(src):
     # テナントは 1 つに固定（客户：既定は 1 つでよい）
     src = re.sub(r"const TENANTS = \[[\s\S]*?\];", "const TENANTS = [ { id: 'tenant1', name: '青葉市', note: '本番' } ];", src, count=1)
     # 監視パスは 1 つだけ（客户）。処理後のファイルはパス行ごとに持つ
-    src = re.sub(r"roots: \[[\s\S]*?\],\n", "roots: [ { id: 'r1', tenant: 'tenant1', path: '\\\\\\\\filesv01\\取込', on: true, after: 'move' }, ],\n", src, count=1)
     seed = """
 /* ── 追加ロール（9 组設計）：閲覧／AI分類結果修正／読取／出力 ────────────── */
 try {
@@ -2924,11 +2923,12 @@ def build_static(outdir):
 
 Handler.extensions_map.update({'.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8'})
 handler = functools.partial(Handler, directory=DIR)
-socketserver.TCPServer.allow_reuse_address = True
+socketserver.ThreadingTCPServer.allow_reuse_address = True
+socketserver.ThreadingTCPServer.daemon_threads = True
 if len(sys.argv) >= 3 and sys.argv[1] == '--build':
     build_static(sys.argv[2])
     sys.exit(0)
 
-with socketserver.TCPServer(('127.0.0.1', PORT), handler) as httpd:
+with socketserver.ThreadingTCPServer(('127.0.0.1', PORT), handler) as httpd:
     print(f'serving {DIR} at http://127.0.0.1:{PORT}/', flush=True)
     httpd.serve_forever()

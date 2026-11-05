@@ -15,6 +15,7 @@ function app() {
   vm.runInContext(source.slice(0, source.lastIndexOf('\napplyHash();')), ctx);
   return (code) => vm.runInContext(code, ctx);
 }
+function watchApp(){const run=app();run('BIZ_SCENES.forEach(sc=>{sc.departmentIds=[sc.id==="cls-hoiku"?"g6":"g4"];})');return run;}
 test('collapsed result filters show one row (filename/status/type); expanded adds scene, people and dates', () => {
   const run = app();
   let html = run('state.filterOpen = false; renderFilters()');
@@ -1080,59 +1081,15 @@ test('ticket permission table gates confirm per layout', () => {
   assert.equal(run('TICKET_PERMS.l4.confirm = []; canTicketAct("l4", "confirm", "u3")'), run('userHasOp("confirm", "u3")'));
 });
 
-test('自動アップロード: 監視パスと帳票タイプ別ルールの 5 セクションを描画する', () => {
-  const run = app();
-  const html = run('renderWatch()');
-  const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行']);
-  /* 監視設定は 1 つだけ（一覧・追加・削除は持たない） */
-  assert.doesNotMatch(html, /監視設定を追加|data-watchadd|data-watchdel|data-watchedit/);
-
-  /* 監視パス：1 行＝1 パス。行ごとに有効／無効のトグルと処理後のファイルを持つ */
-  assert.equal((html.match(/class="wr-root/g) || []).length, run('WATCH.roots.length'));
-  assert.equal((html.match(/data-wrooton=/g) || []).length, run('WATCH.roots.length'));
-  assert.equal((html.match(/data-wroot-path=/g) || []).length, run('WATCH.roots.length'));
-  assert.doesNotMatch(html, /data-wrootadd|data-wrootdel/);
-  assert.equal((html.match(/data-wroot-path=/g) || []).length, 1);
-  assert.doesNotMatch(html, /監視パスを追加/);
-  assert.doesNotMatch(html, /data-wroot-tenant=|>テナント</);
-  assert.match(html, /data-wroot-path=/);
-  assert.match(html, /data-wroot-move=/);
-  assert.match(html, /処理後のファイル/);
-
-  /* 帳票タイプ別ルール：帳票タイプ（ツリー第2階層）1 行。フォルダ名・ファイル名・自動取込 */
-  assert.equal(run('CATEGORY.length'), 9);
-  assert.equal((html.match(/class="wr-rule/g) || []).length, run('CATEGORY.length'));
-  assert.equal((html.match(/data-wruleon=/g) || []).length, run('CATEGORY.length'));
-  for (const t of ['帳票タイプ', 'フォルダ名', '監視対象']) {
-    assert.ok(html.includes(t), t);
-  }
-  assert.match(html, /data-wrule-folder=/);
-  assert.doesNotMatch(html, /data-wrule-pattern=/);
-  /* 処理開始・大小区別は削除済み */
-  assert.doesNotMatch(html, /処理開始|大小区別|data-wrule-start|data-wrule-case/);
-  const ruleRow = (html.match(/<tr class="wr-rule[\s\S]*?<\/tr>/) || [])[0] || '';
-  assert.equal((ruleRow.match(/<td/g) || []).length, 3);
-
-  /* 業務シーンの階層は作らない（帳票タイプをそのまま並べる） */
-  assert.doesNotMatch(html, /data-wf="biz"|data-wf="pattern"|data-wf="startFile"|data-wf="afterDir"/);
-  assert.equal((html.match(/class="wr-group"/g) || []).length, 0);
-  assert.equal((html.match(/class="wr-rule/g) || []).length, run('CATEGORY.length'));
-
-  /* 実際に監視する本数＝有効ルート × 有効カテゴリ */
-  assert.match(html, /監視対象 <b>\d+<\/b> 本/);
-  assert.equal(run('WATCH.roots.filter((r) => r.on).length * WATCH.rules.filter((r) => r.on).length'), 9);
-
-  /* 共通設定（メール通知・宛先メール・通知方法の選択は廃止。Webhook URL を直接入力） */
-  for (const t of ['同一ファイルを除外', '再実行回数']) {
-    assert.ok(html.includes(t), t);
-  }
-  assert.doesNotMatch(html, /宛先メール|data-wf="notifyMail"|通知方法|data-wf-check/);
-  /* ログ設定はログ設定ページへ移した */
-  assert.doesNotMatch(html, /data-wf="logLevel"|data-wf="logPath"|ログ<\/h3>/);
+test('automatic upload maps department folders and scene categories under one recursive root',()=>{
+ const run=watchApp(),html=run('renderWatch()');
+ assert.equal((html.match(/data-wroot-path=/g)||[]).length,1);
+ assert.equal((html.match(/data-wroot-move=/g)||[]).length,1);
+ assert.doesNotMatch(html,/data-wroot-after=|data-wrootadd|data-wrootdel/);
+ assert.match(html,/data-wdept-group=/);assert.match(html,/data-wdept-scene=/);assert.match(html,/data-wmap-add=/);
+ assert.match(html,/AI分類結果/);assert.match(html,/未登録フォルダー/);
+ assert.equal(run('ensureWatchDepartments().length'),2);
 });
-
-
 
 test('エラー通知: 通知方法の選択は持たず、Webhook URL を直接入力する', () => {
   const run = app();
@@ -1472,24 +1429,13 @@ test('tree folders and files share scene department-user data scope', () => {
  assert.equal(run("canSeeCategory('c1','u5')"),false);
 });
 
-test('each monitored path keeps destination visible and enables it only for move', () => {
- const run=app();const html=run('renderWatch()');
- assert.equal((html.match(/data-wroot-move=/g)||[]).length,run('WATCH.roots.length'));
- assert.match(html,/処理後のファイルパス/);
- assert.match(html,/data-wroot-after=/);
- assert.match(html,/<option value="move" selected>移動/);
- run("WATCH.roots[0].after='keep'");
- assert.match(run('renderWatch()'), /data-wroot-move="r1"[^>]*disabled/);
- run("WATCH.roots[0].moveTo='archive/path'");
- assert.match(run('renderWatch()'),/archive\/path/);
-});
+test('archive destination stays editable and processing is fixed to move',()=>{const run=app(),html=run('renderWatch()');assert.match(html,/処理後フォルダー/);assert.doesNotMatch(html,/data-wroot-after/);assert.doesNotMatch(html,/data-wroot-move="r1"[^>]*disabled/);});
 
-test('new ticket types default automatic-upload folder name to their name without overwriting custom folders', () => {
- const run=app();run("TICKET_TYPES.push({id:'new-watch-type',name:'新規申請書',autoWatchRule:true})");
- assert.equal(run("watchRuleOf('new-watch-type').folder"),'新規申請書');
- assert.match(run('renderWatch()'),/data-wrule-folder="new-watch-type" value="新規申請書"/);
- run("watchRuleOf('new-watch-type').folder='custom-folder';TICKET_TYPES.find(t=>t.id==='new-watch-type').name='変更後'");
- assert.equal(run("watchRuleOf('new-watch-type').folder"),'custom-folder');
+test('new scene categories receive empty folder mappings and renaming preserves saved folders',()=>{
+ const run=watchApp();run('ensureWatchDepartments();CATEGORY.push({id:"new-watch",name:"新規申請"});LAYOUT.push({id:"new-watch-layout",category:"new-watch",name:"新規申請"});CLASSIFY_FORMS.push({id:"new-watch-form",name:"新規申請"});BIZ_SCENES.find(s=>s.id==="cls-zeimu").formIds.push("new-watch-form");watchDeptSync(WATCH.departments[0])');
+ assert.equal(run('WATCH.departments[0].mappings.find(m=>m.cat==="new-watch").folders[0]'),'');
+ run('WATCH.departments[0].mappings.find(m=>m.cat==="new-watch").folders=["custom"];CATEGORY.find(c=>c.id==="new-watch").name="改名";watchDeptSync(WATCH.departments[0])');
+ assert.equal(run('WATCH.departments[0].mappings.find(m=>m.cat==="new-watch").folders[0]'),'custom');
 });
 
  test('scene selection merges CSV by category across different layouts', () => {
@@ -1523,3 +1469,71 @@ test('CSV naming supports original single name and configured merged name',()=>{
 test('menu role mocks use valid menu leaves and personal assignments',()=>{const run=app();const grants=JSON.parse(run('JSON.stringify(defaultOperationGrants())'));const leaves=JSON.parse(run('JSON.stringify(MENU_LEAVES)'));Object.values(grants).flat().forEach(id=>assert.ok(leaves.includes(id),id));assert.ok(grants.R7.includes('settings-scenes-edit'));assert.ok(!grants.R8.includes('settings-scenes-edit'));assert.equal(run('initializePhaseOneAccess();entUserByUid("u8").soloPermIds.includes("R8")'),true);});
 
 test('account page and dialogs are available to every logged-in role',()=>{const run=app();assert.equal(run('canReachPage("account","u7")'),true);assert.match(run('renderAccount()'),/ユーザーID/);const password=run('state.accountPasswordOpen=true;renderAccountDialogs()');assert.equal((password.match(/type="password"/g)||[]).length,3);assert.match(password,/旧パスワード/);assert.match(password,/確認パスワード/);const logout=run('state.logoutConfirm=true;renderAccountDialogs()');assert.match(logout,/ログアウトしますか/);assert.match(logout,/id="logoutCancel"/);assert.match(logout,/id="logoutOk"/);});
+
+test('department scene AI corrects wrong folder category and classifies unmapped folders',()=>{const run=watchApp();run('ensureWatchDepartments()');const result=JSON.parse(run('JSON.stringify(watchResolveFile("税務課/スキャナー01/個人住民税申告/test.pdf","c3"))'));assert.equal(result.expectedCategoryId,'c2');assert.equal(result.categoryId,'c3');assert.equal(result.corrected,true);assert.equal(result.dedupScope,'g4|c3');assert.equal(result.archiveRelativePath,'税務課¥スキャナー01¥個人住民税申告¥test.pdf');assert.equal(run('watchResolveFile("税務課/未登録/test.pdf","c3").categoryId'),'c3');assert.ok(run('watchResolveFile("税務課/未登録/test.pdf","c1").error'));});
+ test('watch configuration validates archive separation and folder uniqueness within departments',()=>{const run=watchApp();assert.equal(run('ensureWatchDepartments();watchValidateSettings()'),'');assert.ok(run('WATCH.roots[0].moveTo=WATCH.roots[0].path+"/処理済";watchValidateSettings()'));run('WATCH.roots[0].moveTo="D:/archive";WATCH.departments[0].mappings[1].folders=WATCH.departments[0].mappings[0].folders.slice()');assert.match(run('watchValidateSettings()'),/重複/);});
+
+test('automatic upload scene choices inherit organization data permissions',()=>{const run=app();run('BIZ_SCENES.forEach(sc=>sc.departmentIds=[]);BIZ_SCENES[0].departmentIds=["g1"]');assert.equal(run('watchDeptScenes("g2").some(sc=>sc.id===BIZ_SCENES[0].id)'),true);assert.equal(run('watchDeptScenes("g4").length'),0);run('WATCH.departments=[{id:"isolated",groupId:"g4",folder:"税務課",sceneIds:[BIZ_SCENES[0].id],mappings:[],on:true}];ensureWatchDepartments()');assert.equal(run('WATCH.departments[0].sceneIds.length'),0);});
+
+test('自動取込設定: タイトルの注釈アイコンと保存状態の表示を出さない', () => {
+  const run = app();
+  const html = run('renderWatch()');
+  assert.doesNotMatch(html, /自動取込設定\s*<span class="info-i"/);
+  assert.doesNotMatch(html, /保存済み|未保存の変更があります|data-watch-status|watch-save-status/);
+});
+
+test('自動取込設定は他のメニューと同じようにタブで開く', () => {
+  const run = app();
+  assert.equal(run('tabDef("watch").label'), '自動取込設定');
+  assert.equal(run('tabOfRoute("watch")'), 'watch');
+  run('state.tabs = ["home", "watch"]; state.page = "watch";');
+  const html = run('renderTabbar()');
+  assert.match(html, /data-opentab="watch"/);
+  assert.match(html, /自動取込設定/);
+  assert.match(html, /data-closetab="watch"/);
+});
+
+test('自動取込設定: 同一ファイルを除外が OFF なら判定方法を選べない', () => {
+  const run = app();
+  run('WATCH.dupGuard = false;');
+  let html = run('renderWatch()');
+  assert.match(html, /取込・再試行設定/);
+  assert.match(html, /data-wf="dupMethod"[^>]*disabled/);
+  assert.match(html, /class="wf is-off"/);
+  run('WATCH.dupGuard = true;');
+  html = run('renderWatch()');
+  assert.doesNotMatch(html, /data-wf="dupMethod"[^>]*disabled/);
+  assert.doesNotMatch(html, /class="wf is-off"/);
+});
+
+test('自動取込設定: 部門フォルダーはツリーから単一選択できる', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); WATCH.pathVerified=true; state.watchFolderMenu="wd-tax";');
+  const html = run('renderWatch()');
+  assert.match(html, /class="watch-folder-menu"/);
+  assert.match(html, /data-wdept-folder-pick="税務課\/個人住民税"/);
+  assert.match(html, /data-wdept-folder-pick="税務課\/個人住民税\/令和8年度"/);
+  assert.match(html, /role="option"/);
+  assert.match(html, /aria-selected="true"/);
+});
+
+test('自動取込設定: 多階層の部門フォルダーでもファイルを解決できる', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-deep",groupId:"g4",folder:"税務課/個人住民税",sceneIds:["cls-zeimu"],mappings:[],on:true}]; watchDeptSync(WATCH.departments[0]); WATCH.departments[0].mappings.forEach(m=>{m.folders=[(byId(CATEGORY,m.cat)||{}).name||"x"];});');
+  const result = JSON.parse(run('JSON.stringify(watchResolveFile("税務課/個人住民税/スキャナー01/個人住民税申告/test.pdf","c2"))'));
+  assert.ok(!result.error);
+  assert.equal(result.expectedCategoryId, 'c2');
+  assert.equal(result.archiveRelativePath, '税務課¥個人住民税¥スキャナー01¥個人住民税申告¥test.pdf');
+  assert.equal(run('watchValidateSettings()'), '');
+});
+
+test('自動取込設定: 接続テスト前は部門フォルダーの案内を目立つ位置に出す', () => {
+  const run = watchApp();
+  run('WATCH.pathVerified=false;');
+  const before = run('renderWatch()');
+  assert.match(before, /class="watch-dept-gate-note"/);
+  assert.match(before, /接続テストを実行してください/);
+  run('WATCH.pathVerified=true;');
+  const after = run('renderWatch()');
+  assert.match(after, /class="watch-dept-gate-note" hidden/);
+});

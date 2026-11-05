@@ -866,6 +866,21 @@ td .sub{color:var(--text-3);font-size:10.5px;margin-top:2px}
 .sec-lbl{font-size:12.5px;color:var(--text-2);white-space:nowrap}
 .sec-actions{margin-top:16px}
 
+/* Settings pages use the same centered form canvas. */
+#app[data-page="security"] .maincol,#app[data-page="watch"] .maincol{overflow-y:auto;background:#f5f7fa}
+.sec-page,.watch-page{display:flex;flex-direction:column;flex:0 0 auto;align-self:center;width:min(1120px,calc(100% - 48px));min-height:0;overflow:visible;margin:24px auto 40px;padding:34px 36px;background:#fff;border:1px solid var(--line)}
+.sec-page > .cfg-head,.watch-page > .cfg-head{padding:0 0 24px}
+.sec-page .cfg-title,.watch-page .cfg-title{font-size:22px}
+.sec-grid{gap:18px}
+.sec-card{padding:24px 26px}
+.sec-card h4{font-size:16px}
+.sec-card .cfg-note{color:#8b95a3;line-height:1.7;background:transparent;border:0;padding:0}
+.sec-card:nth-child(2) .cfg-note{background:transparent;border-radius:0;padding:0}
+.sec-actions,.watch-actions{border-top:1px solid var(--line);margin-top:28px;padding:20px 0 0}
+.watch-page .watch-actions{border-top:1px solid var(--line);margin-top:28px;padding:20px 0 0;justify-content:flex-end}
+.sec-actions .btn,.watch-actions .btn{min-width:88px;height:36px;justify-content:center}
+@media(max-width:720px){.sec-page,.watch-page{width:calc(100% - 24px);padding:20px;margin:12px auto 24px}}
+
 /* ══ アイコンを使った微調整（UI 全体の質感） ══ */
 .btn .ico{font-size:14px;margin-right:5px;color:currentColor}
 .btn.primary .ico{color:#fff}

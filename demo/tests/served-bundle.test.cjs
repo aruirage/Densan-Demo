@@ -165,7 +165,9 @@ test('served bundle: 自動アップロードは監視パスごとの処理後�
   const run = servedApp();
   const html = run('renderWatch()');
   const heads = [...html.matchAll(/class="watch-sec-head">([^<]+)</g)].map((m) => m[1]);
-  assert.deepEqual(heads, ['監視パス', '帳票タイプ別ルール', '二重取込防止', '失敗時の再実行']);
+  assert.deepEqual(heads, ['監視・処理後パス ', '部門別取込設定 ', '取込・再試行設定']);
+  assert.match(html, /watch-sec-desc/);
+  assert.doesNotMatch(html, /二重取込防止<\/b>：|実行・再試行設定<\/b>：/);
   assert.equal((html.match(/data-wroot-move=/g) || []).length, run('WATCH.roots.length'));
   assert.doesNotMatch(html, /data-wroot-tenant=|data-wroot-done=|宛先メール|data-wf="notifyMail"/);
   assert.doesNotMatch(html, /通知方法|data-wf-check/);

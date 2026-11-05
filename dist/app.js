@@ -400,16 +400,17 @@ const ENT_USERS = [
 ];
 /** システム権限（メニュー到達）。業務のメニュー権限はユーザーグループの役割で付与する */
 let ROLES = [
-  { id: 'R1', name: 'システム管理者', code: 'tenant_admin', desc: '万能権限。メニュー全到達に加え、帳票／アップロード権限表をバイパスして全業務を実行できる', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R2', name: '業務管理者', code: 'operation_admin', desc: '帳票設定＋利用設定＋ユーザー管理。日常運用の管理者', created: '2025-10-01 00:00:00', status: '有効' },
-  { id: 'R3', name: 'OCR結果確認', code: 'confirmer', desc: '読取結果の閲覧・編集・保存・確認・履歴閲覧。ダウンロード不可', created: '2025-10-01 00:00:00', status: '有効' },
-    { id: 'R5', name: 'アップロード', code: 'uploader', desc: 'ファイルのアップロードと読取結果の閲覧', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R1', name: 'システム管理者', code: 'tenant_admin', desc: 'すべてのメニューと管理機能を利用', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R2', name: '業務管理者', code: 'operation_admin', desc: '帳票設定、ユーザー・部門管理、辞書、自動取込、ログを利用', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R3', name: '帳票業務担当', code: 'document_operator', desc: '新規アップロードと読取結果一覧を利用', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R4', name: '帳票設定担当', code: 'form_manager', desc: '帳票タイプ、業務シーン、辞書を管理', created: '2025-10-01 00:00:00', status: '有効' },
+  { id: 'R5', name: 'アップロード担当', code: 'upload_operator', desc: '新規アップロードを利用', created: '2025-10-01 00:00:00', status: '有効' },
   /* 9 ロール設計で追加した分。メニュー権限は MENU_PERMS 側で付ける */
-  { id: 'R6', name: '閲覧', code: 'viewer', desc: 'すべてのメニューを閲覧可能。編集・確認・履歴閲覧・ダウンロードは不可', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R7', name: 'AI分類結果修正', code: 'classify_fix', desc: 'AI 分類結果（帳票タイプ）の修正', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R8', name: '読取', code: 'reader', desc: 'アップロード済ファイルの読取実行・再読取・削除', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R10', name: '出力', code: 'exporter', desc: 'CSV/JSON/PDF の出力', created: '2026-01-01 00:00:00', status: '有効' },
-  { id: 'R11', name: 'OCR結果修正', code: 'ocr_fix', desc: 'OCR 結果の編集・保存・履歴閲覧。確認とダウンロードは不可', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R6', name: '読取結果担当', code: 'result_operator', desc: '読取結果一覧を利用', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R7', name: '業務シーン管理者', code: 'scene_manager', desc: '業務シーンの追加・編集・削除を利用', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R8', name: '自動取込管理者', code: 'watch_manager', desc: '自動取込設定とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R10', name: '辞書管理者', code: 'dictionary_manager', desc: '辞書登録とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
+  { id: 'R11', name: 'ユーザー管理者', code: 'user_manager', desc: 'ユーザー・部門管理とログを利用', created: '2026-01-01 00:00:00', status: '有効' },
 ];
 /** システム管理者ロール ID（メニュー全許可＋業務権限バイパス） */
 const TENANT_ADMIN_ROLE = 'R1';
@@ -460,6 +461,7 @@ function hasActionPermission(id, uid) {
   const page = state.page;
   const module = PERMISSION_MODULES.find(m=>m.children.some(c=>c.id===id));
   const menu = module && module.id;
+  if (id.startsWith('settings-scenes-')) return canReachMenu(id,uid);
   if (id.startsWith('usage-users-') || id.startsWith('usage-groups-') || id.startsWith('permissions-')) return isTenantAdmin(uid || state.currentUser) || groupLeafSet(uid || state.currentUser).has(id);
   return !menu || canReachMenu(menu,uid);
 }
@@ -552,7 +554,7 @@ let USER_ADD_DRAFT = null;
 
 const SECURITY = {
   /* セキュリティ設定は 3 モジュールだけ（データ保存期限／IPアドレスホワイトリスト／アイドルセッション） */
-  retention: '12ヶ月',      // 7日 / 14日 / 1ヶ月 / 2ヶ月 / 3ヶ月 / 6ヶ月 / 12ヶ月
+  retention: '6ヶ月',       // 7日 / 14日 / 1ヶ月 / 2ヶ月 / 3ヶ月 / 6ヶ月 / 12ヶ月
   ipEnabled: '無効',        // 無効 / 有効
   idle: '制限なし',         // 15分 / 30分 / 60分 / 2時間 / 制限なし
   logs: [
@@ -562,10 +564,9 @@ const SECURITY = {
     { at: '2026-10-14 17:44:02', user: 'misaki.nakamura', type: 'ログイン', ip: '172.16.51.33', result: '失敗', note: 'パスワード誤り' },
     { at: '2026-10-14 15:10:40', user: 'minoru.tanaka', type: '設定変更', ip: '172.16.51.44', result: '成功', note: 'エクスポート設定' },
     { at: '2026-10-14 09:12:00', user: 'miko.sato', type: 'アップロード', ip: '172.16.51.8', result: '成功', note: '3ファイル' },
-    { at: '2026-10-15 08:02:11', user: 'システム', type: '自動取込', ip: '—', result: '成功', note: '監視「窓口共有」 2件 / 10_住民異動関係' },
-    { at: '2026-10-15 08:04:40', user: 'システム', type: '自動取込失敗', ip: '—', result: '失敗', note: '対象外の拡張子' },
-    { at: '2026-10-15 09:10:00', user: 'miko.sato', type: '監視設定変更', ip: '172.16.51.8', result: '成功', note: '分類順を変更' },
-    { at: '2026-10-15 09:11:20', user: 'システム', type: 'エラー通知', ip: '—', result: '成功', note: 'Webhook へ通知' },
+    { at: '2026-10-15 08:02:11', user: 'システム', type: '自動取込', feature: '自動取込設定', action: '自動取込', target: 'scan001.pdf', ip: '—', result: '成功', note: '¥¥filesv01¥取込¥税務課¥住民税' },
+    { at: '2026-10-15 08:04:40', user: 'システム', type: '自動取込', feature: '自動取込設定', action: '自動取込', target: 'scan002.pdf', ip: '—', result: '失敗', note: '¥¥filesv01¥取込¥福祉課¥申請書 ／ 読取失敗' },
+    { at: '2026-10-15 09:10:00', user: 'miko.sato', type: '設定変更', feature: '自動取込設定', action: '設定変更', target: '自動取込設定', ip: '172.16.51.8', result: '成功', note: '実行間隔を変更' },
   ],
 };
 
@@ -1047,7 +1048,7 @@ const PERMISSION_MODULES = [
   },
   {
     "id": "usage-watch",
-    "label": "自動アップロード",
+    "label": "自動取込設定",
     "children": [
       {
         "id": "watch-view",
@@ -1087,7 +1088,12 @@ const MENU_TREE = [
           },
           {
             "id": "settings-scenes",
-            "label": "業務シーン"
+            "label": "業務シーン",
+            "children": [
+              {"id":"settings-scenes-add","label":"業務シーン追加"},
+              {"id":"settings-scenes-edit","label":"業務シーン編集"},
+              {"id":"settings-scenes-del","label":"業務シーン削除"}
+            ]
           }
         ]
       },
@@ -1169,7 +1175,7 @@ const MENU_TREE = [
           },
           {
             "id": "usage-watch",
-            "label": "自動アップロード"
+            "label": "自動取込設定"
           }
         ]
       }
@@ -1187,9 +1193,22 @@ const MENU_LEAVES = (() => {
    （操作ボタンが一つも無ければ操作列ごと隠すので、閲覧＝到達で足りる）。 */
 const BIZ_MENU_BASE = ['home', 'result'];
 function defaultOperationGrants() {
-  const business = ['home','upload','result'];
-  return {R1:MENU_LEAVES.slice(), R2:MENU_LEAVES.slice(), R3:business.slice(), R4:['home','result'], R5:business.slice(), R6:['home','result'], R7:business.slice(), R8:business.slice(), R10:['home','result'], R11:['home','result']};
+  const scene = ['settings-scenes-add','settings-scenes-edit','settings-scenes-del'];
+  const users = ['users-view','usage-users-add','usage-users-edit','usage-users-del','groups-view','usage-groups-add','usage-groups-edit','usage-groups-del'];
+  return {
+    R1: MENU_LEAVES.slice(),
+    R2: ['home','upload','result','settings-type',...scene,'usage-dict',...users,'usage-watch','usage-logs'],
+    R3: ['home','upload','result'],
+    R4: ['home','settings-type',...scene,'usage-dict'],
+    R5: ['home','upload'],
+    R6: ['home','result'],
+    R7: ['home',...scene],
+    R8: ['home','usage-watch','usage-logs'],
+    R10: ['home','usage-dict','usage-logs'],
+    R11: ['home',...users,'usage-logs']
+  };
 }
+
 let MENU_PERMS = { ...defaultOperationGrants() };
 
 /* ── 帳票設定系のモック（実機の一覧列に合わせる） ── */
@@ -1378,7 +1397,9 @@ function makeUpload(name, sizeBytes) {
     status: 'classifying',                  // ①アップロード → 要確認（自動分類中・タイプ確認が必要）
     history: '帳票タイプを自動分類しています（要確認）',
     layout: guess.id,
-    auto: true,
+    /* この関数は画面からの手動アップロード用。監視フォルダー取込のモックは
+       initializeDemoData() で auto=true を明示する。 */
+    auto: false,
     error: '',
     biz: state.upBiz,
   };
@@ -1587,11 +1608,8 @@ function layoutIdOfTicketType(t) {
 
 /** 権限者（ロール）に属するユーザー。組織グループは持たない。 */
 const ROLE_MEMBERS = {
-  R1: ['u1'],                 /* システム管理者 */
-  R2: ['u3'],                 /* 業務管理者 */
-  R3: ['u2', 'u6', 'u8'],     /* 確認者 */
-  R4: ['u4', 'u5'],           /* 承認者 */
-  R5: ['u7'],                 /* アップロード者 */
+  R1:['u1'], R2:['u3'], R3:['u2'], R4:['u4'], R5:['u7'],
+  R6:['u6'], R7:['u5'], R8:['u8'], R10:[], R11:['u10']
 };
 const roleMemberIds = (roleId) => ROLE_MEMBERS[roleId] || [];
 
@@ -1950,7 +1968,7 @@ const HEADER_MENUS = {
     { id: 'roles', label: '権限設定', menuNode: 'usage-permissions' },
     { id: 'security', label: 'セキュリティ設定', menuNode: 'usage-security' },
     { id: 'logs', label: 'ログ設定', menuNode: 'usage-logs' },
-    { id: 'watch', label: '自動アップロード', menuNode: 'usage-watch' },
+    { id: 'watch', label: '自動取込設定', menuNode: 'usage-watch' },
   ] },
 };
 
@@ -2011,6 +2029,7 @@ function canReachMenu(nodeId, uid) {
 
 /** 画面ルートを開けるか */
 function canReachPage(page, uid) {
+  if (page === 'account') return true;
   if (page === 'notices') return true;
   const node = PAGE_MENU_NODE[page];
   if (!node) return isTenantAdmin(uid || state.currentUser);
@@ -2045,7 +2064,7 @@ const state = {
   tenantOpen: false,
   tabs: ['home', 'upload', 'result'], // 開いているタブ。×で閉じられる
   resultPage: 1,                  // 読取結果一覧のページ番号
-  homeTab: 'history',             // ホーム：'history'（ご利用履歴） / 'dashboard'（自動アップロード）
+  homeTab: 'history',             // ホーム：'history'（ご利用履歴） / 'dashboard'（自動取込）
   hFilters: { from: HOME_FROM, to: HOME_TO, layout: [], user: '', biz: [] },
   hPage: 1,
   hPerPage: 10,
@@ -3622,7 +3641,7 @@ function renderFilters() {
       </div>
       <div class="result-search-actions filter-acts">
         <button type="button" class="btn primary filter-act" id="searchBtn" title="検索" aria-label="検索"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-        <button type="button" class="btn filter-act" id="resetBtn" title="リセット" aria-label="リセット"><span class="ico i-refresh" aria-hidden="true"></span></button>
+        <button type="button" class="btn filter-act" id="resetBtn" title="リセット" aria-label="リセット"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
         <button class="link result-more" data-exp="filter" aria-expanded="${open}" aria-controls="resultAdvanced"><span class="ico ${open ? 'i-caret-up' : 'i-caret-down'}" aria-hidden="true"></span>${open ? '閉じる' : 'もっと見る'}</button>
     </div>
       </div>
@@ -3758,6 +3777,7 @@ function renderTable() {
 /* ===================== 5-b2. タブ（ホーム／新規アップロード／ファイル一覧／マイタスク） ===================== */
 
 const TABS_DEF = {
+  account: {id:'account',label:'アカウント情報',route:'account'},
   home: { id: 'home', label: 'ホーム', route: 'home' },
   upload: { id: 'upload', label: '新規アップロード', route: 'upload' },
   result: { id: 'result', label: '読取結果一覧', route: 'result' },
@@ -3770,6 +3790,7 @@ const TABS_DEF = {
   roles: { id: 'roles', label: '権限設定', route: 'roles' },
   security: { id: 'security', label: 'セキュリティ設定', route: 'security' },
   logs: { id: 'logs', label: 'ログ設定', route: 'logs' },
+  watch: { id: 'watch', label: '自動取込設定', route: 'watch' },
 };
 
 /** 确认／详情タブ ID（ファイルごとに1タブ） */
@@ -4113,7 +4134,7 @@ function syncReviewFieldFromInput(inp) {
       rev.dataset.rvRevert = key;
       rev.title = '読取値に戻す';
       rev.setAttribute('aria-label', '読取値に戻す');
-      rev.innerHTML = '<span class="ico i-refresh" aria-hidden="true"></span>';
+      rev.innerHTML = '<svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>';
       wrap.appendChild(rev);
       rev.onclick = (e) => {
         e.stopPropagation();
@@ -4408,7 +4429,7 @@ function renderSaveHistoryDialog() {
         <div class="savehist-user">操作 : ${esc(h.user)}</div>
       </div>
       <div class="savehist-acts">
-        <button type="button" class="btn" data-sh-show="${esc(h.id)}"><span class="ico i-refresh"></span>表示</button>
+        <button type="button" class="btn" data-sh-show="${esc(h.id)}"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>表示</button>
         <button type="button" class="btn savehist-dl" data-sh-dl="${esc(h.id)}">ダウンロード</button>
       </div>
     </div>`;
@@ -4466,7 +4487,7 @@ function commitExport(id, fmt) {
     toast('前回出力以降の差分がないため、同一データの重複出力をスキップしました');
     return false;
   }
-  const base = dispFileName(id).replace(/\.[^.]+$/, '');
+  const base = fmt === 'csv' ? exportMergedFileName([f]) : dispFileName(id).replace(/\.[^.]+$/, '');
   const suffix = delta.first ? '' : '_差分';
   if (fmt === 'json') {
     const fields = OCR_FIELDS.b6.filter((x) => delta.changed.includes(x.key));
@@ -4634,25 +4655,23 @@ function seedExportSnapshots() {
       return { text, enc, delim };
     }
     /* 横向出力（既定）：1 帳票 1 行。一般項目の後ろにテーブル列を上限まで横展開する。 */
-    const headerCells = (withFileCol ? ['入力ファイル名'] : []);
+    const expanded = [];
+    const seenTables = new Set();
+    let generalIndex = 0;
     parts.forEach((p) => {
-      if (p.tb) {
-        for (let i = 1; i <= p.max; i++) headerCells.push(`${p.tb.name}_${p.tc.name}_${i}`);
-      } else {
-        headerCells.push(p.c.label);
+      if (!p.tb) { expanded.push({p, gi: generalIndex++}); return; }
+      if (seenTables.has(p.tb.id)) return;
+      seenTables.add(p.tb.id);
+      const fields = parts.filter(q => q.tb && q.tb.id === p.tb.id);
+      for (let row = 0; row < p.max; row++) {
+        fields.forEach(field => expanded.push({p:field, row}));
       }
     });
+    const headerCells = (withFileCol ? ['入力ファイル名'] : []).concat(expanded.map(({p,row}) =>
+      p.tb ? `${p.tb.name}_${p.tc.name}_${row + 1}` : p.c.label));
     const rows = files.map((f) => {
-      const out = withFileCol ? [dispFileName(f.id)] : [];
-      let gi = 0;
-      parts.forEach((p) => {
-        if (p.tb) {
-          for (let i = 0; i < p.max; i++) out.push(tableCellValue(p.tb, p.tc, i));
-        } else {
-          out.push(generalCellValue(f, p.c, gi));
-          gi += 1;
-        }
-      });
+      const out = (withFileCol ? [dispFileName(f.id)] : []).concat(expanded.map(({p,row,gi}) =>
+        p.tb ? tableCellValue(p.tb,p.tc,row) : generalCellValue(f,p.c,gi)));
       return out.map((v) => formatDateValue(v, dateFmt)).map((v) => (v === '' ? emptyMode : v));
     });
     const all = withHeader ? [headerCells].concat(rows) : rows;
@@ -4690,13 +4709,11 @@ function seedExportSnapshots() {
   }
   function exportMergedFileName(files) {
     const C = state.exportCfg || {};
-    if (C.fileNameFromInput && files[0]) {
-      const base = dispFileName(files[0].id).replace(/\.[^.]+$/, '');
-      return base + '_結合' + (files.length > 1 ? files.length : '');
-    }
-    if (C.fileName) return C.fileName;
-    const base = (files[0] && files[0].name || '出力データ').replace(/\.[^.]+$/, '');
-    return base + '_結合';
+    const clean = value => String(value || '').replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, '_');
+    if (files.length === 1 && C.fileNameFromInput !== false) return clean(dispFileName(files[0].id));
+    if (String(C.fileName || '').trim()) return clean(C.fileName.trim());
+    const cat = files[0] && byId(CATEGORY, (byId(LAYOUT, files[0].layout) || {}).category);
+    return clean(cat && cat.name || '出力データ');
   }
 
   // ZIP (UTF-8 filenames, STORE): offline, no external dependency.
@@ -4745,19 +4762,20 @@ function seedExportSnapshots() {
     ids.forEach((id) => {
       const f = byId(FILES_DATA, id);
       if (!f) return;
-      const key = f.layout || '';
+      const key = (byId(LAYOUT, f.layout) || {}).category || f.layout || '';
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(f);
     });
     let count = 0;
     const entries = [];
     const usedNames = new Set();
-    groups.forEach((files) => {
+    groups.forEach((files, categoryId) => {
       const built = buildExportCsv(files.map((f) => f.id));
       if (!built) return;
       const type = ticketTypeOfFile(files[0]);
-      const label = String(type && type.name || files[0].layout || '未分類').replace(/[\\/:*?"<>|]/g, '_');
-      const base = exportMergedFileName(files) + (groups.size > 1 ? '_' + label : '');
+      const category = byId(CATEGORY, categoryId);
+      const label = String(category && category.name || type && type.name || files[0].layout || '未分類').replace(/[\\/:*?"<>|]/g, '_');
+      const base = exportMergedFileName(files);
       let name = base;
       let n = 2;
       while (usedNames.has(name)) name = base + '_' + n++;
@@ -4987,11 +5005,11 @@ function saveExportCfg() {
  *  - 複数帳票：先頭の帳票名＋「_ほか N 件」
  */
 function exportFileName() {
-  /* 設定で名前が指定されていればそれを優先（帳票タイプ設定のファイル名欄） */
-  const custom = (state.exportCfg && state.exportCfg.fileName) ? String(state.exportCfg.fileName).trim() : '';
-  if (custom) return custom.replace(/\.[A-Za-z0-9]+$/, '');
   const files = visibleFiles();
   if (!files.length) return '出力データ';
+  /* 初期値は帳票カテゴリ名。カテゴリが解決できない場合だけ入力名を使う。 */
+  const category = catOf(files[0].layout);
+  if (category && category.name) return category.name;
   /* ファイルツリーの名前から拡張子だけ落として .csv にする */
   const base = (name) => String(name || '').replace(/\.[A-Za-z0-9]+$/, '');
   return base(files[0].name);
@@ -5000,77 +5018,24 @@ function exportFileName() {
 function renderExportDialog() {
   if (!state.exportOpen) return '';
   const C = state.exportCfg;
-  const fromInput = C.fileNameFromInput !== false;
-  const enc = C.encoding || 'UTF-8';
+  const defaultName = exportFileName();
+  const fileName = C.fileName || defaultName;
   const encodings = ['UTF-8', 'UTF-8（BOMなし）', 'Shift_JIS'];
-  /* 選択中の代表ファイルから、出力設定を決める帳票タイプを求める */
-  const pickedFiles = (typeof visibleFiles === 'function' ? visibleFiles() : [])
-    .filter((f) => state.picked && state.picked[f.id]);
-  const pickedLayouts = [...new Set(pickedFiles.map((f) => f.layout))];
-  const exportType = TICKET_TYPES.find((x) => layoutIdOfTicketType(x) === pickedLayouts[0]);
-  const exportCfg = exportType ? exportCfgOf(exportType) : null;
-  const admin = isTenantAdmin(state.currentUser);
-  const expCols = exportCfg && exportCfg.cols && exportCfg.cols.length ? exportCfg.cols : (exportCfg ? defaultExportCols() : []);
-  const expRecord = exportCfg ? (exportCfg.record || 'perTicket') : 'perTicket';
-  const summary = exportCfg
-    ? `${(exportCfg.formats.join(' / ') || '—').toUpperCase()} ／ ${expRecord === 'perRow' ? '竖向' : expRecord === 'combine' ? '結合' : '横向'} ／ 出力項目 ${expCols.filter((c) => c.on).length} 件`
-    : '';
-  const sw = (key, on, label) => `
-    <label class="switch exp-switch">
-      <span class="switch-text">${esc(label)}</span>
-      <input type="checkbox" data-expcfg="${key}" ${on ? 'checked' : ''} />
-      <span class="switch-track" aria-hidden="true"></span>
-    </label>`;
-  const nameField = fromInput ? '' : `
-        <label class="exp-stack-field">
-          <span class="exp-field-label"><i class="req">*</i>ファイル名</span>
-          <span class="exp-filename">
-            <input class="fld exp-name-input" id="expFileName" type="text" value="${esc(C.fileName || '')}" placeholder="ファイル名を入力してください" aria-label="ファイル名" />
-            <span class="exp-file-ext">.csv</span>
-          </span>
-        </label>`;
-
-  return `
-  <div class="modal-back" id="expBack">
-    <div class="modal exp-modal" style="width:min(440px,100%)">
-      <div class="modal-head"><b>エクスポート設定</b><span class="spacer"></span><button class="icon-btn" id="expClose"><span class="ico i-close"></span></button></div>
+  return `<div class="modal-back" id="expBack">
+    <div class="modal exp-modal" style="width:min(400px,100%)">
+      <div class="modal-head"><b>エクスポート設定</b><span class="spacer"></span><button class="icon-btn" id="expClose" aria-label="閉じる">×</button></div>
       <div class="modal-canvas exp-canvas">
-        ${summary ? `<div class="exp-src-line"><span class="exp-src-k">帳票タイプの出力設定</span><b>${esc(summary)}</b></div>` : ''}
+        <label class="exp-stack-field">
+          <span class="exp-field-label"><i class="req">*</i>ファイル名 <span class="info-i" data-tip="初期値は入力ファイル名です。必要に応じてこの欄で変更できます。" aria-label="ファイル名の説明">i</span></span>
+          <span class="exp-filename"><input class="fld exp-name-input" id="expFileName" type="text" value="${esc(fileName)}" placeholder="ファイル名を入力してください" aria-label="ファイル名" /><span class="exp-file-ext">.csv</span></span>
+        </label>
         <label class="exp-stack-field">
           <span class="exp-field-label"><i class="req">*</i>変換方式</span>
-          <select class="fld exp-control" data-expcfg="encoding">${encodings.map((o) => `<option ${enc === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
+          <select class="fld exp-control" data-expcfg="encoding">${encodings.map(o=>`<option ${(C.encoding || 'UTF-8') === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>
         </label>
-        <div class="exp-switches">
-          <div class="exp-name-group">
-            ${sw('fileNameFromInput', fromInput, '入力名と同じ')}
-            ${nameField}
-        </div>
       </div>
-      ${(() => {
-        if (!admin || !expCols.length) return '';
-        const rows = expCols.map((c, i) => `
-          <div class="exp-col-row" data-colid="${esc(c.id)}">
-            <label class="switch sm exp-col-on"><input type="checkbox" data-colact="on" data-colid="${esc(c.id)}" ${c.on ? 'checked' : ''} /><span></span></label>
-            <input class="fld exp-col-label" data-colact="label" data-colid="${esc(c.id)}" value="${esc(c.label)}" />
-            <span class="exp-col-move">
-              <button type="button" class="exp-col-btn" data-colact="up" data-colid="${esc(c.id)}" ${i === 0 ? 'disabled' : ''} aria-label="上へ">▲</button>
-              <button type="button" class="exp-col-btn" data-colact="down" data-colid="${esc(c.id)}" ${i === expCols.length - 1 ? 'disabled' : ''} aria-label="下へ">▼</button>
-            </span>
-          </div>`).join('');
-        return `
-      <div class="exp-cols-wrap">
-        <div class="exp-cols-head"><span class="exp-cols-title">列設定（出力項目・列順）</span><button type="button" class="btn sm" id="expColReset">初期化</button></div>
-        <div class="exp-cols">${rows}</div>
-      </div>`;
-      })()}
-      </div>
-      <div class="modal-foot exp-foot">
-        <span class="spacer"></span>
-        <button class="btn" id="expCancel">キャンセル</button>
-        <button class="btn primary" id="expSave"><span class="ico i-save"></span>保存</button>
-      </div>
-    </div>
-  </div>`;
+      <div class="modal-foot exp-foot"><span class="spacer"></span><button class="btn" id="expCancel">キャンセル</button><button class="btn primary" id="expSave">OK</button></div>
+    </div></div>`;
 }
 
 /** ページプレビューのモーダル。帳票のページ画像だけを見せる（操作ボタンのバーは置かない） */
@@ -5225,7 +5190,7 @@ function renderAccessKeysTab() {
           <th style="width:90px">ステータス</th><th style="width:180px">作成者</th>
           <th style="width:170px">操作・処理</th>
         </tr></thead>
-        <tbody>${rows || '<tr><td colspan="9" class="empty-cell">データなし</td></tr>'}</tbody>
+        <tbody>${rows || '<tr><td colspan="10" class="empty-cell">データなし</td></tr>'}</tbody>
       </table>
     </div>
   </section>`;
@@ -5711,8 +5676,8 @@ function renderUsers() {
         <div class="field"><span class="lbl">権限</span><select class="fld" id="ugRole"><option value="">選択してください</option>${ROLES.map((r) => `<option value="${esc(r.name)}" ${ug.role === r.name ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>
         <div class="field"><span class="lbl">ステータス</span><select class="fld" id="ugStatus"><option value="">選択してください</option><option value="有効" ${ug.status === '有効' ? 'selected' : ''}>有効</option><option value="無効" ${ug.status === '無効' ? 'selected' : ''}>無効</option></select></div>
         <div class="cfg-filter-acts">
-          <button type="button" class="btn primary" id="ugSearch"><span class="ico i-search"></span>検索</button>
-          <button type="button" class="btn" id="ugReset"><span class="ico i-refresh"></span>リセット</button>
+          <button type="button" class="btn primary" id="ugSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
+          <button type="button" class="btn" id="ugReset"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
         </div>
       </div>
 
@@ -5786,7 +5751,7 @@ function renderUserList() {
     <div class="field"><span class="lbl">ステータス</span><select class="fld"><option>選択してください</option><option>有効</option><option>無効</option></select></div>
     <span class="spacer"></span>
     <button class="btn primary" id="cfgUserSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-    <button class="btn" id="cfgUserReset"><span class="ico i-refresh"></span>リセット</button>
+    <button class="btn" id="cfgUserReset"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
   </div>
   <div class="tablewrap"><table>
     <thead><tr><th style="width:56px">番号</th><th>ユーザー名</th><th>ユーザーID</th><th style="width:110px">権限</th>
@@ -5871,7 +5836,7 @@ function renderRoleList() {
   </div>
       <div class="roles-filter-actions">
         <button type="button" class="btn primary" id="roleSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-        <button type="button" class="btn" id="roleReset"><span class="ico i-refresh"></span>リセット</button>
+        <button type="button" class="btn" id="roleReset"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
       </div>
     </div>
 
@@ -5982,7 +5947,7 @@ function renderGroupList() {
       </div>
       <div class="roles-filter-actions">
         <button type="button" class="btn primary" id="grpSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-        <button type="button" class="btn" id="grpReset"><span class="ico i-refresh"></span>リセット</button>
+        <button type="button" class="btn" id="grpReset"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
       </div>
     </div>
 
@@ -6136,11 +6101,11 @@ function renderSecurity() {
       <p class="cfg-note">設定が有効になると、すべてのオンラインユーザーは次回のログイン時に新しいポリシーが適用されます。</p>
     </section>
   </div>
-  <div class="cfg-actions sec-actions"><button class="btn" id="secClose">閉じる</button><button class="btn primary" id="secSave"><span class="ico i-save"></span>保存</button></div>
+  <div class="cfg-actions sec-actions"><button class="btn" id="secClose">閉じる</button><button class="btn primary" id="secSave">保存</button></div>
   </div>`;
 }
 
-/** ログ出力の設定。自動アップロードの設定から切り離し、この画面で管理する。 */
+/** ログ出力の設定。自動取込の設定から切り離し、この画面で管理する。 */
 let LOG_CFG = {
   level: '標準',
   path: '\\\\filesv01\\ログ',
@@ -6154,7 +6119,7 @@ const LOG_LEVELS = [
 
 /** ログ設定 */
 const AUTH_EVENTS = ['ログイン','ログアウト','パスワード変更','パスワード再設定'];
-function logFunctions() {return ['新規アップロード','読取結果一覧','帳票タイプ設定','業務シーン設定','辞書登録','ユーザー管理','権限設定','セキュリティ設定','ログ設定','自動アップロード'];}
+function logFunctions() {return ['新規アップロード','読取結果一覧','帳票タイプ設定','業務シーン設定','辞書登録','ユーザー管理','権限設定','セキュリティ設定','ログ設定','自動取込設定'];}
 function logRows() {
  const auth = state.logTab !== 'operation';
  const filter = state.logApplied || {};
@@ -6165,7 +6130,7 @@ function renderLogs() {
  const auth=state.logTab!=='operation';const f=state.logDraft||(state.logDraft={});
  const rows=logRows();const per=state.logPer||10;const pages=Math.max(1,Math.ceil(rows.length/per));const page=state.logPage=Math.max(1,Math.min(pages,state.logPage||1));
  const body=rows.slice((page-1)*per,page*per).map(l=>`<tr><td class="nowrap">${esc(l.at)}</td><td>${esc(String(l.user||'').split('@')[0])}</td>${auth?`<td>${esc(l.type)}</td><td>${esc(l.ip||'—')}</td>`:`<td>${esc(l.feature||l.type)}</td><td>${esc(l.action||l.type)}</td><td>${esc(l.target||'—')}</td>`}<td><span class="st ${l.result==='成功'?'ok':'ng'}">${esc(l.result)}</span></td><td>${esc(l.note||'')}</td></tr>`).join('');
- return `<div class="logs-topbar"><div class="home-tabs"><button class="home-tab ${auth?'on':''}" data-logtab="auth">認証ログ一覧</button><button class="home-tab ${!auth?'on':''}" data-logtab="operation">操作ログ一覧</button></div><button class="btn" id="logsDownload">ダウンロード</button></div><div class="cfg-filters logs-filters"><div class="field"><span class="lbl">期間</span><input class="fld" type="date" data-logfilter="from" value="${esc(f.from||'')}" /> ～ <input class="fld" type="date" data-logfilter="to" value="${esc(f.to||'')}" /></div><div class="field"><span class="lbl">ユーザーID</span><input class="fld" data-logfilter="user" value="${esc(f.user||'')}" /></div><div class="field"><span class="lbl">${auth?'イベント':'機能'}</span>${auth ? `<select class="fld" data-logfilter="kind"><option value="">選択してください</option>${AUTH_EVENTS.map(v=>`<option ${f.kind===v?'selected':''}>${esc(v)}</option>`).join('')}</select>` : wizMulti('logFunctions','機能を選択してください',logFunctions().map(v=>[v,v]),f.functions||[])}</div><div class="field"><span class="lbl">操作結果</span><select class="fld" data-logfilter="result"><option value="">すべて</option>${['成功','失敗'].map(v=>`<option ${f.result===v?'selected':''}>${v}</option>`).join('')}</select></div><div class="logs-filter-actions"><button class="btn primary" id="logsSearch">検索</button><button class="btn" id="logsReset" title="条件をクリアして再表示">更新</button></div></div><div class="tablewrap"><table><thead><tr><th>操作日時</th><th>ユーザーID</th>${auth?'<th>イベント種別</th><th>IPアドレス</th>':'<th>機能</th><th>操作種別</th><th>操作対象</th>'}<th>操作結果</th><th>備考</th></tr></thead><tbody>${body||`<tr><td colspan="${auth?6:7}" class="empty-cell">データがありません</td></tr>`}</tbody></table></div><div class="pager"><span>検索結果 ${rows.length} 件中</span><select id="logsPer">${[10,20,50].map(n=>`<option value="${n}" ${per===n?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-logpage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-logpage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="logsGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>`;
+ return `<div class="logs-topbar"><div class="home-tabs"><button class="home-tab ${auth?'on':''}" data-logtab="auth">認証ログ一覧</button><button class="home-tab ${!auth?'on':''}" data-logtab="operation">操作ログ一覧</button></div><button class="btn" id="logsDownload">ダウンロード</button></div><div class="cfg-filters logs-filters"><div class="field"><span class="lbl">期間</span><input class="fld" type="date" data-logfilter="from" value="${esc(f.from||'')}" /> ～ <input class="fld" type="date" data-logfilter="to" value="${esc(f.to||'')}" /></div><div class="field"><span class="lbl">ユーザーID</span><input class="fld" data-logfilter="user" value="${esc(f.user||'')}" /></div><div class="field"><span class="lbl">${auth?'イベント':'機能'}</span>${auth ? `<select class="fld" data-logfilter="kind"><option value="">選択してください</option>${AUTH_EVENTS.map(v=>`<option ${f.kind===v?'selected':''}>${esc(v)}</option>`).join('')}</select>` : wizMulti('logFunctions','機能を選択してください',logFunctions().map(v=>[v,v]),f.functions||[])}</div><div class="field"><span class="lbl">操作結果</span><select class="fld" data-logfilter="result"><option value="">すべて</option>${['成功','失敗'].map(v=>`<option ${f.result===v?'selected':''}>${v}</option>`).join('')}</select></div><div class="logs-filter-actions"><button class="btn primary" id="logsSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button><button class="btn" id="logsReset" title="条件をクリアして再表示"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button></div></div><div class="tablewrap"><table><thead><tr><th>操作日時</th><th>ユーザーID</th>${auth?'<th>イベント種別</th><th>IPアドレス</th>':'<th>機能</th><th>操作種別</th><th>操作対象</th>'}<th>操作結果</th><th>備考</th></tr></thead><tbody>${body||`<tr><td colspan="${auth?6:7}" class="empty-cell">データがありません</td></tr>`}</tbody></table></div><div class="pager"><span>検索結果 ${rows.length} 件中</span><select id="logsPer">${[10,20,50].map(n=>`<option value="${n}" ${per===n?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-logpage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-logpage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="logsGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>`;
 }
 function bindLogs() {
  const functionButton=document.querySelector('[data-wmsbtn="logFunctions"]');
@@ -6399,7 +6364,7 @@ function renderDictBulkModal(d) {
       <div class="dict-bulk-search">
         <input class="fld" id="dictBulkQ" placeholder="辞書名を検索" value="${esc(d.bulkQ)}" aria-label="取込データを検索" />
       </div>
-      <button type="button" class="btn dict-bulk-refresh" id="dictBulkRefresh" title="リセット" aria-label="リセット"><span class="ico i-refresh"></span></button>
+      <button type="button" class="btn dict-bulk-refresh" id="dictBulkRefresh" title="リセット" aria-label="リセット"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg></button>
       <button type="button" class="icon-btn" id="dictBulkClose" aria-label="閉じる"><span class="ico i-close"></span></button>
     </div>
     <div class="dict-bulk-body">
@@ -6448,13 +6413,13 @@ function renderDictDialogs() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   11. 自動アップロード
+   11. 自動取込
    設定画面のみ（監視コンソール・API 連動は持たない）。
    監視で取り込んだファイルは、手動アップロードと同じく「新規アップロード」の
    未処理テーブルに溜まり、「選択帳票読取」で初めて読取結果一覧へ入る。
    ══════════════════════════════════════════════════════════════════════════ */
 
-/** 自動アップロードの設定。
+/** 自動取込の設定。
  *  ① 監視パス＝共有フォルダの UNC パス。1 行＝1 パス。行ごとに有効／無効と、
  *     取り込み成功後のファイルの扱い（削除／そのまま）を持つ
  *     （tenant は取り込み先の紐付け属性で、行の単位ではない）
@@ -6465,14 +6430,14 @@ function renderDictDialogs() {
 let WATCH = {
   on: true,
   /* ① 監視パス。after は取り込み成功後の扱い（del=削除 / keep=そのまま） */
-  roots: [ { id: 'r1', tenant: 'tenant1', path: '\\filesv01\取込', on: true, after: 'move' }, ],
+  roots: [
+    { id: 'r1', tenant: 'tenant1', path: '\\\\filesv01\\取込', on: true, after: 'move', moveTo: '\\\\filesv01\\処理済' },
+  ],
   /* ② 帳票タイプ 1 行。フォルダ名はパス直下の名前（全パス共通） */
   rules: [],
   /* ③ 共通設定。エラー通知は Webhook URL のみ（メール通知は廃止） */
   dupGuard: true, dupMethod: 'meta',
-  retry: 3, retryGap: 5,
-  notify: true, notifyOn: 'fail',
-  notifyUrl: '',
+  retry: 3, retryGap: 5, retryUnit: '分',
   updatedAt: '2026-10-16 09:12:30',
 };
 /* 帳票タイプの数だけルール行を作る（帳票タイプを増やしたら行も増える） */
@@ -6490,7 +6455,7 @@ function watchRuleOf(catId) {
   return r;
 }
 
-/* ── ホームのダッシュボード用モック（自動アップロード） ────────────────
+/* ── ホームのダッシュボード用モック（自動取込） ────────────────
  *  実際の取込ログの代わりに、直近のエラーと日別実績を固定データで持つ。 */
 const WATCH_ERRORS = [
   { id: 'we1', at: '2026-10-20 09:12:30', path: '\\\\filesv01\\取込', cat: '個人住民税申告', file: '01_令和8年度分市民税・県民税申告書（兼・国保税申告書）.pdf', reason: '文字が薄く読み取れませんでした', handled: false },
@@ -6513,12 +6478,12 @@ function renderNotices() {
   </section>`;
 }
 function shouldNotifyUpload(success) {
-  return !!WATCH.notify && (!success || WATCH.notifyOn === 'always');
+  return !success;
 }
 function addUploadFailure(error) {
   if (!shouldNotifyUpload(false)) return;
   WATCH_ERRORS.unshift({...error, id: error.id || 'we' + Date.now(), at: error.at || nowStamp()});
-  SECURITY.logs.unshift({at:error.at || nowStamp(),user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:error.file,ip:'—',result:'失敗',note:[error.file,error.path,error.reason].filter(Boolean).join(' ／ ')});
+  SECURITY.logs.unshift({at:error.at || nowStamp(),user:'システム',type:'自動取込',feature:'自動取込設定',action:'自動取込',target:error.file,ip:'—',result:'失敗',note:[watchPathDisplay(error.path),error.reason].filter(Boolean).join(' ／ ')});
   render();
 }
 
@@ -6541,123 +6506,194 @@ const WATCH_PATTERNS = [
 ];
 
 /* フォーム部品（この画面だけで使う） */
-const watchSelect = (key, opts, cur) => `<select class="fld" data-wf="${key}">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+const watchSelect = (key, opts, cur, disabled) => `<select class="fld" data-wf="${key}" ${disabled ? 'disabled' : ''}>${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
 const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-checked="${on}"><span class="tgl-txt">${on ? 'する' : 'しない'}</span><span class="tgl-knob"></span></button>`;
-const watchRow = (label, inner, wide) => `<div class="wf"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
+const watchRow = (label, inner, wide, off) => `<div class="wf${off ? ' is-off' : ''}"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
 
-/** 自動アップロード設定。
+/** 自動取込設定。
  *  ① 監視パス ② 帳票タイプ別ルール ③ 共通設定 の 3 段で見せる。
  *  監視する実パスは「監視パス × 帳票タイプのフォルダ」で決まる。
  *  取り込み成功後のファイルは、監視パス行ごとの「削除 / そのまま」に従う。 */
-function renderWatch() {
-  const x = WATCH;
-  const row = watchRow;
-
-  const pathRows = x.roots.map((r) => `<tr class="wr-root${r.on ? '' : ' off'}">
-        <td><input class="fld mono" data-wroot-path="${r.id}" value="${esc(r.path)}" placeholder="\\\\filesv01\\取込" aria-label="監視パス" /></td>
-        <td><select class="fld" data-wroot-after="${r.id}" aria-label="処理後のファイル">${Object.entries(WATCH_ROOT_AFTER).map(([value,label])=>`<option value="${value}" ${(r.after || 'move')===value?'selected':''}>${label}</option>`).join('')}</select></td>
-        <td><input class="fld mono" data-wroot-move="${r.id}" value="${esc(r.moveTo || '')}" placeholder="処理後の保存先パス" aria-label="処理後のファイルパス" ${(r.after || 'move') === 'move' ? '' : 'disabled'} /></td>
-        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wrooton="${r.id}" role="switch" aria-checked="${r.on}" aria-label="この監視パスを有効にする"><span class="tgl-knob"></span></button></td>
-        <td class="c"><button type="button" class="wp-del" data-wrootdel="${r.id}" aria-label="この監視パスを削除"${x.roots.length > 1 ? '' : ' disabled'}>×</button></td>
-      </tr>`).join('');
-
-  /* 帳票タイプ（ツリー第2階層）をそのまま並べる。業務シーンの階層は作らず、
-     並び順だけ業務シーンの順に揃える。フォルダ名は全監視パスで共通。 */
-  const orderedCats = CATEGORY.concat(TICKET_TYPES.filter(t=>t.autoWatchRule)).sort((a, b) => {
-    const ba = (byId(BUSINESS, a.business) || {}).order || 0;
-    const bb = (byId(BUSINESS, b.business) || {}).order || 0;
-    return ba - bb || (a.order || 0) - (b.order || 0);
-  });
-  const ruleRows = orderedCats.map((c) => {
-    const r = watchRuleOf(c.id);
-    return `<tr class="wr-rule${r.on ? '' : ' off'}">
-        <td class="wr-cat">${esc(c.name)}</td>
-        <td><input class="fld mono" data-wrule-folder="${c.id}" value="${esc(r.folder)}" placeholder="フォルダ名" aria-label="フォルダ名" /></td>
-        <td><input class="fld mono" data-wrule-pattern="${c.id}" value="${esc(r.pattern)}" list="watchPatternList" aria-label="ファイル名パターン" /></td>
-        <td class="c"><button type="button" class="tgl${r.on ? '' : ' off'}" data-wruleon="${c.id}" role="switch" aria-checked="${r.on}" aria-label="この帳票タイプを自動で取り込む"><span class="tgl-knob"></span></button></td>
-      </tr>`;
+const watchPathDisplay = (value) => String(value || '').split('\\').join('¥');
+const watchPathValue = (value) => String(value || '').split('¥').join('\\');
+function watchDeptScenes(groupId) {
+  if(!groupId)return [];
+  return BIZ_SCENES.filter(sc=>expandGroupSelection(sc.departmentIds||[]).includes(groupId));
+}
+function watchDeptTypes(dept) {
+  const names = (dept.sceneIds || []).flatMap(id => ((byId(BIZ_SCENES,id)||{}).formIds||[]).map(fid => (byId(CLASSIFY_FORMS,fid)||{}).name)).filter(Boolean);
+  const ids = new Set(LAYOUT.filter(l=>names.includes(l.name)).map(l=>l.category));
+  return CATEGORY.filter(c=>ids.has(c.id));
+}
+/** 監視パス配下の部門フォルダー（多階層）。デモ用の固定ツリー。 */
+const WATCH_FOLDERS = [
+  { name: '税務課', children: [
+    { name: '個人住民税', children: [{ name: '令和8年度' }] },
+    { name: '特別徴収' },
+  ] },
+  { name: '福祉課', children: [
+    { name: '保育所等入所' },
+    { name: '児童手当' },
+  ] },
+  { name: '総務部' },
+  { name: '住民課', children: [
+    { name: '住民異動' },
+  ] },
+];
+/** 部門フォルダー選択用のツリー（単一選択）。親フォルダーも選択できる。 */
+function renderWatchFolderNodes(nodes, parent, selected, depth) {
+  const expanded = state.watchFolderExpanded || {};
+  return (nodes || []).map((n) => {
+    const path = parent ? parent + '/' + n.name : n.name;
+    const hasKids = !!(n.children && n.children.length);
+    const open = hasKids && expanded[path] !== false;
+    const isSel = selected === path;
+    const caret = hasKids
+      ? `<button type="button" class="watch-folder-caret" data-wdept-folder-toggle="${esc(path)}" aria-label="${open ? '折りたたむ' : '展開'}">${open ? '▾' : '▸'}</button>`
+      : '<span class="watch-folder-caret is-leaf" aria-hidden="true"></span>';
+    const row = `<div class="watch-folder-node" style="padding-left:${depth * 16}px" role="presentation">${caret}<button type="button" class="watch-folder-pick${isSel ? ' is-selected' : ''}" data-wdept-folder-pick="${esc(path)}" role="option" aria-selected="${isSel}"><span class="watch-folder-name">${esc(n.name)}</span>${isSel ? '<span class="watch-folder-check" aria-hidden="true">✓</span>' : ''}</button></div>`;
+    return row + (open ? renderWatchFolderNodes(n.children, path, selected, depth + 1) : '');
   }).join('');
+}
+function watchDeptSync(dept) {
+  dept.sceneIds=(dept.sceneIds||[]).filter(id=>watchDeptScenes(dept.groupId).some(sc=>sc.id===id));
+  const types=watchDeptTypes(dept);
+  dept.mappings=(dept.mappings||[]).filter(m=>types.some(c=>c.id===m.cat));
+  types.forEach(c=>{if(!dept.mappings.some(m=>m.cat===c.id))dept.mappings.push({cat:c.id,folders:[''],on:true});});
+}
+function ensureWatchDepartments() {
+  if(WATCH.departments){WATCH.departments.forEach(watchDeptSync);return WATCH.departments;}
+  const available=GROUPS.filter(g=>!g.root);
+  const tax=byId(GROUPS,((byId(BIZ_SCENES,'cls-zeimu')||{}).departmentIds||[])[0])||byId(GROUPS,'g4')||available[0]||{};const welfare=byId(GROUPS,((byId(BIZ_SCENES,'cls-hoiku')||{}).departmentIds||[])[0])||byId(GROUPS,'g6')||available[1]||available[0]||{};
+  WATCH.departments=[{id:'wd-tax',groupId:tax.id||'',folder:'税務課',sceneIds:['cls-zeimu'],on:true,mappings:[]},{id:'wd-welfare',groupId:welfare.id||'',folder:'福祉課',sceneIds:['cls-hoiku'],on:true,mappings:[]}];
+  WATCH.departments.forEach(d=>{watchDeptSync(d);d.mappings.forEach(m=>m.folders=[(byId(CATEGORY,m.cat)||{}).name||'']);});
+  const r=WATCH.roots[0];if(r&&!r.moveTo)r.moveTo='\\\\filesv01\\処理済';
+  return WATCH.departments;
+}
+function watchFolderKey(value) {return String(value||'').trim().replace(/[\\/¥]+/g,'/').replace(/^\/+|\/+$/g,'').toLowerCase();}
+function watchValidateSettings() {
+  const root=WATCH.roots[0]||{};
+  const normalize=v=>watchPathValue(v).trim().replace(/[\\/]+/g,'/').replace(/\/$/,'').toLowerCase();
+  const source=normalize(root.path),target=normalize(root.moveTo);
+  if(!source)return '監視フォルダーを入力してください';
+  if(!target)return '処理後フォルダーを入力してください';
+  if(source===target||source.startsWith(target+'/')||target.startsWith(source+'/'))return '監視フォルダーと処理後フォルダーは別の階層に設定してください';
+  const depts=ensureWatchDepartments().filter(d=>d.on),used=new Set();
+  if(!depts.length)return '有効な部門を設定してください';
+  const validName=n=>n&&n!=='.'&&n!=='..'&&!/[\\/¥:*?"<>|]/.test(n);
+  const validPath=p=>{const parts=String(p||'').split(/[\\/¥]+/).filter(Boolean);return parts.length>0&&parts.every(validName);};
+  for(const d of depts){
+    if(!byId(GROUPS,d.groupId))return '部門を選択してください';
+    if(!validPath(d.folder))return '部門フォルダーを確認してください';
+    const folder=watchFolderKey(d.folder);
+    if([...used].some(k=>k===folder||folder.startsWith(k+'/')||k.startsWith(folder+'/')))return '部門フォルダーが重複しています';used.add(folder);
+    if(!(d.sceneIds||[]).length)return '業務シーンを選択してください';
+    const folders=new Set();
+    for(const m of d.mappings.filter(m=>m.on)){
+      if(!watchDeptTypes(d).some(t=>t.id===m.cat))return '帳票タイプを業務シーンの範囲内に設定してください';
+      for(const raw of m.folders){const n=watchFolderKey(raw);if(!validName(n))return '帳票フォルダー名を入力してください';if(folders.has(n))return '同じ部門内でフォルダー名が重複しています';folders.add(n);}
+    }
+  }
+  return '';
+}
+function watchResolveFile(relativePath, aiCategoryId) {
+  const segments=String(relativePath||'').split(/[\\/¥]+/).filter(Boolean);
+  if(segments.some(s=>s==='.'||s==='..'))return {error:'監視フォルダー外のパスです'};
+  const dept=ensureWatchDepartments().find(d=>{
+    if(!d.on)return false;
+    const parts=String(d.folder||'').split(/[\\/¥]+/).filter(Boolean);
+    return parts.length>0&&parts.length<=segments.length&&parts.every((p,i)=>watchFolderKey(p)===watchFolderKey(segments[i]));
+  });
+  if(!dept)return {error:'部門の取込設定が見つかりません',source:relativePath};
+  const deptParts=String(dept.folder||'').split(/[\\/¥]+/).filter(Boolean);
+  const names=segments.slice(deptParts.length,-1).map(watchFolderKey);
+  const expected=dept.mappings.find(m=>m.on&&m.folders.some(f=>watchFolderKey(f)&&names.includes(watchFolderKey(f))));
+  if(!watchDeptTypes(dept).some(c=>c.id===aiCategoryId))return {error:'部門の業務シーン内で帳票タイプを判別できません',departmentId:dept.groupId,source:relativePath};
+  return {departmentId:dept.groupId,expectedCategoryId:expected?expected.cat:null,categoryId:aiCategoryId,corrected:!!expected&&expected.cat!==aiCategoryId,archiveRelativePath:segments.join('¥'),dedupScope:dept.groupId+'|'+aiCategoryId};
+}
 
-  /* 実際に監視する本数＝有効な監視パス × 有効な帳票タイプ */
-  const livePaths = x.roots.filter((r) => r.on && String(r.path || '').trim());
-  const liveRules = x.rules.filter((r) => r.on && String(r.folder || '').trim());
-  const combos = livePaths.length * liveRules.length;
-  const sample = (livePaths[0] && liveRules[0])
-    ? `${String(livePaths[0].path).replace(/[\\/]+$/, '')}\\${liveRules[0].folder}\\${liveRules[0].pattern}`
-    : '';
-
-  return `<div class="cfg-head">
-    <h1 class="cfg-title">自動アップロード <span class="info-i" data-tip="監視パス（共有フォルダ）の直下にある帳票タイプ別フォルダを見張り、条件に合うファイルを自動で取り込みます。取り込んだファイルは「新規アップロード」の未処理一覧に入り、読み取りは手動で実行します。">i</span></h1>
-    <span class="spacer"></span>
-    <span class="watch-head-lab">有効</span>${watchToggle('on', x.on)}<button class="btn primary" data-watchsave="1">保存</button>
-  </div>
-  <div class="watch-body">
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">監視パス<span class="info-i" data-tip="1 行＝1 監視パス（1 台の仮想マシン上の共有フォルダ）です。帳票タイプのフォルダはこのパスの直下に置きます。処理後のファイルは移動・削除・そのままから選びます。移動の場合のみ保存先パスを入力できます。">i</span></h3>
-        <div class="watch-tablewrap">
-          <table class="watch-table wr-roots">
-            <thead><tr>
-              <th>パス</th>
-              <th style="width:150px">処理後のファイル</th>
-              <th>処理後のファイルパス</th>
-              <th class="c" style="width:52px">有効</th>
-              <th class="c" style="width:40px"></th>
-            </tr></thead>
-            <tbody>${pathRows}</tbody>
-          </table>
-        </div>
-        <div class="watch-sec-foot">
-          <button type="button" class="btn wp-add" data-wrootadd="1"><span class="ico i-add"></span>監視パスを追加</button>
-        </div>
-      </section>
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">帳票タイプ別ルール<span class="info-i" data-tip="帳票タイプ（ツリー第2階層）をそのまま並べています。フォルダ名は全監視パスで共通です。自動取込が不要な帳票タイプは「自動取込」を切ってください。">i</span></h3>
-        <div class="watch-tablewrap">
-          <table class="watch-table wr-rules">
-            <thead><tr>
-              <th style="width:180px">帳票タイプ</th>
-              <th style="width:190px">フォルダ名</th>
-              <th style="width:140px">ファイル名</th>
-              <th class="c" style="width:64px">自動取込</th>
-            </tr></thead>
-            <tbody>${ruleRows}</tbody>
-          </table>
-        </div>
-        <datalist id="watchPatternList">${WATCH_PATTERNS.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</datalist>
-        <div class="watch-sec-foot">
-          <p class="wf-help watch-resolve">監視対象 <b>${combos}</b> 本（有効な監視パス ${livePaths.length} × 帳票タイプ ${liveRules.length}）${sample ? `<span class="mono">${esc(sample)}</span>` : ''}</p>
-        </div>
-      </section>
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">二重取込防止</h3>
-        <div class="watch-fields">
-          ${row('同一ファイルを除外', watchToggle('dupGuard', x.dupGuard))}
-          ${row('判定方法', watchSelect('dupMethod', Object.keys(WATCH_DUP).map((k) => [k, WATCH_DUP[k]]), x.dupMethod), true)}
-        </div>
-      </section>
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">失敗時の再実行</h3>
-        <div class="watch-fields">
-          ${row('再実行回数', `<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span class="muted">回</span></div>`)}
-          ${row('実行間隔', `<div class="watch-inline"><input class="fld" type="number" min="1" max="120" data-wf="retryGap" value="${esc(x.retryGap)}" /><span class="muted">分</span></div>`)}
-        </div>
-      </section>
-
-      <section class="watch-sec">
-        <h3 class="watch-sec-head">ログ記録設定<span class="info-i" data-tip="通知を有効にすると、条件に一致した自動アップロードの結果をログに記録します。">i</span></h3>
-        <div class="watch-fields">
-          ${row('通知する', watchToggle('notify', x.notify))}
-          ${row('通知条件', `<select class="fld" data-wf="notifyOn" ${x.notify ? '' : 'disabled'}>${Object.entries(WATCH_NOTIFY_ON).map(([v,label]) => `<option value="${v}" ${x.notifyOn === v ? 'selected' : ''}>${label}</option>`).join('')}</select>`, true)}
-        </div>
-      </section>
-
-
-
-  </div>`;
+function renderWatch() {
+  const x=WATCH,row=watchRow,root=x.roots[0],depts=ensureWatchDepartments();
+  const departmentCards=depts.map((d,di)=>{
+    const group=byId(GROUPS,d.groupId),types=watchDeptTypes(d),scenes=watchDeptScenes(d.groupId);
+    const scope=(d.sceneIds||[]).map(id=>(byId(BIZ_SCENES,id)||{}).name).filter(Boolean);
+    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu" role="listbox" aria-label="部門フォルダー">${renderWatchFolderNodes(WATCH_FOLDERS,'',d.folder,0)}</div>`:'';
+    return `<div class="watch-dept-card watch-dept-row${d.on?'':' is-off'}" data-watch-dept="${d.id}">
+      <div class="watch-dept-fields">
+        <select class="fld" data-wdept-group="${d.id}"><option value="">選択してください</option>${GROUPS.filter(g=>!g.root).map(g=>`<option value="${g.id}" ${g.id===d.groupId?'selected':''}>${esc(g.name)}</option>`).join('')}</select>
+        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}" title="${esc(String(d.folder||'').split('/').join(' / '))}"><span class="watch-folder-value">${d.folder?esc(String(d.folder).split('/').join(' / ')):(x.pathVerified?'選択してください':'接続確認後に選択できます')}</span><span class="watch-folder-arrow" aria-hidden="true">▾</span></button>${folderMenu}</div>
+        <details class="watch-scene-picker" ${state.watchSceneOpen===d.id?'open':''}><summary>${esc(scope.join('、')||'業務シーンを選択してください')}<span>⌄</span></summary><div class="watch-scene-options">${scenes.map(sc=>`<label><input type="checkbox" data-wdept-scene="${d.id}" value="${sc.id}" ${(d.sceneIds||[]).includes(sc.id)?'checked':''} />${esc(sc.name)}</label>`).join('')||'<span class="watch-scope-line">この部門に許可された業務シーンがありません</span>'}</div></details>
+        <button type="button" class="icon-btn watch-dept-delete" data-wdept-del="${d.id}" title="部門設定を削除" aria-label="部門設定を削除">×</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="watch-page"><div class="cfg-head"><h1 class="cfg-title">自動取込設定</h1></div>
+    <section class="watch-sec"><h3 class="watch-sec-head">監視・処理後パス <span class="spacer"></span><span class="watch-master-toggle"><span class="watch-head-lab">有効</span>${watchToggle('on',x.on)}</span></h3>
+    <p class="watch-sec-desc">監視パス（取込元）と処理後パス（分離先）を設定します。</p>
+    <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="監視・処理後パス設定"><div class="watch-root-fields">
+      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>監視パス（取込元） <span class="info-i" data-tip="テナントごとに1つ設定します。配下の全階層のファイルが対象です。">i</span><span class="watch-path-valid ${x.pathVerified?'is-valid':''}">${x.pathVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-path="${root.id}" value="${esc(watchPathDisplay(root.path))}" placeholder="監視パスを入力してください" /><button type="button" class="btn sm" data-wroot-test="path">接続テスト</button></div></div>
+      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>処理後パス（分離先） <span class="info-i" data-tip="監視パスとは別の場所に設定します。処理後ファイルは元の相対フォルダー構成を保ったまま保存します。">i</span><span class="watch-path-valid ${x.moveVerified?'is-valid':''}">${x.moveVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-move="${root.id}" value="${esc(watchPathDisplay(root.moveTo))}" placeholder="処理後パスを入力してください" /><button type="button" class="btn sm" data-wroot-test="move">接続テスト</button></div></div>
+    </div></fieldset></section>
+  <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="自動取込設定">
+    <section class="watch-sec"><h3 class="watch-sec-head">部門別取込設定 <span class="spacer"></span><button class="btn primary sm" type="button" data-wdept-add="1">＋ 部門を追加</button></h3>
+    <p class="watch-sec-desc">部門フォルダー配下を再帰的に読み取り、選択した業務シーンの帳票タイプをAI分類します。分類や確認は該当部門の権限に従います。</p>
+    <div class="watch-dept-gate-note" ${x.pathVerified?'hidden':''}><span class="info-i" aria-hidden="true">i</span><span>部門フォルダーを選択するには、上の「監視パス（取込元）」の接続テストを実行してください。</span></div>
+    <div class="watch-dept-columns"><span>部門</span><span>部門フォルダー</span><span>業務シーン</span><span></span></div>${departmentCards}</section>
+    <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法 <span class="info-i" data-tip="部門・帳票タイプごとに判定します。同じファイルでも部門が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
+  </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div></div>`;
+}
+function bindWatchDepartments() {
+  const depts=ensureWatchDepartments();const get=id=>depts.find(d=>d.id===id);
+  document.querySelectorAll('[data-watch-category]').forEach(el=>el.ontoggle=()=>{if(!el.isConnected)return;state.watchMapExpanded=state.watchMapExpanded||{};state.watchMapExpanded[el.dataset.watchCategory]=el.open;});
+  document.querySelectorAll('.watch-scene-picker').forEach(el=>el.ontoggle=()=>{if(!el.isConnected)return;if(el.open){state.watchSceneOpen=el.querySelector('[data-wdept-scene]')?.dataset.wdeptScene||null;}else state.watchSceneOpen=null;});
+  if(!document._watchSceneOutside){document._watchSceneOutside=true;document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.watch-scene-picker'))return;document.querySelectorAll('.watch-scene-picker[open]').forEach(el=>el.open=false);state.watchSceneOpen=null;});}
+  const mapping=key=>{const [id,cat,index]=key.split('|');const dept=get(id);return {dept,map:dept&&dept.mappings.find(m=>m.cat===cat),index:Number(index)};};
+  document.querySelectorAll('[data-wdept-add]').forEach(b=>b.onclick=()=>{depts.push({id:'wd-'+Date.now(),groupId:'',folder:'',sceneIds:[],mappings:[],on:true});render();});
+  document.querySelectorAll('[data-wdept-del]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();WATCH.departments=depts.filter(d=>d.id!==b.dataset.wdeptDel);render();});
+  document.querySelectorAll('[data-wdept-on]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const d=get(b.dataset.wdeptOn);d.on=!d.on;render();});
+  document.querySelectorAll('[data-wdept-group]').forEach(el=>el.onchange=()=>{const d=get(el.dataset.wdeptGroup);d.groupId=el.value;watchDeptSync(d);render();});
+  document.querySelectorAll('[data-wdept-folder-trigger]').forEach(b=>b.onclick=()=>{
+    if(b.disabled)return;
+    const id=b.dataset.wdeptFolderTrigger;
+    state.watchFolderMenu=state.watchFolderMenu===id?null:id;
+    render();
+  });
+  document.querySelectorAll('[data-wdept-folder-toggle]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const path=b.dataset.wdeptFolderToggle;
+    state.watchFolderExpanded=state.watchFolderExpanded||{};
+    state.watchFolderExpanded[path]=state.watchFolderExpanded[path]===false;
+    render();
+  });
+  document.querySelectorAll('[data-wdept-folder-pick]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const row=b.closest('[data-watch-dept]');
+    const d=row&&get(row.dataset.watchDept);
+    if(!d)return;
+    d.folder=b.dataset.wdeptFolderPick;
+    state.watchFolderMenu=null;
+    render();
+  });
+  if(!document._watchFolderOutside){
+    document._watchFolderOutside=true;
+    document.addEventListener('click',e=>{
+      if(e.target.closest&&e.target.closest('.watch-folder-picker'))return;
+      if(state.watchFolderMenu){state.watchFolderMenu=null;render();}
+    });
+  }
+  document.querySelectorAll('[data-wdept-test]').forEach(b=>b.onclick=()=>{
+    const d=get(b.dataset.wdeptTest), root=WATCH.roots[0]||{};
+    const folder=String(d&&d.folder||'').trim();
+    const path=watchPathValue(root.path).trim();
+    const parts=folder.split(/[\\/¥]+/).filter(Boolean);
+    const valid=!!path&&parts.length>0&&parts.every(p=>p!=='.'&&p!=='..'&&!/[\\/¥:*?"<>|]/.test(p));
+    toast(valid?'部門フォルダーのパスは有効です':'部門フォルダーのパスを確認してください',valid?'success':'error');
+  });
+  document.querySelectorAll('[data-wdept-scene]').forEach(el=>el.onchange=()=>{const d=get(el.dataset.wdeptScene);if(!watchDeptScenes(d.groupId).some(sc=>sc.id===el.value))return;d.sceneIds=el.checked?[...new Set(d.sceneIds.concat(el.value))]:d.sceneIds.filter(id=>id!==el.value);state.watchSceneOpen=d.id;watchDeptSync(d);render();});
+  document.querySelectorAll('[data-wmap-folder]').forEach(el=>el.oninput=()=>{const {map,index}=mapping(el.dataset.wmapFolder);map.folders[index]=el.value;});
+  document.querySelectorAll('[data-wmap-add]').forEach(b=>b.onclick=()=>{mapping(b.dataset.wmapAdd).map.folders.push('');render();});
+  document.querySelectorAll('[data-wmap-remove]').forEach(b=>b.onclick=()=>{const {map,index}=mapping(b.dataset.wmapRemove);map.folders.splice(index,1);if(!map.folders.length)map.folders=[''];render();});
+  document.querySelectorAll('[data-wmap-on]').forEach(b=>b.onclick=()=>{const {map}=mapping(b.dataset.wmapOn);map.on=!map.on;render();});
 }
 
 /** 複数選択。選択値はチップで表示し、あふれた分は「+N」にまとめる。
@@ -6907,6 +6943,7 @@ function bindBizScenes() {
   document.querySelectorAll('[data-scenerename]').forEach((b) => {
     b.onclick = (e) => {
       e.stopPropagation();
+      if (!canReachMenu('settings-scenes-edit')) return;
       const sc = byId(BIZ_SCENES, b.dataset.scenerename);
       state.sceneMenu = null;
       if (sc) state.sceneRename = { id: sc.id, value: sc.name };
@@ -6916,6 +6953,7 @@ function bindBizScenes() {
   document.querySelectorAll('[data-scenedel]').forEach((b) => {
     b.onclick = (e) => {
       e.stopPropagation();
+      if (!canReachMenu('settings-scenes-del')) return;
       const id = b.dataset.scenedel;
       const sc = byId(BIZ_SCENES, id);
       if (!ask(`「${sc ? sc.name : id}」を削除しますか？`)) return;
@@ -6929,6 +6967,7 @@ function bindBizScenes() {
   });
   const add = $('#sceneAdd');
   if (add) add.onclick = () => {
+    if (!canReachMenu('settings-scenes-add')) return;
     cfgState.sceneQ = '';
     const ns = {
       id: 'cls-' + Date.now(), name: '新規業務シーン',
@@ -7028,6 +7067,7 @@ function bindBizScenes() {
   /* ── 保存／完成 ── */
   const sv = $('#scSave');
   if (sv) sv.onclick = () => {
+    if (!canReachMenu('settings-scenes-edit')) return;
     const sc = cur(); if (!sc) return;
     const nm = $('#scName'); const ds = $('#scDesc');
     if (nm) { if (!nm.value.trim()) { toast('業務シーン名を入力してください'); return; } sc.name = nm.value.trim(); }
@@ -7219,7 +7259,7 @@ function renderTypeTablePane() {
         <span class="spacer"></span>
         <label class="tb-limit">
           <span>最大列数</span>
-          <span class="info-i" data-tip="このテーブルの各列を最大何列まで横に展開するか（1〜20）。超えた分は出力されません" aria-label="最大列数の説明">i</span>
+          <span class="info-i" data-tip="このテーブルの各列を設定数まで横に展開します（1〜20）。不足分は空欄、超過分は先頭から設定数まで出力します" aria-label="最大列数の説明">i</span>
           <input class="fld" type="number" min="1" max="20" step="1" data-tb-limit="${esc(tb.id)}" value="${tb.exportMax || 3}" aria-label="最大列数" />
         </label>
         <button type="button" class="tb-icon" data-tb-del="${esc(tb.id)}" title="削除" aria-label="テーブルを削除"><span class="ico i-delete" aria-hidden="true"></span></button>
@@ -7475,7 +7515,7 @@ function renderTicketDetail() {
   const zoomBar = '<div class="wiz-tools">'
     + '<button class="icon-btn" id="tpFit" title="幅に合わせる"><span class="ico i-multi"></span></button>'
     + '<button class="icon-btn" id="tpRotL" title="左に回転"><span class="ico i-reset"></span></button>'
-    + '<button class="icon-btn" id="tpRotR" title="右に回転"><span class="ico i-refresh"></span></button>'
+    + '<button class="icon-btn" id="tpRotR" title="右に回転"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg></button>'
     + '<button class="icon-btn" id="tpZoomIn" title="拡大"><span class="ico i-zoom-in"></span></button>'
     + '<button class="icon-btn" id="tpZoomOut" title="縮小"><span class="ico i-zoom-out"></span></button></div>';
 
@@ -8122,7 +8162,7 @@ function historyRows() {
     && (!uq || String(h.user || '').toLowerCase().includes(uq)));
 }
 
-/** ホームのサブタブ（ご利用履歴 / 自動アップロードのダッシュボード） */
+/** ホームのサブタブ（ご利用履歴 / 自動取込のダッシュボード） */
 function homeTabsHtml(active) {
   const items = [['history', 'ご利用履歴']];
   return `<div class="home-tabs" role="tablist" aria-label="ホーム">
@@ -8130,7 +8170,7 @@ function homeTabsHtml(active) {
   </div>`;
 }
 
-/** ホーム：自動アップロードのダッシュボード（サマリー＋エラー一覧） */
+/** ホーム：自動取込のダッシュボード（サマリー＋エラー一覧） */
 function renderAutoDashboard() {
   const ok = WATCH_SUMMARY.ok;
   const ng = WATCH_SUMMARY.ng;
@@ -8158,7 +8198,7 @@ function renderAutoDashboard() {
     </div>
 
     <section class="auto-card">
-      <div class="auto-card-head"><h3>自動アップロードのエラー</h3><span class="muted">未対応 ${open} 件 / 全 ${WATCH_ERRORS.length} 件</span></div>
+      <div class="auto-card-head"><h3>自動取込のエラー</h3><span class="muted">未対応 ${open} 件 / 全 ${WATCH_ERRORS.length} 件</span></div>
       <div class="tablewrap">
         <table class="auto-table">
           <thead><tr><th style="width:140px">発生日時</th><th style="width:150px">監視パス</th><th style="width:130px">帳票タイプ</th><th>ファイル名</th><th>エラー内容</th><th style="width:84px">状態</th></tr></thead>
@@ -8230,7 +8270,7 @@ function renderHome() {
         </div>
         <div class="home-filter-actions">
           <button class="btn primary" id="hSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-        <button class="btn" id="hReset" ${hasHomeFilters() ? '' : 'disabled'}><span class="ico i-refresh"></span>リセット</button>
+        <button class="btn" id="hReset" ${hasHomeFilters() ? '' : 'disabled'}><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
       </div>
       </div>
     </div>
@@ -8360,7 +8400,7 @@ function renderMyTasks() {
         <span class="mytask-filter-spacer"></span>
         <div class="mytask-filter-acts filter-acts">
           <button type="button" class="btn primary filter-act" id="mtSearch" title="検索" aria-label="検索"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button>
-          <button type="button" class="btn filter-act" id="mtReset" title="リセット" aria-label="リセット"><span class="ico i-refresh" aria-hidden="true"></span>リセット</button>
+          <button type="button" class="btn filter-act" id="mtReset" title="リセット" aria-label="リセット"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button>
         </div>
       </div>
       <div class="tablewrap">
@@ -8390,7 +8430,7 @@ function renderCfgNav() {
       ['roles', '権限設定'],
       ['security', 'セキュリティ設定'],
       ['logs', 'ログ設定'],
-      ['watch', '自動アップロード'],
+      ['watch', '自動取込設定'],
     ] },
   ];
   return `
@@ -8419,13 +8459,13 @@ function renderSidebarPane() {
 }
 
 function renderUpload() {
-  const uploadsForBiz = state.uploads.filter((u) => !u.biz || u.biz === state.upBiz);
+  const uploadsForBiz = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && ['classifying', 'waiting'].includes(u.status));
   const selectableUp = uploadsForBiz.filter((u) => u.status === 'waiting' || u.status === 'failed');
   const upAllChecked = selectableUp.length > 0 && selectableUp.every((u) => state.upPicked[u.id]);
   const picked = uploadsForBiz.filter((u) => state.upPicked[u.id]).length;
   const stMap = {
     classifying: ['判別中', 'mid'],
-    waiting: ['分類完了', 'ok'],
+    waiting: ['読取待ち', 'ok'],
     reading: ['読取中', 'mid'],
     done: ['読取完了', 'ok'],
     failed: ['読取失敗', 'ng'],
@@ -8458,6 +8498,7 @@ function renderUpload() {
         <td class="nowrap">${fmtSize(u.size)}</td>
         <td class="nowrap muted">${esc(u.uploadedAt)}</td>
         <td class="nowrap">${esc(upUser)}</td>
+        <td><span class="upload-source ${u.auto ? 'is-auto' : 'is-manual'}">${u.auto ? '自動' : '手動'}</span></td>
         <td><span class="st ${cls}"><span class="dot"></span>${label}${u.status === 'classifying' || u.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td>
         <td class="up-type">${typeCell}</td>
         <td class="hist ${u.error ? 'cur' : 'done'}">${esc(u.error || '—')}</td>
@@ -8509,7 +8550,7 @@ function renderUpload() {
     <table>
       <thead><tr>
         <th style="width:36px"><input type="checkbox" class="cb" data-upall="1" aria-label="読取待ちを全選択" ${upAllChecked ? 'checked' : ''} /></th>
-            <th>ファイル名</th><th>ファイルサイズ</th><th>アップロード日時</th><th>ユーザー</th><th>ステータス</th><th>帳票タイプ</th><th>エラー理由</th><th class="up-ops-cell" style="width:88px">操作・処理</th>
+            <th>ファイル名</th><th>ファイルサイズ</th><th>アップロード日時</th><th>ユーザー</th><th>取込</th><th>ステータス</th><th>帳票タイプ</th><th>エラー理由</th><th class="up-ops-cell" style="width:88px">操作・処理</th>
       </tr></thead>
       <tbody>${rows || '<tr><td colspan="9" class="empty-cell">データなし</td></tr>'}</tbody>
     </table>
@@ -8531,6 +8572,43 @@ function renderUpload() {
 }
 
 
+function renderAccount() {
+  const me = currentProfile();
+  const user = entUserByUid(state.currentUser) || {};
+  const roleNames = (user.soloPermIds || []).map(id => (byId(ROLES,id)||{}).name).filter(Boolean).join('、') || me.roleLabel;
+  const tenant = byId(TENANTS,state.tenant) || TENANTS[0];
+  return `<section class="account-page"><div class="account-cards">
+    <div class="account-banner"><span class="account-avatar">●</span><div><h1>${esc(me.name)}</h1><p>企業名：${esc(tenant.name)}</p><p>権限：${esc(roleNames)}</p></div></div>
+    <div class="account-card"><h2>ユーザーID</h2><p>${esc(String(user.email || me.id).split('@')[0])}</p></div>
+    <div class="account-card account-password"><h2>ログインパスワード</h2><button type="button" class="link" id="accountPasswordEdit">編集</button></div>
+  </div></section>`;
+}
+function accountPasswordEye(visible) {
+  return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'+(visible?'':'<path d="m3 3 18 18"/>')+'</svg>';
+}
+function renderAccountDialogs() {
+  if(state.logoutConfirm) return `<div class="modal-back" id="logoutBack"><div class="modal account-logout" role="dialog" aria-modal="true" aria-labelledby="logoutTitle"><div class="modal-head"><b id="logoutTitle">ご注意</b></div><div class="account-logout-body"><span class="account-warning">!</span>ログアウトしますか？</div><div class="modal-foot"><span class="spacer"></span><button class="btn" id="logoutCancel">キャンセル</button><button class="btn primary" id="logoutOk">OK</button></div></div></div>`;
+  if(!state.accountPasswordOpen)return '';
+  return `<div class="modal-back" id="accountPasswordBack"><form class="modal account-password-modal" id="accountPasswordForm" role="dialog" aria-modal="true" aria-labelledby="accountPasswordTitle"><div class="modal-head"><b id="accountPasswordTitle">パスワード変更</b><span class="spacer"></span><button type="button" class="icon-btn" id="accountPasswordClose" aria-label="閉じる">×</button></div><div class="account-password-fields">${[['old','旧パスワード','current-password'],['new','新パスワード','new-password'],['confirm','確認パスワード','new-password']].map(([key,label,auto])=>`<label><span><i class="req">*</i>${label}</span><div class="account-password-input"><input class="fld" type="password" id="accountPassword-${key}" autocomplete="${auto}" placeholder="入力してください" required /><button type="button" class="icon-btn" data-password-eye="${key}" aria-label="${label}を表示" aria-pressed="false">${accountPasswordEye(false)}</button></div></label>`).join('')}<p class="account-form-error" id="accountPasswordError" role="alert"></p></div><div class="modal-foot"><span class="spacer"></span><button type="button" class="btn" id="accountPasswordCancel">キャンセル</button><button type="submit" class="btn primary">OK</button></div></form></div>`;
+}
+function bindAccount() {
+  const close=()=>{state.accountPasswordOpen=false;state.logoutConfirm=false;render();};
+  const edit=$('#accountPasswordEdit');if(edit)edit.onclick=()=>{state.accountPasswordOpen=true;render();$('#accountPassword-old').focus();};
+  ['accountPasswordClose','accountPasswordCancel','logoutCancel'].forEach(id=>{const el=$('#'+id);if(el)el.onclick=close;});
+  ['accountPasswordBack','logoutBack'].forEach(id=>{const el=$('#'+id);if(el)el.onclick=e=>{if(e.target===el)close();};});
+  document.querySelectorAll('[data-password-eye]').forEach(b=>b.onclick=()=>{const input=$('#accountPassword-'+b.dataset.passwordEye);const show=input.type==='password';input.type=show?'text':'password';b.setAttribute('aria-pressed',String(show));b.setAttribute('aria-label',show?'パスワードを隠す':'パスワードを表示');b.innerHTML=accountPasswordEye(show);});
+  const form=$('#accountPasswordForm');if(form)form.onsubmit=e=>{
+    e.preventDefault();const old=$('#accountPassword-old').value,next=$('#accountPassword-new').value,confirm=$('#accountPassword-confirm').value;
+    const error=$('#accountPasswordError');
+    if(!old||!next||!confirm){error.textContent='すべての項目を入力してください';return;}
+    if(next!==confirm){error.textContent='新パスワードと確認パスワードが一致しません';return;}
+    if(old===next){error.textContent='旧パスワードと異なるパスワードを入力してください';return;}
+    SECURITY.logs.unshift({at:nowStamp(),user:String((entUserByUid(state.currentUser)||{}).email||state.currentUser).split('@')[0],type:'パスワード変更',result:'成功',ip:'—',note:''});
+    close();toast('パスワードを変更しました（デモ）');
+  };
+  const logout=$('#logoutOk');if(logout)logout.onclick=()=>{SECURITY.logs.unshift({at:nowStamp(),user:String((entUserByUid(state.currentUser)||{}).email||state.currentUser).split('@')[0],type:'ログアウト',result:'成功',ip:'—',note:''});close();toast('ログアウトしました（デモ）');};
+}
+
 function render() {
   const app = $('#app');
   /* innerHTML を丸ごと差し替えるので、同じ画面を描き直すときはスクロール位置を戻す。
@@ -8539,7 +8617,7 @@ function render() {
   const prevMainEl = app.querySelector('.maincol');
   const prevMainTop = prevMainEl ? prevMainEl.scrollTop : 0;
   const prevWinY = window.scrollY || 0;
-  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
+  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
   /* メニュー権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
   if (route !== 'review' && !canReachPage(route)) {
     const fallback = ['home', 'upload', 'result', 'myTasks', 'ticketDetail', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].find((p) => canReachPage(p)) || 'home';
@@ -8558,9 +8636,9 @@ function render() {
   }
   const isTypeList = false;
   const isTypeDetail = route === 'ticketDetail';      // 左：タイプ一覧／右：Step1〜4
-  const isCfg = ['permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(route);
+  const isCfg = ['permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(route);
   const isScene = route === 'bizScenes';        // 業務シーン設定（左：業務シーンリスト／右：ガイド or 編集）
-  const isFullPane = isTypeDetail || isScene || route === 'notices';
+  const isFullPane = isTypeDetail || isScene || route === 'notices' || route === 'account';
   const noSidePane = CFG_NO_SIDEBAR.includes(route);   // 利用設定の各画面：左の設定メニューを出さず全幅で見せる
   app.dataset.page = route;
   app.innerHTML = `
@@ -8586,20 +8664,9 @@ function render() {
         <button type="button" class="userpick-trigger" id="userMenuBtn" aria-expanded="${state.userMenuOpen ? 'true' : 'false'}" aria-haspopup="menu">
           <span class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
           <span class="userpick-name">${esc(me.name)}</span>
-          
           <span class="ico ${state.userMenuOpen ? 'i-caret-up' : 'i-caret-down'} userpick-caret" aria-hidden="true"></span>
         </button>
         <div class="usermenu" role="menu">
-          <div class="usermenu-head">
-            <div class="usermenu-name">${esc(me.name)}</div>
-            <div class="usermenu-email">${esc(String(me.email || '').split('@')[0])}</div>
-            <span class="usermenu-role">権限：${esc(me.roleLabel)}</span>
-            ${me.hint ? `<p class="usermenu-hint">${esc(me.hint)}</p>` : ''}
-        </div>
-          <div class="usermenu-switch">
-            <div class="usermenu-switch-h">デモ：担当者を切替え</div>
-            ${actors}
-      </div>
           <div class="usermenu-acts">
             <button type="button" class="usermenu-item" role="menuitem" data-user-act="account">アカウント情報</button>
             <button type="button" class="usermenu-item" role="menuitem" data-user-act="logout">ログアウト</button>
@@ -8614,7 +8681,7 @@ function render() {
     ${(isHome || isUpload || isMyTasks || isReview || isFullPane || noSidePane || isTypeList) ? '' : (isCfg ? renderCfgNav() : renderSidebarPane())}
     <div class="maincol ${(isHome || isUpload || isMyTasks || isReview) ? 'wide' : ''}">
       ${'' /* 読取結果一覧はステータスタブを先頭に置く */}
-      ${route === 'notices' ? renderNotices() : isHome ? renderHome()
+      ${route === 'account' ? renderAccount() : route === 'notices' ? renderNotices() : isHome ? renderHome()
         : isMyTasks ? renderMyTasks()
           : isScene ? renderBizScenes()
             : isTypeDetail ? renderTicketDetail()
@@ -8640,6 +8707,7 @@ function render() {
   ${renderReviewConfirmLockDialog()}
   ${renderReviewRequiredDialog()}
   ${renderSaveHistoryDialog()}
+  ${renderAccountDialogs()}
   ${renderExportDialog()}`;
   /* 同じ画面のままの再描画なら、退避したスクロール位置へ戻す */
   if (route === prevDomPage) {
@@ -8651,6 +8719,7 @@ function render() {
   applyActionPermissions();
   bindSceneAccess();
   bindLogs();
+  bindAccount();
 }
 
 /* ============================== 6. イベント ============================== */
@@ -8693,9 +8762,9 @@ function bind() {
       e.stopPropagation();
       const act = b.dataset.userAct;
       state.userMenuOpen = false;
+      if (act === 'account') {state.page='account';if(!state.tabs.includes('account'))state.tabs.push('account');}
+      else if(act === 'logout')state.logoutConfirm=true;
       render();
-      if (act === 'account') toast('アカウント情報（モック）');
-      else if (act === 'logout') toast('ログアウトしました（モック）');
     };
   });
   /* デモ：現在ユーザを切替えて閲覧／マイタスクの違いを見せる */
@@ -9333,7 +9402,7 @@ function renderReview() {
             + `<div class="rv-field-input-wrap">`
             + `<input class="rv-field-input${editedCls}" data-ocr="${esc(key)}" value="${esc(val)}" ${ro} />`
             + (showRevert
-              ? `<button type="button" class="rv-field-revert icon-btn" data-rv-revert="${esc(key)}" title="読取値に戻す" aria-label="読取値に戻す"><span class="ico i-refresh" aria-hidden="true"></span></button>`
+              ? `<button type="button" class="rv-field-revert icon-btn" data-rv-revert="${esc(key)}" title="読取値に戻す" aria-label="読取値に戻す"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg></button>`
               : '')
             + `</div></label></div>`;
         }).join('')}</div>`);
@@ -9726,17 +9795,13 @@ function bindCfgPages() {
     }
   }
 
-  /* ── 自動アップロード（監視設定） ──────────────────────────────────── */
+  /* ── 自動取込（監視設定） ──────────────────────────────────── */
   if (state.page === 'watch') {
+    bindWatchDepartments();
+    document.querySelectorAll('[data-watchclose]').forEach((b) => { b.onclick = () => { closeTab('watch'); }; });
     document.querySelectorAll('[data-watchsave]').forEach((b) => {
       b.onclick = () => {
-        if (!WATCH.roots.some((r) => String(r.path || '').trim())) { toast('監視パスを入力してください'); return; }
-        /* 無効行も含めて重複を見る（あとで有効にしたときに二重取込になるため） */
-        const folders = WATCH.rules.map((r) => String(r.folder || '').trim());
-        if (folders.some((n) => !n)) { toast('フォルダ名を入力してください'); return; }
-        const lower = folders.map((n) => n.toLowerCase());
-        const dupAt = lower.findIndex((n, i) => lower.indexOf(n) !== i);
-        if (dupAt >= 0) { toast(`フォルダ名が重複しています：${folders[dupAt]}`); return; }
+        const error=WATCH.on?watchValidateSettings():'';if(error){toast(error,'error');return;}
         WATCH.updatedAt = nowStamp(); render(); toast('設定を保存しました');
       };
     });
@@ -9744,13 +9809,43 @@ function bindCfgPages() {
     document.querySelectorAll('[data-wroot-path]').forEach((el) => {
       el.oninput = () => {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootPath);
-        if (r) r.path = el.value;
+        if (r) r.path = watchPathValue(el.value);
+        WATCH.pathVerified = false;
+        document.querySelector('.watch-path-field [data-wroot-path]')?.closest('.watch-path-field')?.querySelector('.watch-path-valid')?.classList.remove('is-valid');
+        document.querySelectorAll('.watch-folder-select').forEach(select=>{select.disabled=true;select.classList.add('is-locked');});
+        const gateNote=document.querySelector('.watch-dept-gate-note');if(gateNote)gateNote.hidden=false;
       };
     });
     document.querySelectorAll('[data-wroot-move]').forEach((el) => {
       el.oninput = () => {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootMove);
-        if (r) { r.moveTo = el.value; r.after = 'move'; }
+        if (r) { r.moveTo = watchPathValue(el.value); r.after = 'move'; WATCH.moveVerified = false; }
+        el.closest('.watch-path-field')?.querySelector('.watch-path-valid')?.classList.remove('is-valid');
+      };
+    });
+    document.querySelectorAll('[data-wroot-test]').forEach((btn) => {
+      btn.onclick = () => {
+        const r = WATCH.roots[0] || {};
+        const kind = btn.dataset.wrootTest;
+        const value = kind === 'path' ? r.path : r.moveTo;
+        const source = watchPathValue(r.path).trim().replace(/[\\/]+$/,'').toLowerCase();
+        const target = watchPathValue(r.moveTo).trim().replace(/[\\/]+$/,'').toLowerCase();
+        const valid = !!value && (kind === 'path' || (source && target && source !== target && !source.startsWith(target+'/') && !target.startsWith(source+'/')));
+        if(kind==='path')WATCH.pathVerified=valid;
+        else WATCH.moveVerified=valid;
+        toast(valid ? '接続確認が完了しました' : 'パスを確認してください', valid ? 'success' : 'error');
+        render();
+      };
+    });
+    document.querySelectorAll('[data-wroot-test-all]').forEach((btn) => {
+      btn.onclick = () => {
+        const r = WATCH.roots[0] || {};
+        const source = watchPathValue(r.path).trim().replace(/[\\/]+$/,'').toLowerCase();
+        const target = watchPathValue(r.moveTo).trim().replace(/[\\/]+$/,'').toLowerCase();
+        const valid = !!source && !!target && source !== target && !source.startsWith(target+'/') && !target.startsWith(source+'/');
+        WATCH.pathVerified = valid;
+        toast(valid ? '接続確認が完了しました' : '監視パスと処理後パスを確認してください', valid ? 'success' : 'error');
+        render();
       };
     });
     document.querySelectorAll('[data-wroot-after]').forEach((el) => {
@@ -9767,27 +9862,11 @@ function bindCfgPages() {
         r.on = !r.on; render();
       };
     });
-    document.querySelectorAll('[data-wrootdel]').forEach((btn) => {
-      btn.onclick = () => {
-        if (WATCH.roots.length <= 1) return;
-        WATCH.roots = WATCH.roots.filter((q) => q.id !== btn.dataset.wrootdel);
-        render();
-      };
-    });
-    const addRoot = document.querySelector('[data-wrootadd]');
-    if (addRoot) addRoot.onclick = () => {
-      /* 1 行＝1 監視パス。テナントは既存行の紐付けを引き継ぐ */
-      const t = (WATCH.roots[0] && WATCH.roots[0].tenant) || (TENANTS[0] || {}).id || 'tenant1';
-      WATCH.roots.push({ id: `r${Date.now()}`, tenant: t, path: '', moveTo: '', on: true, after: 'move' });
-      render();
-    };
     /* 帳票タイプ別ルール：入力は即時反映（描き直すとフォーカスが飛ぶ）、トグル類は描き直す */
     document.querySelectorAll('[data-wrule-folder]').forEach((el) => {
       el.oninput = () => { watchRuleOf(el.dataset.wruleFolder).folder = el.value; };
     });
-    document.querySelectorAll('[data-wrule-pattern]').forEach((el) => {
-      el.oninput = () => { watchRuleOf(el.dataset.wrulePattern).pattern = el.value; };
-    });
+
     document.querySelectorAll('[data-wruleon]').forEach((btn) => {
       btn.onclick = () => {
         const r = watchRuleOf(btn.dataset.wruleon);
@@ -11006,7 +11085,7 @@ function bindUploadPanel() {
   // 展開／折りたたみ・フィルタ開閉・ドロワー
 }
 
-function canRenameTree(uid) { return canReachMenu('settings-scenes',uid); }
+function canRenameTree(uid) { return canReachMenu('settings-scenes-edit',uid); }
 function startRename(nodeEl, type, id) {
   if (!canRenameTree()) { toast('名称を変更する権限がありません','error'); return; }
   /* ファイル＝ファイル名、フォルダ（業務シーン／帳票タイプ）＝表示名を変更 */
@@ -11051,7 +11130,7 @@ function applyHash() {
     else if (k === 'rename') { const [target, text] = val.split('|'); state.rename[target] = text; }
     else if (k === 'f') { const [key, v2] = val.split(':'); state.filters[key] = v2; }
     else if (k === 'open') state.filterOpen = true;
-    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].includes(val) ? val : 'result';
+    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(val) ? val : 'result';
     else if (k === 'review' && val) {
       state.reviewId = val;
       state.page = 'review';
@@ -11124,14 +11203,14 @@ function seedAdditionalDemoData() {
 function initializePhaseOneAccess() {
  if(state.phaseOneInitialized)return;state.phaseOneInitialized=true;
  DEMO_ACTORS.forEach(a=>{a.hint='割り当てられたメニューにアクセスできます';});
- ENT_USERS.forEach(u=>{u.soloPermIds=rolesFromOrganizationSeed(u.uid);});
+ ENT_USERS.forEach(u=>{u.soloPermIds=Object.keys(ROLE_MEMBERS).filter(rid=>(ROLE_MEMBERS[rid]||[]).includes(u.uid));u.role=u.soloPermIds.map(rid=>(byId(ROLES,rid)||{}).name).filter(Boolean).join("、");});
  const departmentNames={gu:'受付部',gc:'確認部',gb:'業務管理部',gv:'総務部',gk:'分類担当部',gr:'読取担当部',ge:'出力担当部',gf:'データ修正部',gm:'システム管理部'};
  GROUPS.forEach(g=>{g.permIds=[];g.permId=null;g.kind='';g.roles=[];if(departmentNames[g.id])g.name=departmentNames[g.id];});
  const assigned=new Set();GROUPS.slice().sort((a,b)=>Number(!!a.root)-Number(!!b.root)).forEach(g=>{g.userIds=(g.userIds||[]).filter(uid=>{if(assigned.has(uid))return false;assigned.add(uid);return true;});});
  const rootOrg=GROUPS.find(g=>g.root)||GROUPS[0];if(rootOrg)ENT_USERS.forEach(u=>{if(!assigned.has(u.uid)){rootOrg.userIds.push(u.uid);assigned.add(u.uid);}});
  for(let i=0;i<24;i++){SECURITY.logs.push({at:`2026-10-30 09:${String(59-i).padStart(2,'0')}:00`,user:['admin','sato','suzuki'][i%3],type:AUTH_EVENTS[i%4],ip:'172.16.10.'+(20+i),result:i%7===0?'失敗':'成功',note:i%7===0?'ユーザー名またはパスワードを確認してください。':''});}
- SECURITY.logs.forEach(l=>{l.user=String(l.user||'').split('@')[0];if(!AUTH_EVENTS.includes(l.type)){l.feature=logFunctions().includes(l.type)?l.type:'読取結果一覧';l.action=l.type;l.target=l.target||'';}});
- WATCH_ERRORS.forEach(e=>{if(!SECURITY.logs.some(l=>l.uploadErrorId===e.id))SECURITY.logs.push({uploadErrorId:e.id,at:e.at,user:'システム',type:'自動アップロード',feature:'自動アップロード',action:'自動取込',target:e.file,ip:'—',result:'失敗',note:[e.file,e.path,e.reason].join(' ／ ')});});
+ SECURITY.logs.forEach(l=>{l.user=String(l.user||'').split('@')[0];if(!AUTH_EVENTS.includes(l.type)){l.feature=l.feature||({'アップロード':'新規アップロード','自動取込':'自動取込設定','設定変更':'帳票タイプ設定'}[l.type]||'読取結果一覧');l.action=l.action||({'帳票読取':'読取'}[l.type]||l.type);l.target=l.target||'';}});
+ WATCH_ERRORS.forEach(e=>{if(!SECURITY.logs.some(l=>l.uploadErrorId===e.id))SECURITY.logs.push({uploadErrorId:e.id,at:e.at,user:'システム',type:'自動取込',feature:'自動取込設定',action:'自動取込',target:e.file,ip:'—',result:'失敗',note:[watchPathDisplay(e.path),e.reason].join(' ／ ')});});
  BIZ_SCENES.forEach(sc=>{sc.departmentIds=GROUPS.filter(g=>(g.userIds||[]).some(uid=>(sc.userIds||[]).includes(uid))).map(g=>g.id);});
 }
 function rolesFromOrganizationSeed(uid) {

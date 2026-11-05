@@ -368,6 +368,17 @@
 .dict-bulk-preview { max-height: 240px; border: 1px solid var(--line); border-radius: 2px; }
 
 /* ── 自動アップロード ─────────────────────────────────────────────── */
+.upload-source {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.upload-source.is-auto { color: #2f76b7; background: #eaf4fc; }
+.upload-source.is-manual { color: #68727d; background: #f1f3f5; }
 /* 1 画面 1 設定（監視フォルダは 1 つ）。顧客要件の 6 項目を
    2 段組みのセクションとしてそのまま並べる。 */
 #app[data-page="watch"] .maincol { overflow-y: auto; }
@@ -389,8 +400,9 @@
 .watch-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
+.watch-page > .watch-body { margin-top: 18px; }
 
 /* 左右 2 段組みは廃止。列の入れ物は残し、中身をそのまま縦に並べる。 */
 .watch-col {
@@ -400,20 +412,45 @@
 /* セクション ───────────────────────────────────────────────────── */
 .watch-sec {
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: 6px;
   background: #fff;
   overflow: hidden;
+  flex-shrink: 0;
 }
+.watch-sec:has(.watch-scene-picker) {
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+}
+.watch-path-control{display:flex;align-items:center;gap:16px}
+.watch-path-control .fld{flex:1;min-width:0}
+.watch-path-control .btn{flex:none;min-width:0;white-space:nowrap}
+.watch-path-control [data-wroot-test]{background:#eaf3ff;border-color:#9ec4f2;color:#2869ae;font-weight:600}
+.watch-path-control [data-wroot-test]:hover{background:#d9eaff;border-color:#6fa7e7;color:#1e5c9e}
+.watch-path-control [data-wroot-test],.watch-sec-head [data-wdept-add]{padding:0 9px;font-size:12px}
+.watch-sec-head [data-wdept-add]{font-weight:600;min-width:0;white-space:nowrap}
+.watch-actions{flex:0 0 auto;margin-top:auto;padding:16px 2px 4px;justify-content:flex-end}
+.watch-path-field .watch-field-caption{min-height:19px}
+.watch-sec-head .watch-master-toggle{margin-left:0;font-size:12px;font-weight:normal;letter-spacing:0}
 
 .watch-sec-head {
   margin: 0;
-  padding: 7px 12px;
-  border-bottom: 1px solid var(--line);
-  background: #eef5fd;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: var(--accent);
+  padding: 22px 24px 2px;
+  border-bottom: 0;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+/* セクション見出し直下の説明行 */
+.watch-sec-desc {
+  margin: 0;
+  padding: 2px 24px 12px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #8b95a3;
 }
 
 /* 1 項目＝「ラベル｜入力」の 1 行。縦に積むだけなので視線が上下に流れる。 */
@@ -422,13 +459,35 @@
   flex-direction: column;
 }
 
-.wf {
+/* 取込・再試行設定：2 行 × 2 列（ラベル左・操作右） */
+.watch-setting-rows {
   display: grid;
-  grid-template-columns: 168px minmax(0, 1fr);
-  align-items: start;
-  gap: 6px 14px;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 40px;
+  padding: 4px 24px 18px;
+}
+.watch-setting-rows .wf {
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f2f4f8;
+}
+.watch-setting-rows .wf:nth-last-child(-n+2) { border-bottom: 0; }
+.watch-setting-rows .wf-label { font-size: 13px; }
+.watch-setting-rows .wf-ctl { justify-content: flex-end; }
+@media (max-width: 900px) {
+  .watch-setting-rows { grid-template-columns: 1fr; }
+  .watch-setting-rows .wf:nth-last-child(-n+2) { border-bottom: 1px solid #f2f4f8; }
+  .watch-setting-rows .wf:last-child { border-bottom: 0; }
+}
+
+.wf {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   min-width: 0;
-  padding: 9px 14px;
+  padding: 12px 14px;
   border-bottom: 1px solid #f2f4f8;
 }
 
@@ -436,17 +495,21 @@
 .watch-fields > .wf:last-child { border-bottom: 0; }
 
 .wf-label {
-  /* 32px の入力と 1 行目を揃える（折り返しても行間が開かないよう line-height は普通に） */
-  padding-top: 7px;
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 400;
   color: var(--text-2);
   line-height: 1.5;
+  min-width: 0;
+  flex: 0 0 auto;
 }
 
-/* 入力は横幅いっぱいに伸ばさない（セレクトが間延びするため） */
-.wf-ctl { min-width: 0; max-width: 560px; }
-.wf-ctl.wide { max-width: 920px; }
+/* 前提スイッチが OFF の行は、選択できないことが分かるよう淡くする */
+.wf.is-off .wf-label { color: var(--text-3); }
+.wf.is-off .fld { background: #f2f4f7; color: var(--text-3); cursor: not-allowed; }
+
+/* セキュリティ設定と同じく、右側の入力は内容に合わせた幅にする */
+.wf-ctl { min-width: 0; max-width: none; flex: 0 1 auto; display: flex; justify-content: flex-start; }
+.wf-ctl.wide { max-width: none; }
 
 /* 入力の下に添える補足（監視対象の説明など）
    注：`.wf-note` は serve.py が説明文として HTML コメント化するので使わない。 */
@@ -458,7 +521,8 @@
 }
 
 .wf .fld {
-  width: 100%;
+  width: auto;
+  min-width: 132px;
   height: 32px;
   box-sizing: border-box;
   font-size: 12.5px;
@@ -505,7 +569,7 @@
   gap: 6px;
 }
 
-.watch-inline .fld { width: 84px; flex: 0 0 84px; }
+.watch-inline .fld { width: 84px; min-width: 84px; flex: 0 0 84px; }
 .watch-inline .muted { font-size: 11.5px; color: var(--text-3); }
 
 /* 監視パスの行組みは廃止（テナント表＋カテゴリ表に置き換え）。.wp-del / .wp-add は表で使用中。 */
@@ -610,3 +674,43 @@
 .watch-resolve b { color: var(--accent); font-weight: 700; }
 .watch-resolve .mono { margin-left: 8px; color: var(--text-3); font-size: 11px; }
 
+
+/* Global switch keeps settings visible while disabling native controls. */
+fieldset.watch-body{border:0;padding:0;margin:0;min-width:0;flex-shrink:0}
+fieldset.watch-body:disabled{opacity:.5}
+fieldset.watch-body:disabled .watch-sec{pointer-events:none}
+fieldset.watch-body:disabled input,fieldset.watch-body:disabled select{background:#f2f4f7;cursor:not-allowed}
+.watch-root-fields{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:8px 24px 24px}.watch-root-fields .fld{width:100%}.watch-field-caption{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-2);margin-bottom:8px}.watch-field-caption .req{color:#f56c6c;font-style:normal}.watch-path-example{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 20px;background:#f7faff;border-top:1px solid var(--line);color:var(--text-2);font-size:12px}.watch-path-example code{font-family:inherit}.watch-dept-card{margin:0 20px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent}.watch-dept-card.is-off{opacity:.65}.watch-dept-heading{display:flex;align-items:center;gap:12px;padding:12px 0;background:transparent;border-bottom:1px solid var(--line);font-size:13px}.watch-dept-heading b{font-size:15px}.watch-dept-fields{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:18px;padding:16px}.watch-dept-fields .fld{width:100%}.watch-scene-picker{position:relative}.watch-scene-picker summary{list-style:none;border:1px solid var(--line);border-radius:3px;min-height:32px;padding:5px 9px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;font-size:13px}.watch-scene-options{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;background:white;border:1px solid var(--line);box-shadow:0 6px 20px #22334420;max-height:230px;overflow:auto;padding:6px}.watch-scene-options label{display:flex;align-items:center;gap:8px;padding:8px;font-size:13px;cursor:pointer}.watch-scope-line{padding:0 16px 12px;color:var(--muted);font-size:12px}.watch-folder-list{display:flex;flex-direction:column;gap:6px}.watch-folder-list>div{display:flex;align-items:center;gap:5px}.watch-folder-list input{flex:1;min-width:0}.watch-folder-list>.link{align-self:flex-start;font-size:12px}.watch-map-table th:first-child{width:32%}.watch-map-table th:last-child{width:85px}.watch-map-table td{vertical-align:top}.watch-classify-note{display:flex;align-items:flex-start;gap:8px;padding:0 20px 16px;font-size:12px;color:var(--muted)}.watch-dedup-note{font-size:12px;color:var(--muted);padding:0 0 10px 180px}.watch-sec-head .btn{font-weight:normal}@media(max-width:1000px){.watch-dept-fields{grid-template-columns:1fr 1fr}.watch-dept-fields>div:last-child{grid-column:1/-1}.watch-root-fields{grid-template-columns:1fr}}
+.watch-sec-head{display:flex;align-items:center;gap:8px}.watch-sec-head .spacer,.watch-dept-heading .spacer{display:block;flex:1}
+.watch-dept-tree>summary,.watch-category-node>summary{list-style:none;cursor:pointer}.watch-dept-tree>summary::-webkit-details-marker,.watch-category-node>summary::-webkit-details-marker{display:none}.watch-tree-arrow{display:inline-block;font-size:20px;color:var(--muted);transition:transform .12s}.watch-dept-tree[open]>.watch-dept-heading>.watch-tree-arrow,.watch-category-node[open]>summary>.watch-tree-arrow{transform:rotate(90deg)}.watch-tree-caption{font-size:12px;color:var(--muted);font-weight:normal}.watch-dept-toolbar{display:flex;align-items:center;gap:10px;padding:0 16px 14px;font-size:13px}.watch-dept-toolbar .watch-scope-line{padding:0}.watch-dept-toolbar .spacer,.watch-category-node .spacer{flex:1;display:block}.watch-category-tree{margin:0 16px 16px;padding-left:18px;border-left:1px solid var(--line)}.watch-category-node{border:1px solid var(--line);border-radius:4px;margin:8px 0;background:white}.watch-category-node>summary{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:13px;background:#f8faff}.watch-category-content{padding:12px 18px}.watch-mapping-toggle{display:flex;gap:12px;align-items:center;margin-bottom:10px;font-size:12px}.watch-tree-branch{color:var(--muted)}.watch-dept-tree:not([open])>.watch-dept-heading{border-bottom:0}.watch-category-node summary>b{font-weight:500}
+.watch-flat-map{margin:0 16px 16px;border:1px solid var(--line);border-radius:4px}.watch-flat-map th:first-child{width:30%}.watch-flat-map th:last-child{width:95px}.watch-flat-map td{vertical-align:top}.watch-dept-tree .watch-tree-caption[data-wdept-folder-preview]{font-family:inherit;color:var(--text-2)}
+.watch-dept-heading .watch-dept-delete{margin-left:4px;color:var(--muted);font-size:20px}.watch-dept-heading .watch-dept-delete:hover{color:var(--danger,#f56c6c)}
+.watch-master-toggle{display:inline-flex;align-items:center;gap:8px;margin-left:16px;flex-shrink:0}
+/* 部門取込設定の状態・操作表示 */
+.watch-status-chip{padding:2px 8px;border-radius:3px;font-size:12px}.watch-status-chip.is-on{color:#2f8a57;background:#e8f6ed}.watch-status-chip.is-off{color:#7d8791;background:#eef0f2}.watch-op-label{font-size:12px;color:var(--muted)}
+.watch-dept-row .watch-dept-fields{grid-template-columns:1fr 1.2fr 1.5fr .6fr 1fr;align-items:end;padding:14px 0}.watch-dept-row .watch-field-caption{white-space:nowrap}.watch-dept-status,.watch-dept-ops{min-width:0}.watch-dept-status .watch-status-chip{display:inline-flex}.watch-dept-ops>div{display:flex;align-items:center;gap:8px}.watch-dept-ops .watch-dept-delete{font-size:20px}.watch-dept-row{margin:0 24px}
+.watch-dept-columns{display:grid;grid-template-columns:1fr 1.2fr 1.5fr 36px;gap:18px;margin:0 24px;padding:10px 0 6px;border-bottom:1px solid var(--line);color:var(--text-2);font-size:12px}.watch-dept-row .watch-dept-fields{grid-template-columns:1fr 1.2fr 1.5fr 36px}.watch-dept-row .watch-field-caption{display:none}.watch-dept-row .watch-dept-fields{padding:10px 0;align-items:center}
+.watch-path-check{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding-top:2px}.watch-path-check-note{font-size:12px;color:var(--muted)}
+.watch-path-valid{display:none;font-size:12px;color:#2f8a57;background:#e8f6ed;border-radius:3px;padding:2px 8px}.watch-path-valid.is-valid{display:inline-flex}.watch-sec-head .watch-path-valid{margin-left:4px}
+.watch-dept-gate-note{display:flex;align-items:flex-start;gap:8px;margin:0 24px 10px;padding:10px 12px;border:1px solid #cfe3f7;border-radius:6px;background:#f2f8ff;color:#2c5f8a;font-size:12.5px;line-height:1.6}
+.watch-dept-gate-note[hidden]{display:none}
+.watch-dept-gate-note .info-i{flex:none;margin:2px 0 0;width:14px;height:14px;line-height:14px;font-size:9px;background:#2c5f8a;color:#fff}
+.watch-dept-row,.watch-dept-row .watch-dept-fields{overflow:visible}.watch-dept-row{position:relative;z-index:1}.watch-dept-row:focus-within{z-index:20}.watch-scene-picker{z-index:30}.watch-scene-picker[open]{z-index:40}.watch-scene-options{min-width:260px}
+
+/* 部門フォルダー：ツリー選択（単一選択） */
+.watch-folder-picker { position: relative; min-width: 0; }
+.watch-folder-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 32px; padding: 0 9px; text-align: left; cursor: pointer; background: #fff; }
+.watch-folder-trigger .watch-folder-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.watch-folder-trigger .watch-folder-arrow { flex: none; font-size: 10px; color: var(--text-2); }
+.watch-folder-trigger[disabled] { background: #f2f4f7; color: var(--text-3); cursor: not-allowed; }
+.watch-folder-menu { position: absolute; left: 0; top: calc(100% + 4px); z-index: 80; width: max(100%, 300px); max-width: 380px; max-height: 320px; overflow: auto; background: #fff; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 26px rgba(15, 23, 42, .16); padding: 6px; }
+.watch-folder-node { display: flex; align-items: center; border-radius: 4px; }
+.watch-folder-node:hover { background: #f4f8ff; }
+.watch-folder-caret { width: 22px; height: 28px; flex: none; border: 0; background: transparent; color: var(--text-2); font-size: 10px; cursor: pointer; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.watch-folder-caret.is-leaf { visibility: hidden; cursor: default; }
+.watch-folder-pick { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 1; min-width: 0; height: 30px; padding: 0 8px; border: 0; background: transparent; font-size: 12.5px; color: var(--text); text-align: left; cursor: pointer; border-radius: 4px; }
+.watch-folder-pick.is-selected { color: var(--accent); font-weight: 600; background: #eef5ff; }
+.watch-folder-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.watch-folder-check { flex: none; color: var(--accent); font-size: 12px; }
+.watch-sec:has(.watch-folder-picker.is-open) { overflow: visible; position: relative; z-index: 20; }
+.watch-dept-row:has(.watch-folder-picker.is-open) { z-index: 30; }
