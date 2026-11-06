@@ -387,27 +387,21 @@ test('selecting forms for reading promotes rows and jumps to result list while r
   assert.equal(run('FILES_DATA[0].status'), 'reading');
   assert.equal(run('FILES_DATA[0].tenant'), run('state.tenant'));
 });
-test('upload screen business division is a dropdown select filtered by UPLOAD_PERMS', () => {
+test('upload screen business division is available to upload-menu roles', () => {
   const run = app();
-  run('entUserByUid("u2").soloPermIds = ["R5"]; entUserByUid("u4").soloPermIds = ["R5"]');
-  /* u2＝読取グループ → アップロードできる業務シーンだけが出る */
-  run('state.currentUser = "u2";');
+  run('state.currentUser = "u7";'); /* 一般ユーザー：アップロード可 */
   const html = run('renderUpload()');
   assert.match(html, /業務シーンの選択/);
   assert.doesNotMatch(html, /帳票分類タイプの選択/);
-  assert.match(html, /data-tip="アップロード前に業務シーンの選択が必要です/);
-  assert.match(html, /アップロード権限のある業務シーンのみ/);
   assert.match(html, /id="upBizSelect"/);
   assert.match(html, /<select class="fld up-biz-select" id="upBizSelect">/);
-  assert.equal((html.match(/<option value="b/g) || []).length, run('uploadableBusiness().length'));
+  assert.equal((html.match(/<option value="b/g) || []).length, run('BUSINESS.length'));
   assert.equal(run('state.upBiz'), 'b1');
   assert.match(html, /value="b1" selected/);
-  assert.doesNotMatch(html, /value="b2"/); /* 税務は u2 に権限なし */
-  assert.doesNotMatch(html, /up-chip|data-upbiz=/);
-  /* 税務窓口 u4 なら b2 が見える */
-  const taxHtml = run('state.currentUser = "u4"; state.upBiz = "b2"; renderUpload()');
-  assert.match(taxHtml, /value="b2" selected/);
-  assert.equal(run('canUploadBiz("b2")'), true);
+  assert.match(html, /value="b2"/);
+  assert.equal(run('canUploadBiz("b2", "u7")'), true);
+  /* 業務シーン管理者はアップロードメニューを持たない */
+  assert.equal(run('canUploadBiz("b1", "u2")'), false);
 });
 test('classification list is the six sample business folders with a per-row menu and empty right pane', () => {
   const run = app();
@@ -764,25 +758,14 @@ test('ticket permission matrix lists every folder (business scene → ticket typ
   /* 業務レベルの帳票権限表に、システムレベルのメニュー権限ツリーは同居しない */
   assert.doesNotMatch(html, /data-mpnode/);
 });
-test('upload permission matrix lists every business scene with upload assignees', () => {
+test('権限設定は4ロールのメニュー権限で構成する', () => {
   const run = app();
-  run('entUserByUid("u2").soloPermIds = ["R5"]; entUserByUid("u4").soloPermIds = ["R5"]');
-  const html = run('renderPermissions()');
-  assert.match(html, /アップロード権限（業務シーン単位）/);
-  const bizCount = Number(run('BUSINESS.length'));
-  assert.equal((html.match(/data-uploadcell="/g) || []).length, bizCount);
-  assert.equal((html.match(/data-uploadclear="/g) || []).length, bizCount);
-  assert.match(html, /data-uploadcell="b1"/);
-  assert.match(html, /data-uploadclear="b2"/);
-  const up = JSON.parse(run('JSON.stringify(UPLOAD_PERMS)'));
-  assert.equal(Object.keys(up).length, bizCount);
-  Object.values(up).forEach((list) => {
-    assert.ok(list.every((id) => /^([gu]\d+)$/.test(id)), 'upload targets are group or user ids');
-  });
-  assert.equal(run('canUploadBiz("b1", "u2")'), true);
-  assert.equal(run('canUploadBiz("b2", "u2")'), false);
-  assert.equal(run('canUploadBiz("b2", "u4")'), true);
-  assert.deepEqual(JSON.parse(run('JSON.stringify(uploadableBusiness("u2").map((b) => b.id))')), ['b1', 'b3', 'b4', 'b6']);
+  assert.deepEqual(JSON.parse(run('JSON.stringify(ROLES.map(r=>r.id))')), ['R1', 'R2', 'R3', 'R4']);
+  assert.deepEqual(JSON.parse(run('JSON.stringify(ROLES.map(r=>r.name))')), ['システム管理者', '部門管理者', '業務シーン管理者', '一般ユーザー']);
+  assert.equal(run('MENU_PERMS.R2.includes("usage-watch")'), true);
+  assert.equal(run('MENU_PERMS.R3.includes("settings-scenes-edit")'), true);
+  assert.equal(run('MENU_PERMS.R3.includes("result")'), true);
+  assert.equal(run('MENU_PERMS.R4.includes("settings-type")'), false);
 });
 test('ticket permissions assign groups and users for business actions', () => {
   const run = app();
@@ -1013,7 +996,7 @@ test('security settings keep only the three modules from the design', () => {
   assert.match(html, /data-sec="ipEnabled"[\s\S]*?無効[\s\S]*?有効/);
   assert.match(html, /data-sec="idle"[\s\S]*?15分[\s\S]*?30分[\s\S]*?60分[\s\S]*?2時間[\s\S]*?制限なし/);
   /* 既定値 */
-  assert.equal(run('SECURITY.retention'), '12ヶ月');
+  assert.equal(run('SECURITY.retention'), '6ヶ月');
   assert.equal(run('SECURITY.ipEnabled'), '無効');
   assert.equal(run('SECURITY.idle'), '制限なし');
   /* 保存／閉じる */
@@ -1086,8 +1069,8 @@ test('automatic upload maps department folders and scene categories under one re
  assert.equal((html.match(/data-wroot-path=/g)||[]).length,1);
  assert.equal((html.match(/data-wroot-move=/g)||[]).length,1);
  assert.doesNotMatch(html,/data-wroot-after=|data-wrootadd|data-wrootdel/);
- assert.match(html,/data-wdept-group=/);assert.match(html,/data-wdept-scene=/);assert.match(html,/data-wmap-add=/);
- assert.match(html,/AI分類結果/);assert.match(html,/未登録フォルダー/);
+ assert.match(html,/data-wdept-group-trigger=/);assert.match(html,/data-gfopt="wdeptScene:/);
+ assert.match(html,/選択した業務シーンの帳票タイプをAI分類/);assert.doesNotMatch(html,/data-wmap-/);
  assert.equal(run('ensureWatchDepartments().length'),2);
 });
 
@@ -1432,13 +1415,13 @@ test('tree folders and files share scene department-user data scope', () => {
  assert.equal(run("canSeeCategory('c1','u5')"),false);
 });
 
-test('archive destination stays editable and processing is fixed to move',()=>{const run=app(),html=run('renderWatch()');assert.match(html,/処理後フォルダー/);assert.doesNotMatch(html,/data-wroot-after/);assert.doesNotMatch(html,/data-wroot-move="r1"[^>]*disabled/);});
+test('archive destination stays editable and processing is fixed to move',()=>{const run=app(),html=run('renderWatch()');assert.match(html,/処理後パス/);assert.doesNotMatch(html,/data-wroot-after/);assert.doesNotMatch(html,/data-wroot-move="r1"[^>]*disabled/);});
 
-test('new scene categories receive empty folder mappings and renaming preserves saved folders',()=>{
+test('new scene categories need no folder mappings',()=>{
  const run=watchApp();run('ensureWatchDepartments();CATEGORY.push({id:"new-watch",name:"新規申請"});LAYOUT.push({id:"new-watch-layout",category:"new-watch",name:"新規申請"});CLASSIFY_FORMS.push({id:"new-watch-form",name:"新規申請"});BIZ_SCENES.find(s=>s.id==="cls-zeimu").formIds.push("new-watch-form");watchDeptSync(WATCH.departments[0])');
- assert.equal(run('WATCH.departments[0].mappings.find(m=>m.cat==="new-watch").folders[0]'),'');
- run('WATCH.departments[0].mappings.find(m=>m.cat==="new-watch").folders=["custom"];CATEGORY.find(c=>c.id==="new-watch").name="改名";watchDeptSync(WATCH.departments[0])');
- assert.equal(run('WATCH.departments[0].mappings.find(m=>m.cat==="new-watch").folders[0]'),'custom');
+ assert.equal(run('WATCH.departments[0].mappings'),undefined);
+ const result=JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/任意の新しいフォルダー/test.pdf","new-watch"))'));
+ assert.equal(result.categoryId,'new-watch');
 });
 
  test('scene selection merges CSV by category across different layouts', () => {
@@ -1465,16 +1448,16 @@ test('automatic upload global switch disables all settings and retains values',(
  assert.doesNotMatch(run('WATCH.on=true;renderWatch()'),/<fieldset class="watch-body" disabled/);
 });
 
-test('export naming retains name field with input-name toggle',()=>{const run=app();const html=run('state.exportOpen=true;renderExportDialog()');assert.match(html,/id="expFileName"/);assert.match(html,/data-expcfg="fileNameFromInput" checked/);});
+test('export naming retains editable name field with input-name default',()=>{const run=app();const html=run('state.exportOpen=true;renderExportDialog()');assert.match(html,/id="expFileName"/);assert.match(html,/初期値は入力ファイル名/);assert.doesNotMatch(html,/data-expcfg="fileNameFromInput"/);});
 
 test('CSV naming supports original single name and configured merged name',()=>{const run=app();run('state.exportCfg={fileNameFromInput:true,fileName:"指定名"}');assert.equal(run('exportMergedFileName([FILES_DATA[0]])'),run('dispFileName(FILES_DATA[0].id).replace(/\\.[^.]+$/, "")'));assert.equal(run('exportMergedFileName([FILES_DATA[0],FILES_DATA[1]])'),'指定名');assert.equal(run('state.exportCfg.fileNameFromInput=false;exportMergedFileName([FILES_DATA[0]])'),'指定名');});
 
-test('menu role mocks use valid menu leaves and personal assignments',()=>{const run=app();const grants=JSON.parse(run('JSON.stringify(defaultOperationGrants())'));const leaves=JSON.parse(run('JSON.stringify(MENU_LEAVES)'));Object.values(grants).flat().forEach(id=>assert.ok(leaves.includes(id),id));assert.ok(grants.R7.includes('settings-scenes-edit'));assert.ok(!grants.R8.includes('settings-scenes-edit'));assert.equal(run('initializePhaseOneAccess();entUserByUid("u8").soloPermIds.includes("R8")'),true);});
+test('menu role mocks use valid menu leaves and personal assignments',()=>{const run=app();const grants=JSON.parse(run('JSON.stringify(defaultOperationGrants())'));const leaves=JSON.parse(run('JSON.stringify(MENU_LEAVES)'));Object.values(grants).flat().forEach(id=>assert.ok(leaves.includes(id),id));assert.ok(grants.R3.includes('settings-scenes-edit'));assert.ok(!grants.R4.includes('settings-scenes-edit'));assert.equal(run('initializePhaseOneAccess();entUserByUid("u8").soloPermIds.includes("R2")'),true);assert.equal(run('entUserByUid("u2").soloPermIds.includes("R3")'),true);assert.equal(run('entUserByUid("u7").soloPermIds.includes("R4")'),true);});
 
 test('account page and dialogs are available to every logged-in role',()=>{const run=app();assert.equal(run('canReachPage("account","u7")'),true);assert.match(run('renderAccount()'),/ユーザーID/);const password=run('state.accountPasswordOpen=true;renderAccountDialogs()');assert.equal((password.match(/type="password"/g)||[]).length,3);assert.match(password,/旧パスワード/);assert.match(password,/確認パスワード/);const logout=run('state.logoutConfirm=true;renderAccountDialogs()');assert.match(logout,/ログアウトしますか/);assert.match(logout,/id="logoutCancel"/);assert.match(logout,/id="logoutOk"/);});
 
-test('department scene AI corrects wrong folder category and skips unmapped folders',()=>{const run=watchApp();run('ensureWatchDepartments()');const result=JSON.parse(run('JSON.stringify(watchResolveFile("税務課/スキャナー01/個人住民税申告/test.pdf","c3"))'));assert.equal(result.expectedCategoryId,'c2');assert.equal(result.categoryId,'c3');assert.equal(result.corrected,true);assert.equal(result.dedupScope,'g4|c3');assert.equal(result.archiveRelativePath,'税務課¥スキャナー01¥個人住民税申告¥test.pdf');const unmapped=JSON.parse(run('JSON.stringify(watchResolveFile("税務課/未登録/test.pdf","c3"))'));assert.ok(unmapped.error);assert.match(unmapped.error,/マッピング/);assert.ok(run('watchResolveFile("税務課/未登録/test.pdf","c1").error'));});
- test('watch configuration validates archive separation and folder uniqueness within departments',()=>{const run=watchApp();assert.equal(run('ensureWatchDepartments();watchValidateSettings()'),'');assert.ok(run('WATCH.roots[0].moveTo=WATCH.roots[0].path+"/処理済";watchValidateSettings()'));run('WATCH.roots[0].moveTo="D:/archive";WATCH.departments[0].mappings[1].folders=WATCH.departments[0].mappings[0].folders.slice()');assert.match(run('watchValidateSettings()'),/重複/);});
+test('organization scene AI classifies files independently of subfolder names',()=>{const run=watchApp();run('ensureWatchDepartments()');const result=JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/スキャナー01/個人住民税申告/test.pdf","c3"))'));assert.equal(result.categoryId,'c3');assert.equal(result.dedupScope,'g4|c3');assert.equal(result.archiveRelativePath,'税務窓口¥スキャナー01¥個人住民税申告¥test.pdf');const other=JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/未登録/test.pdf","c3"))'));assert.equal(other.categoryId,'c3');assert.ok(run('watchResolveFile("税務窓口/未登録/test.pdf","c1").error'));});
+test('watch configuration validates archive separation and organization folder uniqueness',()=>{const run=watchApp();assert.equal(run('ensureWatchDepartments();watchValidateSettings()'),'');assert.ok(run('WATCH.roots[0].moveTo=WATCH.roots[0].path+"/処理済";watchValidateSettings()'));run('WATCH.roots[0].moveTo="D:/archive";WATCH.departments[1].folder=WATCH.departments[0].folder');assert.match(run('watchValidateSettings()'),/重複/);});
 
 test('automatic upload scene choices inherit organization data permissions',()=>{const run=app();run('BIZ_SCENES.forEach(sc=>sc.departmentIds=[]);BIZ_SCENES[0].departmentIds=["g1"]');assert.equal(run('watchDeptScenes("g2").some(sc=>sc.id===BIZ_SCENES[0].id)'),true);assert.equal(run('watchDeptScenes("g4").length'),0);run('WATCH.departments=[{id:"isolated",groupId:"g4",folder:"税務課",sceneIds:[BIZ_SCENES[0].id],mappings:[],on:true}];ensureWatchDepartments()');assert.equal(run('WATCH.departments[0].sceneIds.length'),0);});
 
@@ -1514,23 +1497,23 @@ test('自動取込設定: 部門フォルダーはツリーから単一選択で
   run('ensureWatchDepartments(); WATCH.pathVerified=true; state.watchFolderMenu="wd-tax";');
   const html = run('renderWatch()');
   assert.match(html, /class="watch-folder-menu"/);
-  assert.match(html, /data-wdept-folder-pick="税務課\/市民税担当\/個人住民税係"/);
-  assert.match(html, /data-wdept-folder-pick="税務課\/市民税担当\/個人住民税係\/令和8年度"/);
+  assert.match(html, /data-wdept-folder-pick="住民異動窓口\/住民課承認者"/);
+  assert.match(html, /data-wdept-folder-pick="住民異動窓口\/住民課長"/);
   assert.match(html, /role="option"/);
   assert.match(html, /aria-selected="true"/);
   /* 他部門で使用中のフォルダーは選択不可 */
   assert.match(html, /class="watch-folder-pick is-disabled"/);
   assert.match(html, /使用中/);
-  assert.doesNotMatch(html, /data-wdept-folder-pick="福祉課"/);
-  assert.doesNotMatch(html, /data-wdept-folder-pick="福祉課\/保育支援担当"/);
+  assert.doesNotMatch(html, /data-wdept-folder-pick="保育・児童窓口"/);
+  assert.doesNotMatch(html, /data-wdept-folder-pick="保育・児童窓口\/保育・児童承認者"/);
 });
 
 test('自動取込設定: 多階層の部門フォルダーでもファイルを解決できる', () => {
   const run = watchApp();
-  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-deep",groupId:"g4",folder:"税務課/市民税担当/個人住民税係",sceneIds:["cls-zeimu"],mappings:[],on:true}]; watchDeptSync(WATCH.departments[0]); WATCH.departments[0].mappings.forEach(m=>{m.folders=[(byId(CATEGORY,m.cat)||{}).name||"x"];});');
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-deep",groupId:"g4",folder:"税務課/市民税担当/個人住民税係",sceneIds:["cls-zeimu"],on:true}]; watchDeptSync(WATCH.departments[0]);');
   const result = JSON.parse(run('JSON.stringify(watchResolveFile("税務課/市民税担当/個人住民税係/スキャナー01/個人住民税申告/test.pdf","c2"))'));
   assert.ok(!result.error);
-  assert.equal(result.expectedCategoryId, 'c2');
+  assert.equal(result.categoryId, 'c2');
   assert.equal(result.archiveRelativePath, '税務課¥市民税担当¥個人住民税係¥スキャナー01¥個人住民税申告¥test.pdf');
   assert.equal(run('watchValidateSettings()'), '');
 });
@@ -1546,13 +1529,12 @@ test('自動取込設定: 接続テスト前は部門フォルダーの案内を
   assert.match(after, /class="watch-dept-gate-note" hidden/);
 });
 
-test('自動取込設定: マッピング未設定の部門フォルダーは取り込まない', () => {
+test('自動取込設定: 組織フォルダー内の未登録子フォルダーも分類する', () => {
   const run = watchApp();
   run('ensureWatchDepartments();');
-  const r = JSON.parse(run('JSON.stringify(watchResolveFile("税務課/未登録/test.pdf","c3"))'));
-  assert.ok(r.error);
-  assert.match(r.error, /未取込/);
-  assert.equal(r.skipped, true);
+  const r = JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/未登録/test.pdf","c3"))'));
+  assert.equal(r.categoryId,'c3');
+  assert.equal(r.archiveRelativePath,'税務窓口¥未登録¥test.pdf');
 });
 
 test('自動取込設定: 未割当フォルダーがある場合は保存時に確認する', () => {
@@ -1587,14 +1569,14 @@ test('自動取込設定: 実際に失敗したファイルはお知らせで確
 
 test('自動取込設定: 部門に割り当てられていないフォルダーを検出する', () => {
   const run = watchApp();
-  run('ensureWatchDepartments();');
+  run('ensureWatchDepartments(); WATCH_GROUP_FILES.g1=2;');
   assert.equal(run('watchUnassignedFolders().length'), 1);
   assert.equal(run('watchUnassignedFolders()[0].files'), 2);
   run('state.watchSaveConfirm=true;');
   const html = run('renderWatch()');
   assert.match(html, /対象外のフォルダー/);
-  assert.match(html, /新設部/);
-  run('WATCH.departments.push({id:"wd-new",groupId:"g4",folder:"新設部",sceneIds:["cls-zeimu"],mappings:[],on:true});');
+  assert.match(html, /住民異動窓口/);
+  run('WATCH.departments.push({id:"wd-new",groupId:"g1",folder:"住民異動窓口",sceneIds:["cls-zeimu"],mappings:[],on:true});');
   assert.equal(run('watchUnassignedFolders().length'), 0);
 });
 
@@ -1611,13 +1593,11 @@ test('自動取込設定: 部門に一致しないファイルはスキャン範
 
 test('自動取込設定: 子フォルダだけ設定時は親フォルダ直下のファイルも未割当', () => {
   const run = watchApp();
-  run('ensureWatchDepartments(); WATCH.departments[0].folder="税務課/市民税担当";');
+  run('ensureWatchDepartments(); WATCH.departments[0].folder="税務窓口/税務承認者"; WATCH_GROUP_FILES.g4=3;');
   const list = JSON.parse(run('JSON.stringify(watchUnassignedFolders())'));
-  assert.equal(list.length, 2);
-  assert.ok(list.some((f) => f.path === '税務課' && f.files === 3));
-  assert.ok(list.some((f) => f.path === '新設部'));
-  assert.ok(!list.some((f) => f.path.includes('資産税担当')));
-  assert.ok(!list.some((f) => f.path === '税務課/市民税担当'));
+  assert.equal(list.length, 1);
+  assert.ok(list.some((f) => f.path === '税務窓口' && f.files === 3));
+  assert.ok(!list.some((f) => f.path === '税務窓口/税務承認者'));
 });
 
 test('操作ログの操作種別は統一されたラベルを使う', () => {
@@ -1702,4 +1682,75 @@ test('操作ログ: 備考列を持たず、成功した操作だけを表示す
   assert.doesNotMatch(html, /<th>備考<\/th>/);
   assert.doesNotMatch(html, /成功時の補足/);
   assert.doesNotMatch(html, /読み取りに失敗しました/);
+});
+
+test('ホーム: 呼び出し方法は手動アップロードと自動取込のみ、フィルタは持たない', () => {
+  const run = app();
+  const html = run('renderHome()');
+  assert.match(html, /呼び出し方法/);
+  assert.match(html, /手動アップロード/);
+  assert.match(html, /自動取込/);
+  assert.doesNotMatch(html, /data-ms="hCall"/);
+  assert.doesNotMatch(html, /画面呼び出し|API呼び出し|合計ページ数/);
+});
+
+test('自動取込設定: 部門下拉は多階層の組織をインデント表示する', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); state.watchDeptMenu="wd-tax";');
+  const html = run('renderWatch()');
+  assert.match(html, /data-wdept-group-trigger="wd-tax"/);
+  assert.match(html, /住民異動窓口/);
+  assert.match(html, /data-wdept-group-toggle="g1"/);
+  assert.match(html, /data-wdept-group-pick="wd-tax\|g2"/);
+  assert.match(html, /data-wdept-group-pick="wd-tax\|g3"/);
+});
+
+test('自動取込設定: 組織モックはトップ部門の下に課・係の3階層を持つ', () => {
+  const run = app();
+  run('initializePhaseOneAccess(); ensureWatchDepartments(); state.watchDeptMenu="wd-tax";');
+  const html = run('renderWatch()');
+  assert.match(html, /住民異動窓口 第一課/);
+  assert.match(html, /住民異動窓口 第一係/);
+  assert.match(html, /data-wdept-group-pick="wd-tax\|[^"]+"/);
+});
+
+test('自動取込設定: 部門・部門フォルダー・業務シーンの選択コントロールを統一する', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments();');
+  const html = run('renderWatch()');
+  assert.match(html, /class="fld watch-ctl watch-dept-trigger" data-wdept-group-trigger=/);
+  assert.match(html, /class="fld watch-ctl watch-folder-trigger"/);
+  assert.match(html, /data-ms="wdeptScene:wd-tax"/);
+});
+
+test('ユーザー編集: 権限は複数選択、所属組織は只读、ステータスは権限の後に表示', () => {
+  const run = app();
+  run("USER_ADD_DRAFT={mode:'edit',id:'U2',uid:'u2',groupIds:['gu'],name:'鈴木 太郎',email:'taro.suzuki',soloPermIds:['R3','R4'],dataPerm:'自身のみ',status:'有効'};");
+  const html = run('renderUserAddDialog()');
+  assert.equal((html.match(/data-gfopt="uaPerm"/g) || []).length, 4);
+  assert.match(html, /id="userAddStatus"/);
+  assert.doesNotMatch(html, /id="userOrganization"/);
+  assert.match(html, /user-add-readonly/);
+  assert.ok(html.indexOf('data-ms="uaPerm"') < html.indexOf('id="userAddStatus"'));
+  assert.ok(html.indexOf('id="userAddStatus"') < html.indexOf('データ権限業務区分'));
+});
+
+test('自動取込設定: 組織フォルダーを組織より先に並べる', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments();');
+  const html = run('renderWatch()');
+  assert.match(html, /<div class="watch-dept-columns"><span>組織フォルダー/);
+  assert.match(html, /<span>組織<\/span>/);
+  const folderIdx = html.indexOf('data-wdept-folder-trigger="wd-tax"');
+  const deptIdx = html.indexOf('data-wdept-group-trigger="wd-tax"');
+  assert.ok(folderIdx >= 0 && deptIdx >= 0 && folderIdx < deptIdx);
+});
+
+test('自動取込設定: 他の部門で使用中の部門は選択できない', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); WATCH.departments[1].groupId=WATCH.departments[0].groupId; WATCH.departments[0].folder="税務課"; WATCH.departments[1].folder="福祉課"; state.watchDeptMenu="wd-tax";');
+  const html = run('renderWatch()');
+  assert.match(html, /使用中/);
+  assert.match(html, /data-wdept-group-pick="wd-tax\\|[^"]+" disabled/);
+  assert.match(run('watchValidateSettings()'), /重複/);
 });

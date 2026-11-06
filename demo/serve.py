@@ -2803,6 +2803,43 @@ if (typeof initializePhaseOneAccess === 'function') {
   if (typeof document !== 'undefined' && document.getElementById('app')) render();
 }
 """
+    # 4 ロール（システム管理者／部門管理者／業務シーン管理者／一般ユーザー）に集約
+    patched += """
+try {
+  var _fourRoles = [
+    { id: 'R1', name: 'システム管理者', code: 'system_admin', desc: 'すべてのメニューとシステム設定を利用', created: '2025-10-01 00:00:00', status: '有効' },
+    { id: 'R2', name: '部門管理者', code: 'department_admin', desc: '自部門の帳票設定、自動取込、ログ、ユーザー管理を利用', created: '2025-10-01 00:00:00', status: '有効' },
+    { id: 'R3', name: '業務シーン管理者', code: 'scene_admin', desc: '帳票タイプ、業務シーン、辞書を管理し、読取結果を閲覧', created: '2025-10-01 00:00:00', status: '有効' },
+    { id: 'R4', name: '一般ユーザー', code: 'general_user', desc: '新規アップロードと読取結果一覧を利用', created: '2025-10-01 00:00:00', status: '有効' }
+  ];
+  if (typeof ROLES !== 'undefined') { ROLES.length = 0; _fourRoles.forEach(function (r) { ROLES.push(r); }); }
+  var _fourMembers = { R1: ['u1'], R2: ['u3','u8'], R3: ['u2','u4','u5'], R4: ['u6','u7','u10'] };
+  if (typeof ROLE_MEMBERS !== 'undefined') {
+    Object.keys(ROLE_MEMBERS).forEach(function (k) { delete ROLE_MEMBERS[k]; });
+    Object.assign(ROLE_MEMBERS, _fourMembers);
+  }
+  if (typeof MENU_PERMS !== 'undefined' && typeof MENU_LEAVES !== 'undefined') {
+    var _scene = ['settings-scenes-add','settings-scenes-edit','settings-scenes-del'];
+    var _users = ['users-view','usage-users-add','usage-users-edit','usage-users-del','groups-view','usage-groups-add','usage-groups-edit','usage-groups-del'];
+    var _fourGrants = {
+      R1: MENU_LEAVES.slice(),
+      R2: ['home','upload','result','settings-type'].concat(_scene, ['usage-dict'], _users, ['usage-watch','usage-logs']),
+      R3: ['home','result','settings-type'].concat(_scene, ['usage-dict']),
+      R4: ['home','upload','result']
+    };
+    Object.keys(MENU_PERMS).forEach(function (k) { delete MENU_PERMS[k]; });
+    Object.assign(MENU_PERMS, _fourGrants);
+  }
+  if (typeof ENT_USERS !== 'undefined') {
+    ENT_USERS.forEach(function (u) {
+      u.soloPermIds = Object.keys(ROLE_MEMBERS).filter(function (rid) { return (ROLE_MEMBERS[rid] || []).includes(u.uid); });
+      var hit = ROLES.find(function (r) { return u.soloPermIds.includes(r.id); });
+      u.role = hit ? hit.name : '';
+    });
+  }
+  if (typeof render === 'function') render();
+} catch (_e) { /* ignore */ }
+"""
     return patched.encode('utf-8')
 
 
