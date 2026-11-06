@@ -1356,11 +1356,14 @@ test('phase one: organization edit only exposes name and disabled parent, never 
  assert.match(html,/上位組織/);assert.match(html,/org-parent-readonly[^>]*disabled readonly/);assert.match(html,/組織名/);
  assert.doesNotMatch(html,/data-gfopt|gfPerm|所属ユーザー|帳票类别/);
 });
-test('phase one: scene users are restricted to selected departments and descendants', () => {
+test('phase one: scene access defaults to all members of selected departments and descendants', () => {
  const run=app();
  run("GROUPS.push({id:'dept-a',parentId:null,userIds:['u2']},{id:'dept-b',parentId:'dept-a',userIds:['u3']},{id:'dept-c',parentId:null,userIds:['u4']})");
  assert.deepEqual(JSON.parse(run("JSON.stringify(sceneAccessUsers({departmentIds:['dept-a']}).map(u=>u.id).sort())")),['u2','u3']);
- assert.match(run("renderSceneAccess({departmentIds:[],userIds:[]})"),/先に組織を選択/);
+ const emptyAccess = run("renderSceneAccess({departmentIds:[],userIds:[]})");
+ assert.doesNotMatch(emptyAccess,/データ権限ユーザー/);
+ assert.doesNotMatch(emptyAccess,/sceneUsers/);
+ assert.equal(run("syncSceneUsers({departmentIds:['dept-a'],userIds:[]}).join(',')"),'u2,u3');
  assert.doesNotMatch(run("state.typeStep=1;typePane(TICKET_TYPES[0],1)"),/data-wmsbtn="tpGroups"/);
 });
 test('phase one: roles are assigned to users, organization roles do not change effective rights', () => {

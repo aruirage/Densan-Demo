@@ -6394,13 +6394,19 @@ function sceneAccessUsers(sc) {
  const ids = expandGroupSelection(sc.departmentIds || []);
  return USERS.filter(u=>GROUPS.some(g=>ids.includes(g.id) && (g.userIds||[]).includes(u.id)));
 }
+function syncSceneUsers(sc) {
+ const users = sceneAccessUsers(sc).map(u=>u.id);
+ sc.userIds = users;
+ return users;
+}
 function renderSceneAccess(sc) {
- return `<div class="wiz-field"><span class="wl req">データ権限組織</span>${wizMulti('sceneDepartments','組織を選択してください',groupOptsWithDepth(),sc.departmentIds || [])}</div><div class="wiz-field"><span class="wl req">データ権限ユーザー</span>${(sc.departmentIds||[]).length ? wizMulti('sceneUsers','ユーザーを選択してください',sceneAccessUsers(sc).map(u=>[u.id,u.name]),sc.userIds||[]) : '<input class="fld" disabled placeholder="先に組織を選択してください" />'}</div>`;
+ syncSceneUsers(sc);
+ return `<div class="wiz-field"><span class="wl req">データ権限組織</span>${wizMulti('sceneDepartments','組織を選択してください',groupOptsWithDepth(),sc.departmentIds || [])}</div>`;
 }
 function bindSceneAccess() {
  document.querySelectorAll('[data-wmsbtn]').forEach(b=>{if(!b.dataset.wmsbtn.startsWith('scene'))return;b.onclick=()=>{state.dd=state.dd===b.dataset.wmsbtn?null:b.dataset.wmsbtn;render();placeOpenDropdown();};});
- document.querySelectorAll('[data-wmsopt]').forEach(cb=>{if(!cb.dataset.wmsopt.startsWith('scene'))return;cb.onchange=()=>{const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;const key=cb.dataset.wmsopt==='sceneDepartments'?'departmentIds':'userIds'; const set=new Set(sc[key]||[]);cb.checked?set.add(cb.value):set.delete(cb.value);sc[key]=[...set]; if(key==='departmentIds')sc.userIds=(sc.userIds||[]).filter(id=>sceneAccessUsers(sc).some(u=>u.id===id));render();placeOpenDropdown();};});
- ['wmsclear','wmsdel'].forEach(attr=>document.querySelectorAll('[data-'+attr+']').forEach(b=>{if(!b.dataset[attr].startsWith('scene'))return;b.onclick=e=>{e.stopPropagation();const [id,value]=b.dataset[attr].split(':');const sc=byId(BIZ_SCENES,state.sceneId);const key=id==='sceneDepartments'?'departmentIds':'userIds';sc[key]=value?(sc[key]||[]).filter(v=>v!==value):[];if(key==='departmentIds')sc.userIds=(sc.userIds||[]).filter(uid=>sceneAccessUsers(sc).some(u=>u.id===uid));render();};}));
+ document.querySelectorAll('[data-wmsopt]').forEach(cb=>{if(!cb.dataset.wmsopt.startsWith('scene'))return;cb.onchange=()=>{const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;const set=new Set(sc.departmentIds||[]);cb.checked?set.add(cb.value):set.delete(cb.value);sc.departmentIds=[...set];syncSceneUsers(sc);render();placeOpenDropdown();};});
+ ['wmsclear','wmsdel'].forEach(attr=>document.querySelectorAll('[data-'+attr+']').forEach(b=>{if(!b.dataset[attr].startsWith('scene'))return;b.onclick=e=>{e.stopPropagation();const [,value]=b.dataset[attr].split(':');const sc=byId(BIZ_SCENES,state.sceneId);sc.departmentIds=value?(sc.departmentIds||[]).filter(v=>v!==value):[];syncSceneUsers(sc);render();};}));
 }
 function sceneEditor(sc) {
   const stepNo = state.sceneStep || 1;
@@ -6467,7 +6473,7 @@ function validateSceneStep1(sc) {
   if (!sc) return false;
   if (!(sc.name || '').trim()) { toast('業務シーン名を入力してください'); return false; }
   if (!(sc.departmentIds||[]).length) { toast('データ権限組織を選択してください'); return false; }
-  if (!(sc.userIds||[]).length) { toast('データ権限ユーザーを選択してください'); return false; }
+  syncSceneUsers(sc);
   return true;
 }
 
