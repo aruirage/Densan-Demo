@@ -1331,6 +1331,8 @@ test('automatic upload failures are always logged without notification settings'
   assert.equal(run('WATCH.notify = true; WATCH.notifyOn = "fail"; shouldNotifyUpload(false)'), true);
   assert.equal(run('shouldNotifyUpload(true)'), false);
   assert.equal(run('WATCH.notifyOn = "always"; shouldNotifyUpload(true)'), false);
+  assert.equal(run("render=()=>{}; addUploadFailure({file:'failed.pdf',path:'監視/税務課',reason:'読取失敗'}); SECURITY.logs.some(l=>l.target==='failed.pdf')"), false);
+  assert.equal(run("WATCH_ERRORS.some(e=>e.file==='failed.pdf')"), true);
   assert.doesNotMatch(run('renderWatch()'), /data-wf-toggle="notify"/);
   assert.doesNotMatch(run('renderWatch()'), /data-wf="notifyOn"/);
   assert.doesNotMatch(run('renderWatch()'), /Webhook URL/);
@@ -1354,7 +1356,7 @@ test('additional demo samples cover statuses and provide upload pagination witho
   run('seedAdditionalDemoData()');
   assert.equal(run('FILES_DATA.length'),before+24);
   assert.equal(run("state.uploads.filter(u=>u.biz==='b1').length"),12);
-  for (const status of ['waiting','failed','classifying','done','reading']) assert.equal(run(`state.uploads.some(u=>u.status==='${status}')`),true);
+  for (const status of ['waiting','needs_confirm','error','failed','classifying','done','reading']) assert.equal(run(`state.uploads.some(u=>u.status==='${status}')`),true);
   const count = run('state.uploads.length');
   run('seedAdditionalDemoData()');
   assert.equal(run('FILES_DATA.length'),before+24);
@@ -1386,12 +1388,13 @@ test('phase one: roles are assigned to users, organization roles do not change e
 test('phase one: auth logs have four events and operation logs group by current menu names', () => {
  const run=app();assert.deepEqual(JSON.parse(run('JSON.stringify(AUTH_EVENTS)')),['ログイン','ログアウト','パスワード変更','パスワード再設定']);
  const html=run('renderLogs()');assert.match(html,/認証ログ一覧/);assert.match(html,/操作ログ一覧/);assert.match(html,/ユーザーID/);assert.doesNotMatch(html,/メールアドレス/);
- assert.match(run("state.logTab='operation';renderLogs()"),/自動アップロード/);
+ assert.match(run("state.logTab='operation';renderLogs()"),/新規アップロード/);
+ assert.doesNotMatch(run("state.logTab='operation';renderLogs()"),/自動アップロード/);
 });
-test('phase one: startup migrates organization roles once and includes upload failures in operation logs', () => {
+test('phase one: startup migrates organization roles once and keeps upload failures out of operation logs', () => {
  const run=app();run('initializePhaseOneAccess()');
  assert.equal(run('GROUPS.some(g=>g.permId || g.permIds.length)'),false);
- assert.equal(run("SECURITY.logs.some(l=>l.feature==='自動アップロード'&&l.result==='失敗')"),true);
+ assert.equal(run("SECURITY.logs.some(l=>l.type==='自動'&&l.result==='失敗')"),false);
  assert.equal(run("ENT_USERS.some(u=>(u.soloPermIds||[]).includes('R1'))"),true);
 });
 
@@ -1410,7 +1413,7 @@ test('phase one: deleting an organization requires warning and cascades through 
 
 test('operation log functions exclude home and allow OR matching of multiple functions', () => {
  const run=app();assert.equal(run("logFunctions().includes('ホーム')"),false);
- run("state.logTab='operation';SECURITY.logs=[{at:'2026-10-30 10:00:00',type:'設定',feature:'辞書登録',user:'a'},{at:'2026-10-30 10:01:00',type:'設定',feature:'ユーザー管理',user:'a'},{at:'2026-10-30 10:02:00',type:'設定',feature:'自動アップロード',user:'b'}];state.logApplied={functions:['辞書登録','ユーザー管理']}");
+ run("state.logTab='operation';SECURITY.logs=[{at:'2026-10-30 10:00:00',type:'設定',feature:'辞書登録',user:'a',result:'成功'},{at:'2026-10-30 10:01:00',type:'設定',feature:'ユーザー管理',user:'a',result:'成功'},{at:'2026-10-30 10:02:00',type:'設定',feature:'自動アップロード',user:'b',result:'成功'}];state.logApplied={functions:['辞書登録','ユーザー管理']}");
  assert.equal(run('logRows().length'),2);
  assert.match(run('renderLogs()'),/data-wmsbtn="logFunctions"/);
 });
@@ -1470,7 +1473,7 @@ test('menu role mocks use valid menu leaves and personal assignments',()=>{const
 
 test('account page and dialogs are available to every logged-in role',()=>{const run=app();assert.equal(run('canReachPage("account","u7")'),true);assert.match(run('renderAccount()'),/ユーザーID/);const password=run('state.accountPasswordOpen=true;renderAccountDialogs()');assert.equal((password.match(/type="password"/g)||[]).length,3);assert.match(password,/旧パスワード/);assert.match(password,/確認パスワード/);const logout=run('state.logoutConfirm=true;renderAccountDialogs()');assert.match(logout,/ログアウトしますか/);assert.match(logout,/id="logoutCancel"/);assert.match(logout,/id="logoutOk"/);});
 
-test('department scene AI corrects wrong folder category and classifies unmapped folders',()=>{const run=watchApp();run('ensureWatchDepartments()');const result=JSON.parse(run('JSON.stringify(watchResolveFile("税務課/スキャナー01/個人住民税申告/test.pdf","c3"))'));assert.equal(result.expectedCategoryId,'c2');assert.equal(result.categoryId,'c3');assert.equal(result.corrected,true);assert.equal(result.dedupScope,'g4|c3');assert.equal(result.archiveRelativePath,'税務課¥スキャナー01¥個人住民税申告¥test.pdf');assert.equal(run('watchResolveFile("税務課/未登録/test.pdf","c3").categoryId'),'c3');assert.ok(run('watchResolveFile("税務課/未登録/test.pdf","c1").error'));});
+test('department scene AI corrects wrong folder category and skips unmapped folders',()=>{const run=watchApp();run('ensureWatchDepartments()');const result=JSON.parse(run('JSON.stringify(watchResolveFile("税務課/スキャナー01/個人住民税申告/test.pdf","c3"))'));assert.equal(result.expectedCategoryId,'c2');assert.equal(result.categoryId,'c3');assert.equal(result.corrected,true);assert.equal(result.dedupScope,'g4|c3');assert.equal(result.archiveRelativePath,'税務課¥スキャナー01¥個人住民税申告¥test.pdf');const unmapped=JSON.parse(run('JSON.stringify(watchResolveFile("税務課/未登録/test.pdf","c3"))'));assert.ok(unmapped.error);assert.match(unmapped.error,/マッピング/);assert.ok(run('watchResolveFile("税務課/未登録/test.pdf","c1").error'));});
  test('watch configuration validates archive separation and folder uniqueness within departments',()=>{const run=watchApp();assert.equal(run('ensureWatchDepartments();watchValidateSettings()'),'');assert.ok(run('WATCH.roots[0].moveTo=WATCH.roots[0].path+"/処理済";watchValidateSettings()'));run('WATCH.roots[0].moveTo="D:/archive";WATCH.departments[0].mappings[1].folders=WATCH.departments[0].mappings[0].folders.slice()');assert.match(run('watchValidateSettings()'),/重複/);});
 
 test('automatic upload scene choices inherit organization data permissions',()=>{const run=app();run('BIZ_SCENES.forEach(sc=>sc.departmentIds=[]);BIZ_SCENES[0].departmentIds=["g1"]');assert.equal(run('watchDeptScenes("g2").some(sc=>sc.id===BIZ_SCENES[0].id)'),true);assert.equal(run('watchDeptScenes("g4").length'),0);run('WATCH.departments=[{id:"isolated",groupId:"g4",folder:"税務課",sceneIds:[BIZ_SCENES[0].id],mappings:[],on:true}];ensureWatchDepartments()');assert.equal(run('WATCH.departments[0].sceneIds.length'),0);});
@@ -1511,19 +1514,24 @@ test('自動取込設定: 部門フォルダーはツリーから単一選択で
   run('ensureWatchDepartments(); WATCH.pathVerified=true; state.watchFolderMenu="wd-tax";');
   const html = run('renderWatch()');
   assert.match(html, /class="watch-folder-menu"/);
-  assert.match(html, /data-wdept-folder-pick="税務課\/個人住民税"/);
-  assert.match(html, /data-wdept-folder-pick="税務課\/個人住民税\/令和8年度"/);
+  assert.match(html, /data-wdept-folder-pick="税務課\/市民税担当\/個人住民税係"/);
+  assert.match(html, /data-wdept-folder-pick="税務課\/市民税担当\/個人住民税係\/令和8年度"/);
   assert.match(html, /role="option"/);
   assert.match(html, /aria-selected="true"/);
+  /* 他部門で使用中のフォルダーは選択不可 */
+  assert.match(html, /class="watch-folder-pick is-disabled"/);
+  assert.match(html, /使用中/);
+  assert.doesNotMatch(html, /data-wdept-folder-pick="福祉課"/);
+  assert.doesNotMatch(html, /data-wdept-folder-pick="福祉課\/保育支援担当"/);
 });
 
 test('自動取込設定: 多階層の部門フォルダーでもファイルを解決できる', () => {
   const run = watchApp();
-  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-deep",groupId:"g4",folder:"税務課/個人住民税",sceneIds:["cls-zeimu"],mappings:[],on:true}]; watchDeptSync(WATCH.departments[0]); WATCH.departments[0].mappings.forEach(m=>{m.folders=[(byId(CATEGORY,m.cat)||{}).name||"x"];});');
-  const result = JSON.parse(run('JSON.stringify(watchResolveFile("税務課/個人住民税/スキャナー01/個人住民税申告/test.pdf","c2"))'));
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-deep",groupId:"g4",folder:"税務課/市民税担当/個人住民税係",sceneIds:["cls-zeimu"],mappings:[],on:true}]; watchDeptSync(WATCH.departments[0]); WATCH.departments[0].mappings.forEach(m=>{m.folders=[(byId(CATEGORY,m.cat)||{}).name||"x"];});');
+  const result = JSON.parse(run('JSON.stringify(watchResolveFile("税務課/市民税担当/個人住民税係/スキャナー01/個人住民税申告/test.pdf","c2"))'));
   assert.ok(!result.error);
   assert.equal(result.expectedCategoryId, 'c2');
-  assert.equal(result.archiveRelativePath, '税務課¥個人住民税¥スキャナー01¥個人住民税申告¥test.pdf');
+  assert.equal(result.archiveRelativePath, '税務課¥市民税担当¥個人住民税係¥スキャナー01¥個人住民税申告¥test.pdf');
   assert.equal(run('watchValidateSettings()'), '');
 });
 
@@ -1532,8 +1540,166 @@ test('自動取込設定: 接続テスト前は部門フォルダーの案内を
   run('WATCH.pathVerified=false;');
   const before = run('renderWatch()');
   assert.match(before, /class="watch-dept-gate-note"/);
-  assert.match(before, /接続テストを実行してください/);
+  assert.match(before, /接続テストが必要です/);
   run('WATCH.pathVerified=true;');
   const after = run('renderWatch()');
   assert.match(after, /class="watch-dept-gate-note" hidden/);
+});
+
+test('自動取込設定: マッピング未設定の部門フォルダーは取り込まない', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments();');
+  const r = JSON.parse(run('JSON.stringify(watchResolveFile("税務課/未登録/test.pdf","c3"))'));
+  assert.ok(r.error);
+  assert.match(r.error, /未取込/);
+  assert.equal(r.skipped, true);
+});
+
+test('自動取込設定: 未割当フォルダーがある場合は保存時に確認する', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); WATCH.departments.push({id:"wd-new",groupId:"g4",folder:"総務部",sceneIds:["cls-zeimu"],mappings:[],on:true}); state.watchSaveConfirm=true;');
+  const html = run('renderWatch()');
+  assert.match(html, /ご注意/);
+  assert.match(html, /設定を保存しますか？/);
+  assert.match(html, /対象外のフォルダー/);
+  assert.match(html, /id="watchSaveCancel"/);
+  assert.match(html, /id="watchSaveOk"/);
+  assert.doesNotMatch(html, /data-wf="unmappedPolicy"/);
+});
+
+test('自動取込ダッシュボード: 実際に取り込んだファイルの失敗理由を表示する', () => {
+  const run = app();
+  const html = run('renderAutoDashboard()');
+  assert.match(html, /未対応エラー/);
+  assert.match(html, /パスワード保護/);
+  assert.match(html, /auto-status open/);
+  assert.doesNotMatch(html, /スキャン範囲外/);
+});
+
+test('自動取込設定: 実際に失敗したファイルはお知らせで確認できる', () => {
+  const run = watchApp();
+  assert.equal(run('tabDef("notices").label'), 'お知らせ');
+  const notices = run('renderNotices()');
+  assert.match(notices, /パスワード保護された PDF/);
+  assert.match(notices, /02_特別徴収関係一式\.pdf/);
+  assert.doesNotMatch(notices, /スキャン範囲外/);
+});
+
+test('自動取込設定: 部門に割り当てられていないフォルダーを検出する', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments();');
+  assert.equal(run('watchUnassignedFolders().length'), 1);
+  assert.equal(run('watchUnassignedFolders()[0].files'), 2);
+  run('state.watchSaveConfirm=true;');
+  const html = run('renderWatch()');
+  assert.match(html, /対象外のフォルダー/);
+  assert.match(html, /新設部/);
+  run('WATCH.departments.push({id:"wd-new",groupId:"g4",folder:"新設部",sceneIds:["cls-zeimu"],mappings:[],on:true});');
+  assert.equal(run('watchUnassignedFolders().length'), 0);
+});
+
+test('自動取込設定: 部門に一致しないファイルはスキャン範囲外として未取込', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments();');
+  const r = JSON.parse(run('JSON.stringify(watchResolveFile("新設部/申請書.pdf","c2"))'));
+  assert.ok(r.error);
+  assert.match(r.error, /スキャン範囲外/);
+  assert.equal(r.skipped, true);
+  const notices = run('renderNotices()');
+  assert.doesNotMatch(notices, /新設部\/申請書\.pdf/);
+});
+
+test('自動取込設定: 子フォルダだけ設定時は親フォルダ直下のファイルも未割当', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); WATCH.departments[0].folder="税務課/市民税担当";');
+  const list = JSON.parse(run('JSON.stringify(watchUnassignedFolders())'));
+  assert.equal(list.length, 2);
+  assert.ok(list.some((f) => f.path === '税務課' && f.files === 3));
+  assert.ok(list.some((f) => f.path === '新設部'));
+  assert.ok(!list.some((f) => f.path.includes('資産税担当')));
+  assert.ok(!list.some((f) => f.path === '税務課/市民税担当'));
+});
+
+test('操作ログの操作種別は統一されたラベルを使う', () => {
+  const run = app();
+  assert.equal(run('logActionLabel("ダウンロード")'), '出力');
+  assert.equal(run('logActionLabel("帳票読取")'), '読取');
+  assert.equal(run('logActionLabel("設定変更")'), '変更');
+  assert.equal(run('logActionLabel("追加")'), '追加');
+  assert.equal(run('logActionLabel("新規追加")'), '追加');
+  assert.equal(run('logActionLabel("登録")'), '追加');
+  assert.equal(run('logActionLabel("削除")'), '削除');
+  assert.equal(run('logActionLabel("アップロード", "manual")'), '追加');
+  assert.equal(run('logActionLabel("自動取込", "auto")'), '自動追加');
+  assert.equal(run('logActionLabel("取込", "auto")'), '自動追加');
+  assert.equal(run('logActionLabel("取込", "manual")'), '追加');
+  assert.equal(run('logActionLabel("手動")'), '追加');
+  assert.equal(run('logActionLabel("自動")'), '自動追加');
+  const types = JSON.parse(run('JSON.stringify([...new Set(SECURITY.logs.filter((l) => !AUTH_EVENTS.includes(l.type)).map((l) => l.type))])'));
+  assert.ok(types.includes('手動'));
+  assert.ok(types.includes('出力'));
+  assert.ok(types.includes('設定変更'));
+  assert.ok(types.includes('削除'));
+  assert.ok(!types.includes('ダウンロード'));
+  assert.ok(!types.includes('帳票読取'));
+});
+
+test('操作ログ: 自動取込を表示せず、操作結果列も持たない', () => {
+  const run = app();
+  const html = run('state.logTab="operation"; state.logPage=1; renderLogs()');
+  assert.doesNotMatch(html, /<th>取込方法<\/th>/);
+  assert.doesNotMatch(html, /<th>操作結果<\/th>/);
+  assert.doesNotMatch(html, /<th>備考<\/th>/);
+  assert.doesNotMatch(html, /data-logfilter="result"/);
+  const authHtml = run('state.logTab="auth"; renderLogs()');
+  assert.match(authHtml, /<th>操作結果<\/th>/);
+  assert.equal(run("logFunctions().includes('新規アップロード')"), true);
+  assert.equal(run("logFunctions().includes('自動取込')"), false);
+  const settingActions = JSON.parse(run('JSON.stringify(SECURITY.logs.filter((l) => l.feature === "自動取込設定").map((l) => l.action || l.type))'));
+  assert.ok(settingActions.includes('変更'));
+});
+
+test('操作ログ: 自動取込と手動アップロードは表示しない', () => {
+  const run = app();
+  run("state.logTab='operation'; state.logApplied={}; SECURITY.logs=[{at:'2026-10-30 10:00:00',user:'システム',type:'自動',feature:'新規アップロード',action:'自動',source:'auto',result:'成功',target:'ok.pdf'},{at:'2026-10-30 10:01:00',user:'システム',type:'自動',feature:'新規アップロード',action:'自動',source:'auto',result:'失敗',target:'ng.pdf'},{at:'2026-10-30 10:02:00',user:'admin',type:'アップロード',feature:'新規アップロード',action:'手動',source:'manual',result:'成功',target:'manual.pdf'},{at:'2026-10-30 10:03:00',user:'admin',type:'手動',feature:'新規アップロード',action:'手動',source:'manual',result:'成功',target:'manual-read.pdf'}]");
+  const rows = JSON.parse(run('JSON.stringify(logRows().map(l=>l.target))'));
+  assert.deepEqual(rows, ['manual-read.pdf']);
+});
+
+test('自動取込の失敗区分はお知らせに表示する', () => {
+  const run = app();
+  const notices = run('renderNotices()');
+  assert.match(notices, /\[アップロード\]/);
+  assert.match(notices, /\[登録\]/);
+  assert.match(notices, /\[分類\]/);
+  assert.match(notices, /\[読み取り\]/);
+  assert.doesNotMatch(notices, /監視スキャン|スキャン範囲外/);
+  assert.equal(run('WATCH_ERRORS.find((e) => e.id === "we5").stage'), '読み取り');
+  assert.equal(run('WATCH_ERRORS.find((e) => e.id === "we4").stage'), '分類');
+});
+
+test('新規アップロード: 分類失敗ステータスを持たず、読取失敗も表示しない', () => {
+  const run = app();
+  run('seedAdditionalDemoData(); state.upBiz="b1";');
+  const html = run('renderUpload()');
+  assert.match(html, /要確認/);
+  assert.match(html, /判別中/);
+  assert.match(html, /読取待ち/);
+  assert.match(html, /失敗/);
+  assert.doesNotMatch(html, /分類失敗/);
+  assert.doesNotMatch(html, /読取失敗/);
+  assert.doesNotMatch(html, /upload-source/);
+  assert.doesNotMatch(html, /<th>取込<\/th>/);
+  assert.doesNotMatch(html, /data-upconfirm/);
+  assert.equal(run('state.uploads.some((u) => u.status === "classify_failed")'), false);
+  assert.equal(run('state.uploads.some((u) => u.status === "failed")'), true);
+});
+
+test('操作ログ: 備考列を持たず、成功した操作だけを表示する', () => {
+  const run = app();
+  run("state.logTab='operation'; state.logApplied={}; state.logPage=1; SECURITY.logs=[{at:'2026-10-30 10:00:00',user:'user',type:'手動',feature:'新規アップロード',action:'手動',result:'成功',target:'ok.pdf',note:'成功時の補足'},{at:'2026-10-30 10:01:00',user:'user',type:'手動',feature:'新規アップロード',action:'手動',result:'失敗',target:'ng.pdf',note:'読み取りに失敗しました'}]");
+  const html = run('renderLogs()');
+  assert.doesNotMatch(html, /<th>備考<\/th>/);
+  assert.doesNotMatch(html, /成功時の補足/);
+  assert.doesNotMatch(html, /読み取りに失敗しました/);
 });

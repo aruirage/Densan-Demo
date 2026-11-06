@@ -337,12 +337,13 @@ input:focus,select:focus,button:focus-visible{
 .home-tab.on{color:var(--accent);font-weight:700;border-bottom-color:var(--accent)}
 /* ダッシュボード：サマリーカード・日別チャート・エラー一覧 */
 .auto-dash{display:flex;flex-direction:column;gap:16px}
-.auto-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.auto-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
 .auto-kpi{border:1px solid var(--line);border-radius:var(--radius);background:#fbfdff;padding:13px 16px;min-width:0}
 .auto-kpi .k{font-size:12px;color:var(--text-2)}
 .auto-kpi .v{font-size:26px;font-weight:700;color:var(--text);line-height:1.2;margin-top:6px}
 .auto-kpi .v small{font-size:12px;font-weight:500;color:var(--text-3);margin-left:4px}
 .auto-kpi .v.auto-ng{color:var(--red)}
+.auto-kpi .v.auto-warn{color:#c27c0e}
 .auto-kpi .sub{font-size:11px;color:var(--text-3);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .auto-card{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:14px 16px}
 .auto-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
@@ -356,6 +357,7 @@ input:focus,select:focus,button:focus-visible{
 .auto-status{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;white-space:nowrap}
 .auto-status.open{background:#fdeceb;color:var(--red)}
 .auto-status.done{background:#eef5ee;color:#3d7a46}
+.auto-status.skip{background:#fff4e5;color:#a86200}
 @media (max-width:1100px){.auto-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .homefilter{border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px 10px;background:#fbfbfb}
 .home-filter-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 16px}

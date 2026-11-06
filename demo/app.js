@@ -527,15 +527,17 @@ const SECURITY = {
   ipEnabled: '無効',        // 無効 / 有効
   idle: '制限なし',         // 15分 / 30分 / 60分 / 2時間 / 制限なし
   logs: [
-    { at: '2026-10-14 20:51:32', user: 'miko.sato', type: '帳票読取', ip: '172.16.51.8', result: '成功', note: '—' },
-    { at: '2026-10-14 20:19:45', user: 'miko.sato', type: 'ダウンロード', ip: '172.16.51.8', result: '成功', note: 'CSV 12件' },
+    { at: '2026-10-14 20:51:32', user: 'miko.sato', type: '手動', feature: '新規アップロード', action: '手動', target: '—', ip: '172.16.51.8', result: '成功', note: '—' },
+    { at: '2026-10-14 20:35:14', user: 'miko.sato', type: '手動', feature: '新規アップロード', action: '手動', target: '07_test1.pdf', ip: '172.16.51.8', result: '成功', note: '' },
+    { at: '2026-10-14 20:19:45', user: 'miko.sato', type: '出力', ip: '172.16.51.8', result: '成功', note: 'CSV 12件' },
     { at: '2026-10-14 19:02:48', user: 'taro.suzuki', type: '確認', ip: '172.16.51.20', result: '成功', note: '確認担当者: 山田 健太' },
     { at: '2026-10-14 17:44:02', user: 'misaki.nakamura', type: 'ログイン', ip: '172.16.51.33', result: '失敗', note: 'パスワード誤り' },
     { at: '2026-10-14 15:10:40', user: 'minoru.tanaka', type: '設定変更', ip: '172.16.51.44', result: '成功', note: 'エクスポート設定' },
-    { at: '2026-10-14 09:12:00', user: 'miko.sato', type: 'アップロード', ip: '172.16.51.8', result: '成功', note: '3ファイル' },
-    { at: '2026-10-15 08:02:11', user: 'システム', type: '自動取込', feature: '自動取込設定', action: '自動取込', target: 'scan001.pdf', ip: '—', result: '成功', note: '¥¥filesv01¥取込¥税務課¥住民税' },
-    { at: '2026-10-15 08:04:40', user: 'システム', type: '自動取込', feature: '自動取込設定', action: '自動取込', target: 'scan002.pdf', ip: '—', result: '失敗', note: '¥¥filesv01¥取込¥福祉課¥申請書 ／ 読取失敗' },
-    { at: '2026-10-15 09:10:00', user: 'miko.sato', type: '設定変更', feature: '自動取込設定', action: '設定変更', target: '自動取込設定', ip: '172.16.51.8', result: '成功', note: '実行間隔を変更' },
+    { at: '2026-10-13 10:15:00', user: 'miko.sato', type: '設定変更', feature: '帳票タイプ設定', action: '変更', target: '新規帳票タイプ', ip: '172.16.51.8', result: '成功', note: '帳票タイプを追加' },
+    { at: '2026-10-13 11:20:00', user: 'miko.sato', type: '設定変更', feature: '辞書登録', action: '変更', target: '用語「住民票」', ip: '172.16.51.8', result: '成功', note: '辞書から削除' },
+    { at: '2026-10-12 16:05:00', user: 'admin', type: '設定変更', feature: 'ユーザー管理', action: '変更', target: '田中 一郎', ip: '172.16.51.9', result: '成功', note: 'ユーザーを追加' },
+    { at: '2026-10-14 18:00:00', user: 'miko.sato', type: '削除', feature: '読取結果一覧', action: '削除', target: '07_test1.pdf', ip: '172.16.51.8', result: '成功', note: '結果を削除' },
+    { at: '2026-10-15 09:10:00', user: 'miko.sato', type: '設定変更', feature: '自動取込設定', action: '変更', target: '自動取込設定', ip: '172.16.51.8', result: '成功', note: '実行間隔を変更' },
   ],
 };
 
@@ -1936,8 +1938,8 @@ function startClassifying(created) {
         if (candidates.length && !candidates.some((l) => l.id === u.layout)) {
           u.layout = candidates[0].id;                 // 業務シーン外の推定は候補先頭へ寄せる
         }
-        u.status = 'waiting';
-        u.history = `帳票タイプ「${dispLayout(u.layout)}」として判別（自動）。要確認のため必要なら変更してください`;
+        u.status = 'needs_confirm';
+        u.history = `帳票タイプ「${dispLayout(u.layout)}」として判別（自動）。内容を確認してください`;
         n++;
       }
     });
@@ -3464,6 +3466,7 @@ const TABS_DEF = {
   security: { id: 'security', label: 'セキュリティ設定', route: 'security' },
   logs: { id: 'logs', label: 'ログ設定', route: 'logs' },
   watch: { id: 'watch', label: '自動取込設定', route: 'watch' },
+  notices: { id: 'notices', label: 'お知らせ', route: 'notices' },
 };
 
 /** 确认／详情タブ ID（ファイルごとに1タブ） */
@@ -4863,7 +4866,7 @@ function renderAccessKeysTab() {
           <th style="width:90px">ステータス</th><th style="width:180px">作成者</th>
           <th style="width:170px">操作・処理</th>
         </tr></thead>
-        <tbody>${rows || '<tr><td colspan="10" class="empty-cell">データなし</td></tr>'}</tbody>
+        <tbody>${rows || '<tr><td colspan="9" class="empty-cell">データなし</td></tr>'}</tbody>
       </table>
     </div>
   </section>`;
@@ -5353,7 +5356,7 @@ function renderGroupList() {
   const view = rows.slice(start, start + state.groupPerPage);
 
   const body = view.length === 0
-    ? '<tr><td colspan="6" class="empty-cell">データがありません</td></tr>'
+    ? '<tr><td colspan="${auth?6:5}" class="empty-cell">データがありません</td></tr>'
     : view.map((g, i) => {
       const members = groupUserNames(g);
       const memberHtml = members.length
@@ -5573,18 +5576,53 @@ const LOG_LEVELS = [
 
 /** ログ設定 */
 const AUTH_EVENTS = ['ログイン','ログアウト','パスワード変更','パスワード再設定'];
+/** 操作ログの操作種別を統一する（帳票読取→読取、ダウンロード→出力 など）。 */
+const LOG_ACTION_LABELS = {
+  '帳票読取': '読取',
+  'ダウンロード': '出力',
+  '読取': '読取',
+  '出力': '出力',
+  '確認': '確認',
+  '修正': '修正',
+  '承認': '承認',
+  '削除': '削除',
+  '設定変更': '変更',
+  '更新': '変更',
+  '編集': '変更',
+  '追加': '追加',
+  '新規追加': '追加',
+  '登録': '追加',
+  '作成': '追加',
+  'アップロード': '追加',
+  '自動取込': '自動追加',
+  '手動取込': '追加',
+  '手動': '追加',
+  '自動': '自動追加',
+  '追加': '追加',
+  '自動追加': '自動追加',
+  '変更': '変更',
+};
+/** 手動読取は追加、自動取込は自動追加として表示する。 */
+function logActionLabel(value, source) {
+  const v = String(value || '');
+  if (v === 'アップロード' || v === '手動取込' || v === '手動') return '追加';
+  if (v === '自動取込' || v === '自動') return '自動追加';
+  if (v === '取込' || v === '新規アップロード') return source === 'auto' ? '自動追加' : '追加';
+  if (/変更$/.test(v)) return '変更';
+  return LOG_ACTION_LABELS[v] || v || '';
+}
 function logFunctions() {return ['新規アップロード','読取結果一覧','帳票タイプ設定','業務シーン設定','辞書登録','ユーザー管理','権限設定','セキュリティ設定','ログ設定','自動取込設定'];}
 function logRows() {
  const auth = state.logTab !== 'operation';
  const filter = state.logApplied || {};
- const list = SECURITY.logs.filter(l=>auth ? AUTH_EVENTS.includes(l.type) : !AUTH_EVENTS.includes(l.type));
- return list.filter(l=>(!filter.user||String(l.user).includes(filter.user))&&(auth ? (!filter.kind||l.type===filter.kind) : (!(filter.functions||[]).length || filter.functions.includes(l.feature||l.type)))&&(!filter.from||l.at.slice(0,10)>=filter.from)&&(!filter.to||l.at.slice(0,10)<=filter.to)&&(!filter.result||l.result===filter.result)).sort((a,b)=>b.at.localeCompare(a.at));
+ const list = SECURITY.logs.filter(l=>auth ? AUTH_EVENTS.includes(l.type) : !AUTH_EVENTS.includes(l.type) && l.result==='成功' && !(l.type==='アップロード' || l.type==='手動取込') && !(l.source==='auto' || l.type==='自動' || l.action==='自動追加' || l.feature==='自動取込'));
+ return list.filter(l=>(!filter.user||String(l.user).includes(filter.user))&&(auth ? (!filter.kind||l.type===filter.kind) : (!(filter.functions||[]).length || filter.functions.includes(l.feature||l.type)))&&(!filter.from||l.at.slice(0,10)>=filter.from)&&(!filter.to||l.at.slice(0,10)<=filter.to)&&(auth ? (!filter.result||l.result===filter.result) : true)).sort((a,b)=>b.at.localeCompare(a.at));
 }
 function renderLogs() {
  const auth=state.logTab!=='operation';const f=state.logDraft||(state.logDraft={});
  const rows=logRows();const per=state.logPer||10;const pages=Math.max(1,Math.ceil(rows.length/per));const page=state.logPage=Math.max(1,Math.min(pages,state.logPage||1));
- const body=rows.slice((page-1)*per,page*per).map(l=>`<tr><td class="nowrap">${esc(l.at)}</td><td>${esc(String(l.user||'').split('@')[0])}</td>${auth?`<td>${esc(l.type)}</td><td>${esc(l.ip||'—')}</td>`:`<td>${esc(l.feature||l.type)}</td><td>${esc(l.action||l.type)}</td><td>${esc(l.target||'—')}</td>`}<td><span class="st ${l.result==='成功'?'ok':'ng'}">${esc(l.result)}</span></td><td>${esc(l.note||'')}</td></tr>`).join('');
- return `<div class="logs-topbar"><div class="home-tabs"><button class="home-tab ${auth?'on':''}" data-logtab="auth">認証ログ一覧</button><button class="home-tab ${!auth?'on':''}" data-logtab="operation">操作ログ一覧</button></div><button class="btn" id="logsDownload">ダウンロード</button></div><div class="cfg-filters logs-filters"><div class="field"><span class="lbl">期間</span><input class="fld" type="date" data-logfilter="from" value="${esc(f.from||'')}" /> ～ <input class="fld" type="date" data-logfilter="to" value="${esc(f.to||'')}" /></div><div class="field"><span class="lbl">ユーザーID</span><input class="fld" data-logfilter="user" value="${esc(f.user||'')}" /></div><div class="field"><span class="lbl">${auth?'イベント':'機能'}</span>${auth ? `<select class="fld" data-logfilter="kind"><option value="">選択してください</option>${AUTH_EVENTS.map(v=>`<option ${f.kind===v?'selected':''}>${esc(v)}</option>`).join('')}</select>` : wizMulti('logFunctions','機能を選択してください',logFunctions().map(v=>[v,v]),f.functions||[])}</div><div class="field"><span class="lbl">操作結果</span><select class="fld" data-logfilter="result"><option value="">すべて</option>${['成功','失敗'].map(v=>`<option ${f.result===v?'selected':''}>${v}</option>`).join('')}</select></div><div class="logs-filter-actions"><button class="btn primary" id="logsSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button><button class="btn" id="logsReset" title="条件をクリアして再表示"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button></div></div><div class="tablewrap"><table><thead><tr><th>操作日時</th><th>ユーザーID</th>${auth?'<th>イベント種別</th><th>IPアドレス</th>':'<th>機能</th><th>操作種別</th><th>操作対象</th>'}<th>操作結果</th><th>備考</th></tr></thead><tbody>${body||`<tr><td colspan="${auth?6:7}" class="empty-cell">データがありません</td></tr>`}</tbody></table></div><div class="pager"><span>検索結果 ${rows.length} 件中</span><select id="logsPer">${[10,20,50].map(n=>`<option value="${n}" ${per===n?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-logpage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-logpage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="logsGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>`;
+ const body=rows.slice((page-1)*per,page*per).map(l=>{const note=auth?(l.note||''):(l.result==='失敗'?(l.note||''):'');return `<tr><td class="nowrap">${esc(l.at)}</td><td>${esc(String(l.user||'').split('@')[0])}</td>${auth?`<td>${esc(l.type)}</td><td>${esc(l.ip||'—')}</td>`:`<td>${esc(l.feature||l.type)}</td><td>${esc(l.action||l.type)}</td><td>${esc(l.target||'—')}</td>`}${auth?`<td><span class="st ${l.result==='成功'?'ok':'ng'}">${esc(l.result)}</span></td><td>${esc(note||'—')}</td>`:''}</tr>`;}).join('');
+ return `<div class="logs-topbar"><div class="home-tabs"><button class="home-tab ${auth?'on':''}" data-logtab="auth">認証ログ一覧</button><button class="home-tab ${!auth?'on':''}" data-logtab="operation">操作ログ一覧</button></div><button class="btn" id="logsDownload">ダウンロード</button></div><div class="cfg-filters logs-filters"><div class="field"><span class="lbl">期間</span><input class="fld" type="date" data-logfilter="from" value="${esc(f.from||'')}" /> ～ <input class="fld" type="date" data-logfilter="to" value="${esc(f.to||'')}" /></div><div class="field"><span class="lbl">ユーザーID</span><input class="fld" data-logfilter="user" value="${esc(f.user||'')}" /></div><div class="field"><span class="lbl">${auth?'イベント':'機能'}</span>${auth ? `<select class="fld" data-logfilter="kind"><option value="">選択してください</option>${AUTH_EVENTS.map(v=>`<option ${f.kind===v?'selected':''}>${esc(v)}</option>`).join('')}</select>` : wizMulti('logFunctions','機能を選択してください',logFunctions().map(v=>[v,v]),f.functions||[])}</div>${auth?`<div class="field"><span class="lbl">操作結果</span><select class="fld" data-logfilter="result"><option value="">すべて</option>${['成功','失敗'].map(v=>`<option ${f.result===v?'selected':''}>${v}</option>`).join('')}</select></div>`:''}<div class="logs-filter-actions"><button class="btn primary" id="logsSearch"><svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>検索</button><button class="btn" id="logsReset" title="条件をクリアして再表示"><svg class="search-icon refresh-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.5 7a6 6 0 0 0-10-1L3.5 8M3.5 4.5V8H7M4.5 13a6 6 0 0 0 10 1l2-2M16.5 15.5V12H13"/></svg>リセット</button></div></div><div class="tablewrap"><table><thead><tr><th>操作日時</th><th>ユーザーID</th>${auth?'<th>イベント種別</th><th>IPアドレス</th>':'<th>機能</th><th>操作種別</th><th>操作対象</th>'}${auth?'<th>操作結果</th><th>備考</th>':''}</tr></thead><tbody>${body||`<tr><td colspan="${auth?6:5}" class="empty-cell">データがありません</td></tr>`}</tbody></table></div><div class="pager"><span>検索結果 ${rows.length} 件中</span><select id="logsPer">${[10,20,50].map(n=>`<option value="${n}" ${per===n?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-logpage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-logpage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="logsGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>`;
 }
 function bindLogs() {
  const functionButton=document.querySelector('[data-wmsbtn="logFunctions"]');
@@ -5600,7 +5638,7 @@ function bindLogs() {
  document.querySelectorAll('[data-logpage]').forEach(b=>b.onclick=()=>{state.logPage=Number(b.dataset.logpage);render();});
  const per=$('#logsPer');if(per)per.onchange=()=>{state.logPer=Number(per.value);state.logPage=1;render();};
  const go=$('#logsGoto');if(go)go.onchange=()=>{state.logPage=Number(go.value)||1;render();};
- const dl=$('#logsDownload');if(dl)dl.onclick=()=>{const auth=state.logTab!=='operation';const header=auth?['操作日時','ユーザーID','イベント種別','IPアドレス','操作結果','備考']:['操作日時','ユーザーID','機能','操作種別','操作対象','操作結果','備考'];const rows=logRows().map(l=>[l.at,String(l.user||'').split('@')[0],...(auth?[l.type,l.ip||'—']:[l.feature||l.type,l.action||l.type,l.target||'—']),l.result,l.note||'']);csvDownload((auth?'認証ログ':'操作ログ')+'.csv',[header,...rows].map(r=>r.map(v=>csvEscape(v,',')).join(',')).join('\r\n'),'UTF-8');};
+ const dl=$('#logsDownload');if(dl)dl.onclick=()=>{const auth=state.logTab!=='operation';const header=auth?['操作日時','ユーザーID','イベント種別','IPアドレス','操作結果','備考']:['操作日時','ユーザーID','機能','操作種別','操作対象'];const rows=logRows().map(l=>[l.at,String(l.user||'').split('@')[0],...(auth?[l.type,l.ip||'—',l.result,l.note||'']:[l.feature||l.type,l.action||l.type,l.target||'—'])]);csvDownload((auth?'認証ログ':'操作ログ')+'.csv',[header,...rows].map(r=>r.map(v=>csvEscape(v,',')).join(',')).join('\r\n'),'UTF-8');};
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -5740,7 +5778,7 @@ function renderDictionary() {
     : '';
   const body = (rows.length || d.editId === 'new')
     ? rowHtml + newRow
-    : `<tr><td colspan="6" class="empty-cell">条件に一致する項目がありません。</td></tr>`;
+    : `<tr><td colspan="${auth?6:5}" class="empty-cell">条件に一致する項目がありません。</td></tr>`;
 
   const pager = `<div class="dict-pager">
     <span class="muted">${filtered.length} 件中</span>
@@ -5912,12 +5950,14 @@ function watchRuleOf(catId) {
 /* ── ホームのダッシュボード用モック（自動取込） ────────────────
  *  実際の取込ログの代わりに、直近のエラーと日別実績を固定データで持つ。 */
 const WATCH_ERRORS = [
-  { id: 'we1', at: '2026-10-20 09:12:30', path: '\\\\filesv01\\取込', cat: '個人住民税申告', file: '01_令和8年度分市民税・県民税申告書（兼・国保税申告書）.pdf', reason: '文字が薄く読み取れませんでした', handled: false },
-  { id: 'we2', at: '2026-10-20 08:45:10', path: '\\\\filesv01\\取込', cat: '児童手当認定請求', file: '01_児童手当 認定請求書.pdf', reason: '帳票の傾きが大きく読み取れませんでした', handled: false },
-  { id: 'we3', at: '2026-10-19 17:30:02', path: '\\\\filesv01\\取込', cat: '利用申込', file: '02_令和8年度保育所等利用申込書.pdf', reason: '一部項目の認識に失敗しました', handled: true },
-  { id: 'we4', at: '2026-10-19 15:11:48', path: '\\\\filesv02\\取込', cat: '介護保険認定申請', file: '01_介護保険認定申請書（新規・更新）.pdf', reason: '対象外の拡張子（.xlsx）', handled: true },
-  { id: 'we5', at: '2026-10-18 11:02:19', path: '\\\\filesv01\\取込', cat: '特別徴収', file: '02_特別徴収関係一式.pdf', reason: 'パスワード保護された PDF のため読み取れません', handled: false },
-  { id: 'we6', at: '2026-10-18 09:40:55', path: '\\\\filesv02\\取込', cat: '実態調査票', file: '高齢者等実態調査票.pdf', reason: 'ページの一部が欠けています', handled: true },
+  { id: 'we1', stage: '読み取り', at: '2026-10-20 09:12:30', path: '\\\\filesv01\\取込', cat: '個人住民税申告', file: '01_令和8年度分市民税・県民税申告書（兼・国保税申告書）.pdf', reason: '文字が薄く読み取れませんでした', handled: false },
+  { id: 'we2', stage: '読み取り', at: '2026-10-20 08:45:10', path: '\\\\filesv01\\取込', cat: '児童手当認定請求', file: '01_児童手当 認定請求書.pdf', reason: '帳票の傾きが大きく読み取れませんでした', handled: false },
+  { id: 'we3', stage: '読み取り', at: '2026-10-19 17:30:02', path: '\\\\filesv01\\取込', cat: '利用申込', file: '02_令和8年度保育所等利用申込書.pdf', reason: '一部項目の認識に失敗しました', handled: true },
+  { id: 'we4', stage: '分類', at: '2026-10-19 15:11:48', path: '\\\\filesv02\\取込', cat: '介護保険認定申請', file: '01_介護保険認定申請書（新規・更新）.xlsx', reason: '対象外の拡張子（.xlsx）', handled: true },
+  { id: 'we5', stage: '読み取り', at: '2026-10-18 11:02:19', path: '\\\\filesv01\\取込', cat: '特別徴収', file: '02_特別徴収関係一式.pdf', reason: 'パスワード保護された PDF のため読み取れません', handled: false },
+  { id: 'we6', stage: '読み取り', at: '2026-10-18 09:40:55', path: '\\\\filesv02\\取込', cat: '実態調査票', file: '高齢者等実態調査票.pdf', reason: 'ページの一部が欠けています', handled: true },
+  { id: 'we11', stage: 'アップロード', at: '2026-10-20 10:28:00', path: '\\\\filesv01\\取込', cat: '—', file: 'scan003.pdf', reason: 'ファイル転送に失敗', handled: false },
+  { id: 'we12', stage: '登録', at: '2026-10-20 10:26:00', path: '\\\\filesv01\\取込', cat: '—', file: 'scan004.pdf', reason: '結果の登録に失敗', handled: false },
 ];
 let noticeHasNew = true;
 function renderNotices() {
@@ -5927,7 +5967,7 @@ function renderNotices() {
   const page = state.noticePage = Math.min(pages, Math.max(1, state.noticePage || 1));
   const rows = errors.slice((page-1)*per, page*per);
   return `<section class="notice-page"><h2>お知らせ</h2>
-    <div class="notice-tablewrap"><table class="auto-table"><thead><tr><th>発生日時</th><th>ファイル名</th><th>監視パス</th><th>通知内容・失敗理由</th></tr></thead><tbody>${rows.map(e=>`<tr><td>${esc(e.at)}</td><td>${esc(e.file)}</td><td class="mono">${esc(e.path)}</td><td>${esc(e.reason)}</td></tr>`).join('') || '<tr><td colspan="4">お知らせはありません</td></tr>'}</tbody></table></div>
+    <div class="notice-tablewrap"><table class="auto-table"><thead><tr><th>発生日時</th><th>ファイル名</th><th>監視パス</th><th>通知内容・失敗理由</th></tr></thead><tbody>${rows.map(e=>`<tr><td>${esc(e.at)}</td><td>${esc(e.file)}</td><td class="mono">${esc(e.path)}</td><td>${esc((e.stage ? `[${e.stage}] ` : '') + e.reason)}</td></tr>`).join('') || '<tr><td colspan="4">お知らせはありません</td></tr>'}</tbody></table></div>
     <div class="pager"><span>全 ${errors.length} 件</span><select id="noticePerPage" aria-label="表示件数">${[10,20,50].map(n=>`<option value="${n}" ${n===per?'selected':''}>${n}件ずつ</option>`).join('')}</select><button class="pg" data-noticepage="${page-1}" ${page===1?'disabled':''}>‹</button><span>${page} / ${pages}</span><button class="pg" data-noticepage="${page+1}" ${page===pages?'disabled':''}>›</button><input class="pginput" id="noticeGoto" aria-label="ページ番号" value="${page}" /><span>ページへ</span></div>
   </section>`;
 }
@@ -5936,8 +5976,8 @@ function shouldNotifyUpload(success) {
 }
 function addUploadFailure(error) {
   if (!shouldNotifyUpload(false)) return;
-  WATCH_ERRORS.unshift({...error, id: error.id || 'we' + Date.now(), at: error.at || nowStamp()});
-  SECURITY.logs.unshift({at:error.at || nowStamp(),user:'システム',type:'自動取込',feature:'自動取込設定',action:'自動取込',target:error.file,ip:'—',result:'失敗',note:[watchPathDisplay(error.path),error.reason].filter(Boolean).join(' ／ ')});
+  const at = error.at || nowStamp();
+  WATCH_ERRORS.unshift({...error, id: error.id || 'we' + Date.now(), at});
   render();
 }
 
@@ -5961,7 +6001,7 @@ const WATCH_PATTERNS = [
 
 /* フォーム部品（この画面だけで使う） */
 const watchSelect = (key, opts, cur, disabled) => `<select class="fld" data-wf="${key}" ${disabled ? 'disabled' : ''}>${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
-const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-checked="${on}"><span class="tgl-txt">${on ? 'する' : 'しない'}</span><span class="tgl-knob"></span></button>`;
+const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-label="${key==='on'?'自動取込を有効にする':'同一ファイルを除外'}" aria-checked="${on}"><span class="tgl-knob"></span></button>`;
 const watchRow = (label, inner, wide, off) => `<div class="wf${off ? ' is-off' : ''}"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
 
 /** 自動取込設定。
@@ -5981,32 +6021,116 @@ function watchDeptTypes(dept) {
 }
 /** 監視パス配下の部門フォルダー（多階層）。デモ用の固定ツリー。 */
 const WATCH_FOLDERS = [
-  { name: '税務課', children: [
-    { name: '個人住民税', children: [{ name: '令和8年度' }] },
-    { name: '特別徴収' },
+  { name: '税務課', files: 3, children: [
+    { name: '市民税担当', files: 1, children: [
+      { name: '個人住民税係', files: 12, children: [{ name: '令和8年度', files: 0 }] },
+      { name: '特別徴収係', files: 4 },
+    ] },
+    { name: '資産税担当', files: 0, children: [
+      { name: '固定資産税係', files: 5 },
+      { name: '納税管理係', files: 2 },
+    ] },
   ] },
-  { name: '福祉課', children: [
-    { name: '保育所等入所' },
-    { name: '児童手当' },
+  { name: '福祉課', files: 2, children: [
+    { name: '保育支援担当', files: 0, children: [
+      { name: '保育所等入所係', files: 8 },
+      { name: '児童手当係', files: 3 },
+    ] },
+    { name: '介護保険担当', files: 0, children: [
+      { name: '認定係', files: 4 },
+      { name: '給付係', files: 2 },
+    ] },
   ] },
-  { name: '総務部' },
-  { name: '住民課', children: [
-    { name: '住民異動' },
+  { name: '総務部', files: 0, children: [
+    { name: '総務課', files: 0, children: [
+      { name: '文書係', files: 0 },
+      { name: '人事係', files: 0 },
+    ] },
+    { name: '情報管理課', files: 0, children: [
+      { name: 'システム係', files: 0 },
+      { name: 'ネットワーク係', files: 0 },
+    ] },
+  ] },
+  { name: '住民課', files: 0, children: [
+    { name: '住民異動係', files: 0 },
+    { name: '戸籍係', files: 0 },
+  ] },
+  { name: '新設部', files: 2, children: [
+    { name: '文書係', files: 0 },
   ] },
 ];
+/** 監視ルート直下の実フォルダー（デモ用モック）。部門フォルダーで覆われていないものを検出する。 */
+/** どの部門フォルダーにも属さない「ファイルを持つフォルダー」を返す。
+ *  部門が親フォルダーに一致していれば配下は対象内。
+ *  子フォルダーだけが設定されている場合は、親フォルダー直下のファイルは未割当として扱う。 */
+function watchUnassignedFolders() {
+  const depts = ensureWatchDepartments().filter((d) => d.on && d.folder).map((d) => watchFolderKey(d.folder));
+  const covered = (path) => depts.some((d) => path === d || path.startsWith(d + '/'));
+  const out = [];
+  const walk = (nodes, parent) => {
+    (nodes || []).forEach((n) => {
+      const path = parent ? parent + '/' + n.name : n.name;
+      const key = watchFolderKey(path);
+      if (covered(key)) return; // 親が部門に一致していれば配下すべて対象内
+      if (n.files) { out.push({ path, files: n.files }); return; } // 上位の未割当フォルダーに集約
+      walk(n.children, path);
+    });
+  };
+  walk(WATCH_FOLDERS, '');
+  return out;
+}
+/** 保存前の確認ダイアログ（部門未割当フォルダー）。 */
+function renderWatchSaveDialog() {
+  if (!state.watchSaveConfirm) return '';
+  const unassigned = watchUnassignedFolders();
+  return `<div class="modal-back" id="watchSaveBack" role="presentation">
+    <div class="modal watch-save-modal" role="dialog" aria-labelledby="watchSaveTitle" aria-modal="true">
+      <div class="modal-head"><b id="watchSaveTitle">ご注意</b></div>
+      <div class="modal-canvas watch-save-body">
+        <p class="watch-confirm-q"><span class="watch-confirm-icon" aria-hidden="true">!</span><span>設定を保存しますか？</span></p>
+        <p class="watch-save-explanation">部門に割り当てていないフォルダーは自動取込の対象外です。</p>
+        <div class="watch-save-detail"><span class="watch-save-detail-label">対象外のフォルダー</span><span>${unassigned.map((f) => esc(f.path)).join('、')}</span></div>
+      </div>
+      <div class="modal-foot"><span class="spacer"></span><button type="button" class="btn" id="watchSaveCancel">キャンセル</button><button type="button" class="btn primary" id="watchSaveOk">保存</button></div>
+    </div>
+  </div>`;
+}
+function saveWatchSettings() {
+  WATCH.updatedAt = nowStamp();
+  state.watchSnapshot = JSON.stringify(WATCH);
+  state.watchSaveConfirm = false;
+  render();
+  toast('設定を保存しました');
+}
+function discardWatchSettings() {
+  if (state.watchSnapshot) WATCH = JSON.parse(state.watchSnapshot);
+  state.watchSaveConfirm = false;
+  state.watchFolderMenu = null;
+  closeTab('watch');
+  if (state.page === 'watch') { state.page = 'home'; render(); }
+  toast('保存せずに閉じました');
+}
 /** 部門フォルダー選択用のツリー（単一選択）。親フォルダーも選択できる。 */
-function renderWatchFolderNodes(nodes, parent, selected, depth) {
+function renderWatchFolderNodes(nodes, parent, selected, depth, usedFolders) {
   const expanded = state.watchFolderExpanded || {};
+  const used = (usedFolders || []).map(watchFolderKey).filter(Boolean);
+  const selectedKey = watchFolderKey(selected);
   return (nodes || []).map((n) => {
     const path = parent ? parent + '/' + n.name : n.name;
+    const key = watchFolderKey(path);
     const hasKids = !!(n.children && n.children.length);
     const open = hasKids && expanded[path] !== false;
     const isSel = selected === path;
+    /* 他の部門で使用済み（親子関係の重なりも含む）は選択不可 */
+    const isUsed = key !== selectedKey && used.some((u) => key === u || key.startsWith(u + '/') || u.startsWith(key + '/'));
     const caret = hasKids
       ? `<button type="button" class="watch-folder-caret" data-wdept-folder-toggle="${esc(path)}" aria-label="${open ? '折りたたむ' : '展開'}">${open ? '▾' : '▸'}</button>`
       : '<span class="watch-folder-caret is-leaf" aria-hidden="true"></span>';
-    const row = `<div class="watch-folder-node" style="padding-left:${depth * 16}px" role="presentation">${caret}<button type="button" class="watch-folder-pick${isSel ? ' is-selected' : ''}" data-wdept-folder-pick="${esc(path)}" role="option" aria-selected="${isSel}"><span class="watch-folder-name">${esc(n.name)}</span>${isSel ? '<span class="watch-folder-check" aria-hidden="true">✓</span>' : ''}</button></div>`;
-    return row + (open ? renderWatchFolderNodes(n.children, path, selected, depth + 1) : '');
+    const control = isUsed
+      ? `<button type="button" class="watch-folder-pick is-disabled" disabled aria-disabled="true" title="他の部門で使用中"><span class="watch-folder-name">${esc(n.name)}</span><span class="watch-folder-used">使用中</span></button>`
+      : `<button type="button" class="watch-folder-pick${isSel ? ' is-selected' : ''}" data-wdept-folder-pick="${esc(path)}" role="option" aria-selected="${isSel}"><span class="watch-folder-name">${esc(n.name)}</span>${isSel ? '<span class="watch-folder-check" aria-hidden="true">✓</span>' : ''}</button>`;
+    const row = `<div class="watch-folder-node" style="padding-left:${depth * 16}px" role="presentation">${caret}${control}</div>`;
+    return row + (open ? renderWatchFolderNodes(n.children, path, selected, depth + 1, usedFolders) : '');
   }).join('');
 }
 function watchDeptSync(dept) {
@@ -6045,7 +6169,13 @@ function watchValidateSettings() {
     const folders=new Set();
     for(const m of d.mappings.filter(m=>m.on)){
       if(!watchDeptTypes(d).some(t=>t.id===m.cat))return '帳票タイプを業務シーンの範囲内に設定してください';
-      for(const raw of m.folders){const n=watchFolderKey(raw);if(!validName(n))return '帳票フォルダー名を入力してください';if(folders.has(n))return '同じ部門内でフォルダー名が重複しています';folders.add(n);}
+      for(const raw of m.folders){
+        const n=watchFolderKey(raw);
+        if(!n)continue;
+        if(!validName(n))return '帳票フォルダー名を入力してください';
+        if(folders.has(n))return '同じ部門内でフォルダー名が重複しています';
+        folders.add(n);
+      }
     }
   }
   return '';
@@ -6058,43 +6188,45 @@ function watchResolveFile(relativePath, aiCategoryId) {
     const parts=String(d.folder||'').split(/[\\/¥]+/).filter(Boolean);
     return parts.length>0&&parts.length<=segments.length&&parts.every((p,i)=>watchFolderKey(p)===watchFolderKey(segments[i]));
   });
-  if(!dept)return {error:'部門の取込設定が見つかりません',source:relativePath};
+  if(!dept)return {error:'部門フォルダーが未設定のため未取込（スキャン範囲外）',skipped:true,source:relativePath};
   const deptParts=String(dept.folder||'').split(/[\\/¥]+/).filter(Boolean);
   const names=segments.slice(deptParts.length,-1).map(watchFolderKey);
   const expected=dept.mappings.find(m=>m.on&&m.folders.some(f=>watchFolderKey(f)&&names.includes(watchFolderKey(f))));
+  if(!expected)return {error:'部門フォルダーのマッピングが未設定のため未取込',skipped:true,departmentId:dept.groupId,source:relativePath};
   if(!watchDeptTypes(dept).some(c=>c.id===aiCategoryId))return {error:'部門の業務シーン内で帳票タイプを判別できません',departmentId:dept.groupId,source:relativePath};
   return {departmentId:dept.groupId,expectedCategoryId:expected?expected.cat:null,categoryId:aiCategoryId,corrected:!!expected&&expected.cat!==aiCategoryId,archiveRelativePath:segments.join('¥'),dedupScope:dept.groupId+'|'+aiCategoryId};
 }
 
 function renderWatch() {
+  if (!state.watchSnapshot) state.watchSnapshot = JSON.stringify(WATCH);
   const x=WATCH,row=watchRow,root=x.roots[0],depts=ensureWatchDepartments();
   const departmentCards=depts.map((d,di)=>{
     const group=byId(GROUPS,d.groupId),types=watchDeptTypes(d),scenes=watchDeptScenes(d.groupId);
     const scope=(d.sceneIds||[]).map(id=>(byId(BIZ_SCENES,id)||{}).name).filter(Boolean);
-    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu" role="listbox" aria-label="部門フォルダー">${renderWatchFolderNodes(WATCH_FOLDERS,'',d.folder,0)}</div>`:'';
+    const usedByOthers=depts.filter(o=>o.id!==d.id&&o.folder).map(o=>o.folder);
+    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu" role="listbox" aria-label="部門フォルダー">${renderWatchFolderNodes(WATCH_FOLDERS,'',d.folder,0,usedByOthers)}</div>`:'';
     return `<div class="watch-dept-card watch-dept-row${d.on?'':' is-off'}" data-watch-dept="${d.id}">
       <div class="watch-dept-fields">
         <select class="fld" data-wdept-group="${d.id}"><option value="">選択してください</option>${GROUPS.filter(g=>!g.root).map(g=>`<option value="${g.id}" ${g.id===d.groupId?'selected':''}>${esc(g.name)}</option>`).join('')}</select>
-        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}" title="${esc(String(d.folder||'').split('/').join(' / '))}"><span class="watch-folder-value">${d.folder?esc(String(d.folder).split('/').join(' / ')):(x.pathVerified?'選択してください':'接続確認後に選択できます')}</span><span class="watch-folder-arrow" aria-hidden="true">▾</span></button>${folderMenu}</div>
+        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}" title="${x.pathVerified?esc(String(d.folder||'').split('/').join(' / ')):'監視パスの接続テストが必要です'}"><span class="watch-folder-value">${x.pathVerified?(d.folder?esc(String(d.folder).split('/').join(' / ')):'選択してください'):'監視パスを先に接続テスト'}</span><span class="watch-folder-arrow" aria-hidden="true">▾</span></button>${folderMenu}</div>
         <details class="watch-scene-picker" ${state.watchSceneOpen===d.id?'open':''}><summary>${esc(scope.join('、')||'業務シーンを選択してください')}<span>⌄</span></summary><div class="watch-scene-options">${scenes.map(sc=>`<label><input type="checkbox" data-wdept-scene="${d.id}" value="${sc.id}" ${(d.sceneIds||[]).includes(sc.id)?'checked':''} />${esc(sc.name)}</label>`).join('')||'<span class="watch-scope-line">この部門に許可された業務シーンがありません</span>'}</div></details>
         <button type="button" class="icon-btn watch-dept-delete" data-wdept-del="${d.id}" title="部門設定を削除" aria-label="部門設定を削除">×</button>
       </div>
     </div>`;
   }).join('');
   return `<div class="watch-page"><div class="cfg-head"><h1 class="cfg-title">自動取込設定</h1></div>
-    <section class="watch-sec"><h3 class="watch-sec-head">監視・処理後パス <span class="spacer"></span><span class="watch-master-toggle"><span class="watch-head-lab">有効</span>${watchToggle('on',x.on)}</span></h3>
+    <section class="watch-sec"><h3 class="watch-sec-head">監視・処理後パス <span class="spacer"></span><span class="watch-master-toggle"><span class="watch-head-lab">${x.on?'有効':'無効'}</span>${watchToggle('on',x.on)}</span></h3>
     <p class="watch-sec-desc">監視パス（取込元）と処理後パス（分離先）を設定します。</p>
     <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="監視・処理後パス設定"><div class="watch-root-fields">
-      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>監視パス（取込元） <span class="info-i" data-tip="テナントごとに1つ設定します。配下の全階層のファイルが対象です。">i</span><span class="watch-path-valid ${x.pathVerified?'is-valid':''}">${x.pathVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-path="${root.id}" value="${esc(watchPathDisplay(root.path))}" placeholder="監視パスを入力してください" /><button type="button" class="btn sm" data-wroot-test="path">接続テスト</button></div></div>
-      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>処理後パス（分離先） <span class="info-i" data-tip="監視パスとは別の場所に設定します。処理後ファイルは元の相対フォルダー構成を保ったまま保存します。">i</span><span class="watch-path-valid ${x.moveVerified?'is-valid':''}">${x.moveVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-move="${root.id}" value="${esc(watchPathDisplay(root.moveTo))}" placeholder="処理後パスを入力してください" /><button type="button" class="btn sm" data-wroot-test="move">接続テスト</button></div></div>
+      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>監視パス（取込元） <span class="info-i" data-tip="テナントごとに1つ設定します。配下の全階層のファイルが対象です。">i</span><span class="watch-path-valid ${x.pathVerified?'is-valid':''}">${x.pathVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-path="${root.id}" value="${esc(watchPathDisplay(root.path))}" placeholder="監視パスを入力してください" /><button type="button" class="btn primary sm" data-wroot-test="path">接続テスト</button></div></div>
+      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>処理後パス（分離先） <span class="info-i" data-tip="監視パスとは別の場所に設定します。処理後ファイルは元の相対フォルダー構成を保ったまま保存します。">i</span><span class="watch-path-valid ${x.moveVerified?'is-valid':''}">${x.moveVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-move="${root.id}" value="${esc(watchPathDisplay(root.moveTo))}" placeholder="処理後パスを入力してください" /><button type="button" class="btn primary sm" data-wroot-test="move">接続テスト</button></div></div>
     </div></fieldset></section>
   <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="自動取込設定">
     <section class="watch-sec"><h3 class="watch-sec-head">部門別取込設定 <span class="spacer"></span><button class="btn primary sm" type="button" data-wdept-add="1">＋ 部門を追加</button></h3>
     <p class="watch-sec-desc">部門フォルダー配下を再帰的に読み取り、選択した業務シーンの帳票タイプをAI分類します。分類や確認は該当部門の権限に従います。</p>
-    <div class="watch-dept-gate-note" ${x.pathVerified?'hidden':''}><span class="info-i" aria-hidden="true">i</span><span>部門フォルダーを選択するには、上の「監視パス（取込元）」の接続テストを実行してください。</span></div>
-    <div class="watch-dept-columns"><span>部門</span><span>部門フォルダー</span><span>業務シーン</span><span></span></div>${departmentCards}</section>
-    <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法 <span class="info-i" data-tip="部門・帳票タイプごとに判定します。同じファイルでも部門が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
-  </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div></div>`;
+    <div class="watch-dept-columns"><span>部門</span><span>部門フォルダー <small class="watch-dept-gate-note" ${x.pathVerified?'hidden':''}>要テスト</small></span><span>業務シーン</span><span></span></div>${departmentCards}</section>
+    <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法<span class="info-i watch-label-tip" data-tip="部門・帳票タイプごとに判定します。同じファイルでも部門が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
+  </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div>${renderWatchSaveDialog()}</div>`;
 }
 function bindWatchDepartments() {
   const depts=ensureWatchDepartments();const get=id=>depts.find(d=>d.id===id);
@@ -7630,6 +7762,7 @@ function renderAutoDashboard() {
   const total = ok + ng;
   const rate = total ? (ok / total * 100) : 0;
   const open = WATCH_ERRORS.filter((e) => !e.handled).length;
+  const skipped = WATCH_ERRORS.filter((e) => e.skipped).length;
   const livePaths = WATCH.roots.filter((r) => r.on && String(r.path || '').trim()).length;
   const liveRules = WATCH.rules.filter((r) => r.on).length;
   const combos = livePaths * liveRules;
@@ -7639,7 +7772,7 @@ function renderAutoDashboard() {
     <td>${esc(e.cat)}</td>
     <td class="auto-file" title="${esc(e.file)}">${esc(e.file)}</td>
     <td class="auto-reason">${esc(e.reason)}</td>
-    <td><span class="auto-status ${e.handled ? 'done' : 'open'}">${e.handled ? '対応済み' : '未対応'}</span></td>
+    <td><span class="auto-status ${e.handled ? 'done' : (e.skipped ? 'skip' : 'open')}">${e.handled ? '対応済み' : (e.skipped ? '未取込' : '未対応')}</span></td>
   </tr>`).join('');
   return `
   <div class="auto-dash">
@@ -7647,6 +7780,7 @@ function renderAutoDashboard() {
       <div class="auto-kpi"><div class="k">直近7日の取込</div><div class="v">${total}<small>件</small></div><div class="sub">成功 ${ok} 件 / 失敗 ${ng} 件</div></div>
       <div class="auto-kpi"><div class="k">取込成功率</div><div class="v">${rate.toFixed(1)}<small>%</small></div><div class="sub">対象 ${total} 件</div></div>
       <div class="auto-kpi"><div class="k">未対応エラー</div><div class="v auto-ng">${open}<small>件</small></div><div class="sub">全 ${WATCH_ERRORS.length} 件</div></div>
+      <div class="auto-kpi"><div class="k">未取込</div><div class="v auto-warn">${skipped}<small>件</small></div><div class="sub">マッピング未設定など</div></div>
       <div class="auto-kpi"><div class="k">監視設定</div><div class="v">${combos}<small>本</small></div><div class="sub">監視パス ${livePaths} × 帳票タイプ ${liveRules}</div></div>
     </div>
 
@@ -7912,15 +8046,17 @@ function renderSidebarPane() {
 }
 
 function renderUpload() {
-  const uploadsForBiz = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && ['classifying', 'waiting'].includes(u.status));
-  const selectableUp = uploadsForBiz.filter((u) => u.status === 'waiting' || u.status === 'failed');
+  const uploadsForBiz = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && ['classifying', 'needs_confirm', 'waiting', 'error'].includes(u.status));
+  const selectableUp = uploadsForBiz.filter((u) => u.status === 'waiting' || u.status === 'needs_confirm');
   const upAllChecked = selectableUp.length > 0 && selectableUp.every((u) => state.upPicked[u.id]);
   const picked = uploadsForBiz.filter((u) => state.upPicked[u.id]).length;
   const stMap = {
     classifying: ['判別中', 'mid'],
+    needs_confirm: ['要確認', 'mid'],
     waiting: ['読取待ち', 'ok'],
     reading: ['読取中', 'mid'],
     done: ['読取完了', 'ok'],
+    error: ['失敗', 'ng'],
     failed: ['読取失敗', 'ng'],
   };
   const typeCandidates = layoutsForBiz(state.upBiz);
@@ -7931,7 +8067,7 @@ function renderUpload() {
   const rows = view.length === 0
     ? ''
     : view.map((u) => {
-      const [label, cls] = stMap[u.status] || ['—', 'wait'];
+      const [label, cls] = stMap[u.status] || ['失敗', 'ng'];
       const opts = typeCandidates.length ? typeCandidates : savedTemplates();
       const typeDisabled = u.status === 'classifying' || u.status === 'reading';
       const hasLayout = opts.some((l) => l.id === u.layout);
@@ -7940,7 +8076,7 @@ function renderUpload() {
         ...opts.map((l) => `<option value="${l.id}" ${!typeDisabled && l.id === u.layout ? 'selected' : ''}>${esc(dispLayout(l.id))}</option>`),
       ].join('');
       const typeCell = `<select class="type-select${typeDisabled ? ' is-pending' : ''}" data-uptype="${u.id}" title="${typeDisabled ? '自動判別が完了するまで変更できません' : '分類結果を確認し、必要なら帳票タイプを選び直してください'}" ${typeDisabled ? 'disabled' : ''}>${typeOptions}</select>`;
-      const canPick = u.status === 'waiting' || u.status === 'failed';
+      const canPick = u.status === 'waiting' || u.status === 'needs_confirm';
       const upUser = u.user || currentUploadUserLabel();
       const delBtn = userHasOp('delete')
         ? `<button type="button" class="act danger" data-upact="del" data-id="${u.id}" data-tip="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>`
@@ -7951,7 +8087,6 @@ function renderUpload() {
         <td class="nowrap">${fmtSize(u.size)}</td>
         <td class="nowrap muted">${esc(u.uploadedAt)}</td>
         <td class="nowrap">${esc(upUser)}</td>
-        <td><span class="upload-source ${u.auto ? 'is-auto' : 'is-manual'}">${u.auto ? '自動' : '手動'}</span></td>
         <td><span class="st ${cls}"><span class="dot"></span>${label}${u.status === 'classifying' || u.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td>
         <td class="up-type">${typeCell}</td>
         <td class="hist ${u.error ? 'cur' : 'done'}">${esc(u.error || '—')}</td>
@@ -8003,7 +8138,7 @@ function renderUpload() {
     <table>
       <thead><tr>
         <th style="width:36px"><input type="checkbox" class="cb" data-upall="1" aria-label="読取待ちを全選択" ${upAllChecked ? 'checked' : ''} /></th>
-            <th>ファイル名</th><th>ファイルサイズ</th><th>アップロード日時</th><th>ユーザー</th><th>取込</th><th>ステータス</th><th>帳票タイプ</th><th>エラー理由</th><th class="up-ops-cell" style="width:88px">操作・処理</th>
+            <th>ファイル名</th><th>ファイルサイズ</th><th>アップロード日時</th><th>ユーザー</th><th>ステータス</th><th>帳票タイプ</th><th>エラー理由</th><th class="up-ops-cell" style="width:88px">操作・処理</th>
       </tr></thead>
       <tbody>${rows || '<tr><td colspan="9" class="empty-cell">データなし</td></tr>'}</tbody>
     </table>
@@ -8070,10 +8205,10 @@ function render() {
   const prevMainEl = app.querySelector('.maincol');
   const prevMainTop = prevMainEl ? prevMainEl.scrollTop : 0;
   const prevWinY = window.scrollY || 0;
-  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
+  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices', 'account'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
   /* メニュー権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
   if (route !== 'review' && !canReachPage(route)) {
-    const fallback = ['home', 'upload', 'result', 'myTasks', 'ticketDetail', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch'].find((p) => canReachPage(p)) || 'home';
+    const fallback = ['home', 'upload', 'result', 'myTasks', 'ticketDetail', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices'].find((p) => canReachPage(p)) || 'home';
     state.page = fallback;
     route = fallback;
   }
@@ -9254,9 +9389,17 @@ function bindCfgPages() {
     document.querySelectorAll('[data-watchsave]').forEach((b) => {
       b.onclick = () => {
         const error=WATCH.on?watchValidateSettings():'';if(error){toast(error,'error');return;}
-        WATCH.updatedAt = nowStamp(); render(); toast('設定を保存しました');
+        const unassigned=watchUnassignedFolders();
+        if(unassigned.length){state.watchSaveConfirm=true;render();return;}
+        saveWatchSettings();
       };
     });
+    const saveBack=$('#watchSaveBack');
+    if(saveBack)saveBack.onclick=(e)=>{if(e.target===saveBack){state.watchSaveConfirm=false;render();}};
+    const saveCancel=$('#watchSaveCancel');
+    if(saveCancel)saveCancel.onclick=()=>{state.watchSaveConfirm=false;render();};
+    const saveOk=$('#watchSaveOk');
+    if(saveOk)saveOk.onclick=()=>saveWatchSettings();
     /* 監視パス：パス・処理後のファイル（削除／そのまま）・有効切替・追加・削除 */
     document.querySelectorAll('[data-wroot-path]').forEach((el) => {
       el.oninput = () => {
@@ -9264,7 +9407,7 @@ function bindCfgPages() {
         if (r) r.path = watchPathValue(el.value);
         WATCH.pathVerified = false;
         document.querySelector('.watch-path-field [data-wroot-path]')?.closest('.watch-path-field')?.querySelector('.watch-path-valid')?.classList.remove('is-valid');
-        document.querySelectorAll('.watch-folder-select').forEach(select=>{select.disabled=true;select.classList.add('is-locked');});
+        document.querySelectorAll('.watch-folder-trigger').forEach(button=>{button.disabled=true;button.title='監視パスの接続テストが必要です';const value=button.querySelector('.watch-folder-value');if(value)value.textContent='監視パスを先に接続テスト';});
         const gateNote=document.querySelector('.watch-dept-gate-note');if(gateNote)gateNote.hidden=false;
       };
     });
@@ -9935,8 +10078,8 @@ function bindCfgPages() {
   // ログ設定
   const le = document.querySelector('[data-logexport]');
   if (le) le.onclick = () => {
-    const head = ['操作日時', 'メールアドレス', 'イベント種別', 'IPアドレス', '操作結果', '備考'];
-    const lines = [head.join(',')].concat(SECURITY.logs.map((l) => [l.at, l.user, l.type, l.ip, l.result, l.note].join(',')));
+    const head = ['操作日時', 'メールアドレス', '種別', 'IPアドレス', '操作結果', '備考'];
+    const lines = [head.join(',')].concat(SECURITY.logs.map((l) => [l.at, l.user, AUTH_EVENTS.includes(l.type) ? l.type : logActionLabel(l.action || l.type, l.source), l.ip, l.result, l.note].join(',')));
     const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `操作ログ_${SECURITY.logs.length}件.csv`;
     document.body.appendChild(a); a.click(); a.remove();
@@ -10390,7 +10533,7 @@ function bindUploadPanel() {
   const upAll = $('[data-upall]');
   if (upAll) upAll.onchange = (e) => {
     e.stopPropagation();
-    const selectable = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && (u.status === 'waiting' || u.status === 'failed'));
+    const selectable = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && u.status === 'waiting');
     const allOn = !!e.target.checked;
     selectable.forEach((u) => { state.upPicked[u.id] = allOn; });
     render();
@@ -10403,9 +10546,9 @@ function bindUploadPanel() {
   const upRead = $('#upRead');
   if (upRead) upRead.onclick = () => {
     /* 分類完了（読取待ち／失敗の再実行）のみ。分類中は対象外 */
-    const targets = state.uploads.filter((u) => state.upPicked[u.id] && (u.status === 'waiting' || u.status === 'failed'));
+    const targets = state.uploads.filter((u) => state.upPicked[u.id] && (u.status === 'waiting' || u.status === 'needs_confirm'));
     if (!targets.length) {
-      toast('読取待ちの帳票を選択してください。要確認（自動分類中）の帳票は完了後にタイプを確認してから読取できます');
+      toast('読取待ち・要確認の帳票を選択してください');
       return;
     }
     targets.forEach((u) => {
@@ -10435,6 +10578,7 @@ function bindUploadPanel() {
       const u = state.uploads.find((x) => x.id === sel.dataset.uptype);
       if (!u) return;
       u.layout = sel.value; u.auto = false;
+      if (u.status === 'needs_confirm') u.status = 'waiting';
       u.history = `帳票タイプ「${dispLayout(u.layout)}」に手動で分類`;
       render();
       toast(`帳票タイプを「${dispLayout(u.layout)}」に変更しました`);
@@ -10581,7 +10725,7 @@ function applyHash() {
     else if (k === 'rename') { const [target, text] = val.split('|'); state.rename[target] = text; }
     else if (k === 'f') { const [key, v2] = val.split(':'); state.filters[key] = v2; }
     else if (k === 'open') state.filterOpen = true;
-    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(val) ? val : 'result';
+    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices', 'account'].includes(val) ? val : 'result';
     else if (k === 'review' && val) {
       state.reviewId = val;
       state.page = 'review';
@@ -10638,15 +10782,15 @@ function seedAdditionalDemoData() {
   BUSINESS.forEach((biz, bi) => {
     const layouts = layoutsForBiz(biz.id);
     if (!layouts.length) return;
-    const states = ['waiting','waiting','classifying','waiting','failed','done','reading','waiting','waiting','failed','waiting','done'];
+    const states = ['waiting','needs_confirm','classifying','waiting','error','done','reading','needs_confirm','waiting','failed','waiting','done'];
     states.forEach((status,i) => {
       const layout = layouts[i % layouts.length];
       state.uploads.push({id:`demo-upload-${bi}-${i}`, biz:biz.id, layout:layout.id,
         name:`${String(i+1).padStart(2,'0')}_${layout.name}_サンプル.pdf`, size:180000+i*87000,
         pages:1+i%5, uploadedAt:`2026-10-28 10:${String(59-i).padStart(2,'0')}:00`,
         user:['佐藤 一郎','鈴木 花子','山本 彩'][i%3], status, auto:true,
-        history:status==='failed'?'読取失敗':status==='classifying'?'自動判別中':'分類完了',
-        error:status==='failed'?'画像が不鮮明なため読み取れませんでした':'',});
+        history:status==='failed'?'読取失敗':status==='error'?'処理エラー':status==='needs_confirm'?'AI分類完了。帳票タイプを確認してください':status==='classifying'?'自動判別中':'分類完了',
+        error:status==='failed'?'画像が不鮮明なため読み取れませんでした':status==='error'?'処理中にエラーが発生しました。再度アップロードしてください。':'',});
     });
   });
 }
@@ -10660,8 +10804,7 @@ function initializePhaseOneAccess() {
  const assigned=new Set();GROUPS.slice().sort((a,b)=>Number(!!a.root)-Number(!!b.root)).forEach(g=>{g.userIds=(g.userIds||[]).filter(uid=>{if(assigned.has(uid))return false;assigned.add(uid);return true;});});
  const rootOrg=GROUPS.find(g=>g.root)||GROUPS[0];if(rootOrg)ENT_USERS.forEach(u=>{if(!assigned.has(u.uid)){rootOrg.userIds.push(u.uid);assigned.add(u.uid);}});
  for(let i=0;i<24;i++){SECURITY.logs.push({at:`2026-10-30 09:${String(59-i).padStart(2,'0')}:00`,user:['admin','sato','suzuki'][i%3],type:AUTH_EVENTS[i%4],ip:'172.16.10.'+(20+i),result:i%7===0?'失敗':'成功',note:i%7===0?'ユーザー名またはパスワードを確認してください。':''});}
- SECURITY.logs.forEach(l=>{l.user=String(l.user||'').split('@')[0];if(!AUTH_EVENTS.includes(l.type)){l.feature=l.feature||({'アップロード':'新規アップロード','自動取込':'自動取込設定','設定変更':'帳票タイプ設定'}[l.type]||'読取結果一覧');l.action=l.action||({'帳票読取':'読取'}[l.type]||l.type);l.target=l.target||'';}});
- WATCH_ERRORS.forEach(e=>{if(!SECURITY.logs.some(l=>l.uploadErrorId===e.id))SECURITY.logs.push({uploadErrorId:e.id,at:e.at,user:'システム',type:'自動取込',feature:'自動取込設定',action:'自動取込',target:e.file,ip:'—',result:'失敗',note:[watchPathDisplay(e.path),e.reason].join(' ／ ')});});
+ SECURITY.logs.forEach(l=>{l.user=String(l.user||'').split('@')[0];if(!AUTH_EVENTS.includes(l.type)){l.feature=l.feature||({'アップロード':'新規アップロード','自動取込':'新規アップロード','自動':'新規アップロード','手動':'新規アップロード','設定変更':'帳票タイプ設定','読取':'読取結果一覧','出力':'読取結果一覧','確認':'読取結果一覧'}[l.type]||'読取結果一覧');if(l.type==='自動取込'||l.type==='取込')l.source=l.source||'auto';else if(l.type==='アップロード')l.source=l.source||'manual';l.action=logActionLabel(l.action||l.type,l.source);l.target=l.target||'';}});
  BIZ_SCENES.forEach(sc=>{sc.departmentIds=GROUPS.filter(g=>(g.userIds||[]).some(uid=>(sc.userIds||[]).includes(uid))).map(g=>g.id);});
 }
 function rolesFromOrganizationSeed(uid) {

@@ -368,17 +368,6 @@
 .dict-bulk-preview { max-height: 240px; border: 1px solid var(--line); border-radius: 2px; }
 
 /* ── 自動アップロード ─────────────────────────────────────────────── */
-.upload-source {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  padding: 0 8px;
-  border-radius: 3px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.upload-source.is-auto { color: #2f76b7; background: #eaf4fc; }
-.upload-source.is-manual { color: #68727d; background: #f1f3f5; }
 /* 1 画面 1 設定（監視フォルダは 1 つ）。顧客要件の 6 項目を
    2 段組みのセクションとしてそのまま並べる。 */
 #app[data-page="watch"] .maincol { overflow-y: auto; }
@@ -425,8 +414,7 @@
 .watch-path-control{display:flex;align-items:center;gap:16px}
 .watch-path-control .fld{flex:1;min-width:0}
 .watch-path-control .btn{flex:none;min-width:0;white-space:nowrap}
-.watch-path-control [data-wroot-test]{background:#eaf3ff;border-color:#9ec4f2;color:#2869ae;font-weight:600}
-.watch-path-control [data-wroot-test]:hover{background:#d9eaff;border-color:#6fa7e7;color:#1e5c9e}
+.watch-path-control [data-wroot-test]{font-weight:600}
 .watch-path-control [data-wroot-test],.watch-sec-head [data-wdept-add]{padding:0 9px;font-size:12px}
 .watch-sec-head [data-wdept-add]{font-weight:600;min-width:0;white-space:nowrap}
 .watch-actions{flex:0 0 auto;margin-top:auto;padding:16px 2px 4px;justify-content:flex-end}
@@ -692,9 +680,8 @@ fieldset.watch-body:disabled input,fieldset.watch-body:disabled select{backgroun
 .watch-dept-columns{display:grid;grid-template-columns:1fr 1.2fr 1.5fr 36px;gap:18px;margin:0 24px;padding:10px 0 6px;border-bottom:1px solid var(--line);color:var(--text-2);font-size:12px}.watch-dept-row .watch-dept-fields{grid-template-columns:1fr 1.2fr 1.5fr 36px}.watch-dept-row .watch-field-caption{display:none}.watch-dept-row .watch-dept-fields{padding:10px 0;align-items:center}
 .watch-path-check{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding-top:2px}.watch-path-check-note{font-size:12px;color:var(--muted)}
 .watch-path-valid{display:none;font-size:12px;color:#2f8a57;background:#e8f6ed;border-radius:3px;padding:2px 8px}.watch-path-valid.is-valid{display:inline-flex}.watch-sec-head .watch-path-valid{margin-left:4px}
-.watch-dept-gate-note{display:flex;align-items:flex-start;gap:8px;margin:0 24px 10px;padding:10px 12px;border:1px solid #cfe3f7;border-radius:6px;background:#f2f8ff;color:#2c5f8a;font-size:12.5px;line-height:1.6}
+.watch-dept-gate-note{display:inline-block;margin-left:7px;padding:2px 6px;border-radius:3px;background:#fff1d8;color:#98620d;font-size:11px;font-weight:600;white-space:nowrap}
 .watch-dept-gate-note[hidden]{display:none}
-.watch-dept-gate-note .info-i{flex:none;margin:2px 0 0;width:14px;height:14px;line-height:14px;font-size:9px;background:#2c5f8a;color:#fff}
 .watch-dept-row,.watch-dept-row .watch-dept-fields{overflow:visible}.watch-dept-row{position:relative;z-index:1}.watch-dept-row:focus-within{z-index:20}.watch-scene-picker{z-index:30}.watch-scene-picker[open]{z-index:40}.watch-scene-options{min-width:260px}
 
 /* 部門フォルダー：ツリー選択（単一選択） */
@@ -702,7 +689,7 @@ fieldset.watch-body:disabled input,fieldset.watch-body:disabled select{backgroun
 .watch-folder-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 32px; padding: 0 9px; text-align: left; cursor: pointer; background: #fff; }
 .watch-folder-trigger .watch-folder-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .watch-folder-trigger .watch-folder-arrow { flex: none; font-size: 10px; color: var(--text-2); }
-.watch-folder-trigger[disabled] { background: #f2f4f7; color: var(--text-3); cursor: not-allowed; }
+.watch-folder-trigger[disabled] { background:#fff9ed; border-color:#e5bf75; color:#895b16; font-weight:600; cursor:not-allowed; opacity:1; }
 .watch-folder-menu { position: absolute; left: 0; top: calc(100% + 4px); z-index: 80; width: max(100%, 300px); max-width: 380px; max-height: 320px; overflow: auto; background: #fff; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 26px rgba(15, 23, 42, .16); padding: 6px; }
 .watch-folder-node { display: flex; align-items: center; border-radius: 4px; }
 .watch-folder-node:hover { background: #f4f8ff; }
@@ -714,3 +701,25 @@ fieldset.watch-body:disabled input,fieldset.watch-body:disabled select{backgroun
 .watch-folder-check { flex: none; color: var(--accent); font-size: 12px; }
 .watch-sec:has(.watch-folder-picker.is-open) { overflow: visible; position: relative; z-index: 20; }
 .watch-dept-row:has(.watch-folder-picker.is-open) { z-index: 30; }
+
+.watch-folder-pick.is-disabled { color: var(--text-3); cursor: not-allowed; opacity: .7; background: transparent; }
+.watch-folder-pick.is-disabled:hover { background: transparent; }
+.watch-folder-used { flex: none; font-size: 10.5px; color: var(--text-3); white-space: nowrap; }
+
+/* 保存前の確認ダイアログ */
+.watch-save-modal{width:min(480px,calc(100vw - 32px))}
+.watch-save-body{display:block;background:#fff;padding:20px 22px}
+.watch-confirm-q{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:15px;line-height:1.6;color:var(--text)}
+.watch-confirm-icon{display:inline-flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;border-radius:50%;background:#e8a23a;color:#fff;font-size:13px;font-weight:700}
+.watch-save-explanation{margin:0 0 14px;color:var(--text-2);font-size:12px;line-height:1.6}
+.watch-save-detail{display:flex;flex-direction:column;gap:5px;padding:12px 14px;border-radius:4px;background:#f6f8fb;color:var(--text-2);font-size:12px;line-height:1.6;max-height:160px;overflow:auto;word-break:break-word}
+.watch-save-detail-label{font-weight:600;color:var(--text)}
+
+/* 自動取込設定: keep the accent for actions and warnings, not every boundary. */
+.watch-page .watch-sec{border-color:#e1e5eb}
+.watch-page .watch-dept-columns,.watch-page .watch-dept-card{border-color:#e1e5eb}
+.watch-page .fld:not(.watch-folder-trigger),.watch-page .watch-folder-trigger,.watch-page .watch-scene-picker summary{border-color:#cfd6df}
+.watch-page .watch-folder-trigger[disabled]{border-color:#e5bf75}
+.watch-page .watch-sec-head [data-wdept-add]{font-weight:700}
+.watch-page .tgl,.watch-page .wf .tgl{width:44px;height:24px}
+.watch-setting-rows .watch-label-tip{position:relative;top:-5px;margin-left:3px;margin-right:0;vertical-align:top}
