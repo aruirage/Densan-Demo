@@ -6170,7 +6170,7 @@ function renderWatch() {
     const deptMenu=state.watchDeptMenu===d.id?`<div class="watch-folder-menu watch-dept-menu" role="listbox" aria-label="組織">${renderWatchDeptNodes(deptRoot,0,d.id,d.groupId,usedGroups)}</div>`:'';
     return `<div class="watch-dept-card watch-dept-row${d.on?'':' is-off'}" data-watch-dept="${d.id}">
       <div class="watch-dept-fields">
-        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-ctl watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}" title="${x.pathVerified?esc(String(d.folder||'').split('/').join(' / ')):'監視パスの接続テストが必要です'}"><span class="watch-folder-value">${x.pathVerified?(d.folder?esc(String(d.folder).split('/').join(' / ')):'選択してください'):'監視パスを先に接続テスト'}</span></button>${folderMenu}</div>
+        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-ctl watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified&&!x.pathLoading?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}" title="${x.pathVerified?esc(String(d.folder||'').split('/').join(' / ')):(x.pathLoading?'フォルダーを取得中です':'監視パスの接続テストが必要です')}"><span class="watch-folder-value">${x.pathLoading?'フォルダーを取得中…':(x.pathVerified?(d.folder?esc(String(d.folder).split('/').join(' / ')):'選択してください'):'監視パスを先に接続テスト')}</span></button>${folderMenu}</div>
         <div class="watch-dept-picker${state.watchDeptMenu===d.id?' is-open':''}"><button type="button" class="fld watch-ctl watch-dept-trigger" data-wdept-group-trigger="${d.id}" aria-haspopup="listbox" aria-expanded="${state.watchDeptMenu===d.id}"><span class="watch-dept-value">${esc(deptName)}</span></button>${deptMenu}</div>
         <div class="watch-scene-multi">${scenes.length?groupFormMulti('wdeptScene:'+d.id,'業務シーンを選択してください',scenes.map(sc=>[sc.id,sc.name]),d.sceneIds||[]):'<span class="watch-scope-line">この組織に許可された業務シーンがありません</span>'}</div>
         <button type="button" class="icon-btn watch-dept-delete" data-wdept-del="${d.id}" title="組織設定を削除" aria-label="組織設定を削除">×</button>
@@ -6181,13 +6181,13 @@ function renderWatch() {
     <section class="watch-sec"><h3 class="watch-sec-head">監視・処理後パス <span class="spacer"></span><span class="watch-master-toggle"><span class="watch-head-lab">${x.on?'有効':'無効'}</span>${watchToggle('on',x.on)}</span></h3>
     <p class="watch-sec-desc">監視パス（取込元）と処理後パス（分離先）を設定します。</p>
     <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="監視・処理後パス設定"><div class="watch-root-fields">
-      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>監視パス（取込元） <span class="info-i" data-tip="テナントごとに1つ設定します。配下の全階層のファイルが対象です。">i</span><span class="watch-path-valid ${x.pathVerified?'is-valid':''}">${x.pathVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-path="${root.id}" value="${esc(watchPathDisplay(root.path))}" placeholder="監視パスを入力してください" /><button type="button" class="btn primary sm" data-wroot-test="path">接続テスト</button></div></div>
+      <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>監視パス（取込元） <span class="info-i" data-tip="テナントごとに1つ設定します。配下の全階層のファイルが対象です。">i</span><span class="watch-path-valid ${x.pathVerified?'is-valid':''}">${x.pathVerified?'有効':''}</span><span class="watch-path-loading" ${x.pathLoading?'':'hidden'}><span class="watch-loading-spinner" aria-hidden="true"></span>フォルダーを取得中…</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-path="${root.id}" value="${esc(watchPathDisplay(root.path))}" placeholder="監視パスを入力してください" ${x.pathLoading?'disabled':''}/><button type="button" class="btn primary sm" data-wroot-test="path" ${x.pathLoading?'disabled':''}>${x.pathLoading?'取得中…':'接続テスト'}</button></div></div>
       <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>処理後パス（分離先） <span class="info-i" data-tip="監視パスとは別の場所に設定します。処理後ファイルは元の相対フォルダー構成を保ったまま保存します。">i</span><span class="watch-path-valid ${x.moveVerified?'is-valid':''}">${x.moveVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-move="${root.id}" value="${esc(watchPathDisplay(root.moveTo))}" placeholder="処理後パスを入力してください" /><button type="button" class="btn primary sm" data-wroot-test="move">接続テスト</button></div></div>
     </div></fieldset></section>
   <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="自動取込設定">
     <section class="watch-sec"><h3 class="watch-sec-head">組織別取込設定 <span class="spacer"></span><button class="btn primary sm" type="button" data-wdept-add="1">＋ 組織を追加</button></h3>
     <p class="watch-sec-desc">組織フォルダー配下を再帰的に読み取り、選択した業務シーンの帳票タイプをAI分類します。分類や確認は該当組織の権限に従います。</p>
-    <div class="watch-dept-columns"><span>組織フォルダー <small class="watch-dept-gate-note" ${x.pathVerified?'hidden':''}>要テスト</small></span><span>組織</span><span>業務シーン</span><span></span></div>${departmentCards}</section>
+    <div class="watch-dept-columns"><span>組織フォルダー <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span><span>組織</span><span>業務シーン</span><span></span></div>${departmentCards}</section>
     <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法<span class="info-i watch-label-tip" data-tip="組織・帳票タイプごとに判定します。同じファイルでも組織が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
   </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div>${renderWatchSaveDialog()}</div>`;
 }
@@ -9399,6 +9399,8 @@ function bindCfgPages() {
         const r = WATCH.roots.find((q) => q.id === el.dataset.wrootPath);
         if (r) r.path = watchPathValue(el.value);
         WATCH.pathVerified = false;
+        WATCH.pathLoading = false;
+        WATCH.pathTestToken = (WATCH.pathTestToken || 0) + 1;
         document.querySelector('.watch-path-field [data-wroot-path]')?.closest('.watch-path-field')?.querySelector('.watch-path-valid')?.classList.remove('is-valid');
         document.querySelectorAll('.watch-folder-trigger').forEach(button=>{button.disabled=true;button.title='監視パスの接続テストが必要です';const value=button.querySelector('.watch-folder-value');if(value)value.textContent='監視パスを先に接続テスト';});
         const gateNote=document.querySelector('.watch-dept-gate-note');if(gateNote)gateNote.hidden=false;
@@ -9419,8 +9421,23 @@ function bindCfgPages() {
         const source = watchPathValue(r.path).trim().replace(/[\\/]+$/,'').toLowerCase();
         const target = watchPathValue(r.moveTo).trim().replace(/[\\/]+$/,'').toLowerCase();
         const valid = !!value && (kind === 'path' || (source && target && source !== target && !source.startsWith(target+'/') && !target.startsWith(source+'/')));
-        if(kind==='path')WATCH.pathVerified=valid;
-        else WATCH.moveVerified=valid;
+        if(kind==='path'){
+          if(!valid){WATCH.pathVerified=false;WATCH.pathLoading=false;toast('パスを確認してください','error');render();return;}
+          const token=(WATCH.pathTestToken||0)+1;
+          WATCH.pathTestToken=token;
+          WATCH.pathVerified=false;
+          WATCH.pathLoading=true;
+          render();
+          setTimeout(()=>{
+            if(WATCH.pathTestToken!==token)return;
+            WATCH.pathLoading=false;
+            WATCH.pathVerified=true;
+            toast('フォルダーの取得が完了しました','success');
+            render();
+          },1200);
+          return;
+        }
+        WATCH.moveVerified=valid;
         toast(valid ? '接続確認が完了しました' : 'パスを確認してください', valid ? 'success' : 'error');
         render();
       };

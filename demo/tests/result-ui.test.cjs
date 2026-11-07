@@ -1532,6 +1532,16 @@ test('自動取込設定: 接続テスト前は部門フォルダーの案内を
   assert.match(after, /class="watch-dept-gate-note" hidden/);
 });
 
+test('自動取込設定: 監視パスの接続テスト中はフォルダー取得の中間状態を表示する', () => {
+  const run = watchApp();
+  run('WATCH.pathVerified=false; WATCH.pathLoading=true;');
+  const html = run('renderWatch()');
+  assert.match(html, /data-wroot-test="path" disabled>取得中…<\/button>/);
+  assert.match(html, /watch-path-loading/);
+  assert.match(html, /フォルダーを取得中…/);
+  assert.match(html, /watch-dept-gate-note[^>]*>読取中<\/small>/);
+});
+
 test('自動取込設定: 組織フォルダー内の未登録子フォルダーも分類する', () => {
   const run = watchApp();
   run('ensureWatchDepartments();');
