@@ -6897,18 +6897,20 @@ function sceneResultPane(sc) {
 
 /** 「帳票追加」ピッカー（原型 FormPickerModal） */
 function sceneFormPicker(sc) {
-  const avail = CLASSIFY_FORMS.filter((f) => !(sc.formIds || []).includes(f.id));
+  const selected = new Set(sc.formIds || []);
   const q = (cfgState.pickQ || '').toLowerCase();
-  const list = avail.filter((f) => !q || f.name.toLowerCase().includes(q));
+  const list = CLASSIFY_FORMS.filter((f) => !q || f.name.toLowerCase().includes(q));
   return '<div class="modal-back" id="scPickBack"><div class="modal sc-picker">'
-    + '<div class="modal-head"><b>帳票タイプの選択</b><span class="spacer"></span><button class="icon-btn" id="scPickClose"><span class="ico i-close"></span></button></div>'
+    + '<div class="modal-head"><b>帳票タイプの選択</b></div>'
     + `<div class="sc-pick-search search-wrap"><input id="scPickQ" placeholder="帳票名を入力してください" value="${esc(cfgState.pickQ || '')}" /></div>`
     + '<div class="sc-pick-list">'
     + (list.length
-      ? list.map((f) => `<button type="button" class="sc-pick-row" data-pickform="${f.id}"><span class="pf-name">${esc(f.name)}</span><span class="cat-badge">${esc(f.category)}</span></button>`).join('')
+      ? list.map((f) => {
+        const on = selected.has(f.id);
+        return `<button type="button" class="sc-pick-row${on ? ' is-selected' : ''}" data-pickform="${f.id}" aria-pressed="${on}"><span class="pf-name">${esc(f.name)}</span><span class="pick-check${on ? ' on' : ''}" aria-hidden="true"></span></button>`;
+      }).join('')
       : '<p class="muted center">該当する帳票がありません</p>')
     + '</div>'
-    + `<div class="modal-foot"><span class="muted">候補 ${avail.length} 件</span><span class="spacer"></span><button class="btn" id="scPickCancel">閉じる</button></div>`
     + '</div></div>';
 }
 
@@ -7189,10 +7191,11 @@ function bindBizScenes() {
     b.onclick = () => {
       const sc = cur(); if (!sc) return;
       const ids = sc.formIds || (sc.formIds = []);
+      const id = b.dataset.pickform;
+      if (ids.includes(id)) { sc.formIds = ids.filter((x) => x !== id); render(); return; }
       if (ids.length >= MAX_CLASSIFY_FORMS) { toast(`1業務シーンあたり最大${MAX_CLASSIFY_FORMS}種類までです`); return; }
-      if (!ids.includes(b.dataset.pickform)) ids.push(b.dataset.pickform);
-      state.scenePick = false; cfgState.pickQ = '';
-      render(); toast('帳票を追加しました');
+      ids.push(id);
+      render();
     };
   });
   document.querySelectorAll('.tc-del[data-typedel]').forEach((b) => {

@@ -1804,3 +1804,14 @@ test('phase one: business tree nodes map to business scenes', () => {
   assert.equal(run("businessOfSceneId('cls-zeimu').id"), 'b2');
   assert.equal(run("sceneOfBusinessId('b6').id"), 'cls-korei');
 });
+
+test('scene form picker is multi-select without category labels or close buttons', () => {
+  const run = app();
+  run('state.page="bizScenes"; state.sceneId="cls-zeimu"; state.scenePick=true; render=()=>{};');
+  const html = run('renderBizScenes()');
+  assert.match(html, /id="scPickQ"/);
+  assert.match(html, /pick-check/);
+  assert.match(html, /class="sc-pick-row is-selected"/);
+  assert.doesNotMatch(html, /cat-badge/);
+  assert.doesNotMatch(html, /scPickClose|scPickCancel/);
+});
