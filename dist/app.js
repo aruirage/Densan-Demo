@@ -7147,7 +7147,7 @@ function setSceneTestFile(fileOrName, size) {
   SCENE_TESTS[sc.id] = {
     fileName: name,
     fileSize: typeof fmtSize === 'function' ? fmtSize(bytes) : '',
-    page: 1, pageCount: 8, tested: false, threshold: 90, zoom: 1, rot: 0,
+    page: 1, pageCount: 8, tested: true, threshold: 90, zoom: 1, rot: 0,
     previewUrl,
   };
   render();
