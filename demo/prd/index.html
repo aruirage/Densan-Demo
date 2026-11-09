@@ -824,6 +824,7 @@
 </tr>
 </tbody></table>
 <p>场景授权组织向下包含下级组织，不向上包含。自动取入的组织文件夹必须落在场景授权组织的范围内。</p>
+<p>图中<strong>场景A</strong> 指授权组织设为「総務部」的业务场景，<strong>场景B</strong> 指授权组织设为「第一課」的业务场景；✓ 表示该组织在对应场景的授权范围内（含下级），✕ 表示不在。</p>
 <pre class="mermaid">flowchart TB
   R[&quot;電算&quot;] --&gt; GA[&quot;総務部&lt;br/&gt;场景A ✓／场景B ✕&quot;]
   GA --&gt; GB[&quot;第一課&lt;br/&gt;场景A ✓／场景B ✓&quot;]
