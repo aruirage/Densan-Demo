@@ -6429,7 +6429,6 @@ function sceneEditor(sc) {
   return '<section class="type-main">' + bar
     + '<div class="wiz-body">' + left + (stepNo === 1 ? sceneFormsPane(sc) : sceneResultPane(sc)) + '</div>'
     + '<div class="wiz-foot">'
-    + '<button class="btn danger" id="scDelete"><span class="ico i-delete"></span>削除</button>'
     + '<span class="spacer"></span>'
     + '<button class="btn" id="scClose">閉じる</button>'
     + (stepNo > 1 ? '<button class="btn" id="scPrev">前へ</button>' : '')
