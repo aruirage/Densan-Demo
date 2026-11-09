@@ -6311,13 +6311,12 @@ function sceneFormsPane(sc) {
   const cards = ids.map((fid) => {
     const f = byId(CLASSIFY_FORMS, fid);
     if (!f) return '';
-    return `<div class="typecard"><span class="tc-body"><span class="tc-name">${esc(f.name)}</span>`
-      + `<span class="cat-badge">${esc(f.category)}</span></span>`
+    return `<div class="typecard"><span class="tc-body"><span class="tc-name">${esc(f.name)}</span></span>`
       + `<span class="tc-del" data-typedel="${f.id}" title="削除"><span class="ico i-close"></span></span></div>`;
   }).join('');
   const full = ids.length >= MAX_CLASSIFY_FORMS;
-  /* 見出しは出さず、右寄せで「選択済み n/20」＋「帳票追加」 */
   return '<div class="scene-types"><div class="scene-types-head">'
+    + '<span class="st-title">判別する帳票</span>'
     + `<span class="selcount">選択済み ${ids.length}/${MAX_CLASSIFY_FORMS}</span>`
     + `<button class="btn sm" id="scAddType" ${full ? 'disabled' : ''}><span class="ico i-add"></span>帳票追加</button></div>`
     + '<div class="typecards">' + (cards || '<p class="muted">「帳票追加」から分類対象の帳票を選択してください</p>') + '</div></div>';
@@ -6413,7 +6412,7 @@ function bindSceneAccess() {
 }
 function sceneEditor(sc) {
   const stepNo = state.sceneStep || 1;
-  const bar = '<div class="wiz">' + ['AI分類設定', '効果テスト'].map((lb, i) =>
+  const bar = '<div class="wiz">' + ['AI分類設定', '判別結果'].map((lb, i) =>
     '<button class="wiz-step ' + (stepNo === i + 1 ? 'on' : '') + ' ' + (stepNo > i + 1 ? 'done' : '') + '" data-scenestep="' + (i + 1) + '">'
     + '<span class="wiz-no">' + (i + 1) + '</span><span class="wiz-label">' + lb + '</span></button>'
     + (i === 0 ? '<span class="wiz-line ' + (stepNo > 1 ? 'on' : '') + '"></span>' : '')).join('') + '</div>';
@@ -6435,7 +6434,7 @@ function sceneEditor(sc) {
     + '<button class="btn" id="scClose">閉じる</button>'
     + (stepNo > 1 ? '<button class="btn" id="scPrev">前へ</button>' : '')
     + (stepNo < 2 ? '<button class="btn" id="scNext">次へ</button>' : '')
-    + `<button class="btn primary" id="scSave">${stepNo === 1 ? '保存＆テスト' : '完成'}</button>`
+    + (stepNo === 1 ? '<button class="btn primary" id="scSave">保存</button>' : '')
     + '</div></section>'
     + (state.scenePick ? sceneFormPicker(sc) : '')
     + (state.sceneRename ? sceneRenameDialog() : '');
@@ -6714,7 +6713,7 @@ function bindBizScenes() {
     sc.updatedAt = nowStamp();
     if ((state.sceneStep || 1) === 1) {
       if (!validateSceneStep1(sc)) return;
-      state.sceneStep = 2; render(); toast('保存しました。効果テストへ進みます');
+      state.sceneStep = 2; render(); toast('保存しました。判別結果へ進みます');
       return;
     }
     state.sceneId = null; state.sceneStep = 1; render(); toast('保存しました');

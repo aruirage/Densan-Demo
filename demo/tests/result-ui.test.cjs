@@ -462,7 +462,9 @@ test('classification wizard step 2 runs the effect test and renders ranked resul
   assert.match(html, /ファイルをアップロードすると/);
   assert.match(html, /id="scPickFile"/);
   assert.match(html, /id="scPrev"/);
-  assert.match(html, />完成</);
+  assert.match(html, /判別結果/);
+  assert.doesNotMatch(html, /完成/);
+  assert.doesNotMatch(html, /id="scSave"/);
   assert.doesNotMatch(html, /id="scNext"/);
   run('setSceneTestFile("sample.pdf", 20480)');
   html = run('renderBizScenes()');
