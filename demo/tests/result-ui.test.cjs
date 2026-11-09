@@ -408,7 +408,7 @@ test('classification list is the six sample business folders with a per-row menu
   run('state.page = "bizScenes"; state.sceneId = null; state.sceneMenu = null');
   const html = run('renderBizScenes()');
   assert.equal(run('BIZ_SCENES.length'), 6);
-  for (const n of ['10_住民異動関係', '20_税務関係', '30_保育所等入所の申込手続', '40_児童手当', '50_介護保険関係', '60_高齢者実態調査']) {
+  for (const n of ['住民異動関係', '税務関係', '保育所等入所', '児童手当', '介護保険関係', '高齢者実態調査']) {
     assert.ok(html.includes(n), n);
   }
   assert.match(html, /業務シーン設定/);
@@ -430,7 +430,7 @@ test('classification forms and business divisions are named after the sample fil
   assert.equal(run('CLASSIFY_FORMS.length'), 23);
   // 左リストの名称＝samples のフォルダ名、帳票名＝同フォルダ内 PDF のファイル名（拡張子なし）
   assert.equal(run('BIZ_SCENES.map((b) => b.name).join("|")'),
-    '10_住民異動関係|20_税務関係|30_保育所等入所の申込手続|40_児童手当|50_介護保険関係|60_高齢者実態調査');
+    '住民異動関係|税務関係|保育所等入所|児童手当|介護保険関係|高齢者実態調査');
   // 各帳票は必ずどれかの業務シーンに属し、formIds は実在する帳票を指す
   for (const sc of run('BIZ_SCENES')) {
     assert.ok(sc.formIds.length > 0, sc.name);
@@ -1773,8 +1773,8 @@ test('自動取込設定: 他の部門で使用中の部門は選択できない
 test('phase one: scene and type names are unique, used scenes cannot be deleted', () => {
   const run = watchApp();
   run('globalThis.msgs = []; toast = (m) => globalThis.msgs.push(m);');
-  assert.equal(run("sceneNameExists('20_税務関係','cls-jyumin')"), true);
-  assert.equal(run("sceneNameExists('20_税務関係','cls-zeimu')"), false);
+  assert.equal(run("sceneNameExists('税務関係','cls-jyumin')"), true);
+  assert.equal(run("sceneNameExists('税務関係','cls-zeimu')"), false);
   assert.equal(run("typeNameExists('高齢者等実態調査票','T7')"), true);
   assert.equal(run("typeNameExists('高齢者等実態調査票','T8')"), false);
   assert.match(run("sceneDeleteBlockMessage('cls-zeimu')"), /自動取込設定/);
