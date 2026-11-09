@@ -1767,3 +1767,30 @@ test('自動取込設定: 他の部門で使用中の部門は選択できない
   assert.match(html, /data-wdept-group-pick="wd-tax\\|[^"]+" disabled/);
   assert.match(run('watchValidateSettings()'), /重複/);
 });
+
+test('phase one: scene and type names are unique, used scenes cannot be deleted', () => {
+  const run = watchApp();
+  run('globalThis.msgs = []; toast = (m) => globalThis.msgs.push(m);');
+  assert.equal(run("sceneNameExists('20_税務関係','cls-jyumin')"), true);
+  assert.equal(run("sceneNameExists('20_税務関係','cls-zeimu')"), false);
+  assert.equal(run("typeNameExists('高齢者等実態調査票','T7')"), true);
+  assert.equal(run("typeNameExists('高齢者等実態調査票','T8')"), false);
+  assert.match(run("sceneDeleteBlockMessage('cls-zeimu')"), /自動取込設定/);
+  assert.equal(run("sceneDeleteBlockMessage('cls-jyumin')"), '');
+});
+
+test('phase one: deleting an organization used by scenes or watch is blocked', () => {
+  const run = watchApp();
+  run('globalThis.msgs=[]; toast=(m)=>globalThis.msgs.push(m); const wd=ensureWatchDepartments()[0]; globalThis.gid=wd.groupId; globalThis.sc=wd.sceneIds[0];');
+  assert.equal(run("watchUsesOrgScene(globalThis.sc, globalThis.gid)"), true);
+  assert.equal(run("deleteOrganization(globalThis.gid)"), false);
+  assert.equal(run("!!byId(GROUPS, globalThis.gid)"), true);
+});
+
+test('phase one: tree folder display names are unique per level', () => {
+  const run = app();
+  assert.equal(run("displayNameExists('biz','税務関係','b1')"), true);
+  assert.equal(run("displayNameExists('biz','税務関係','b2')"), false);
+  assert.equal(run("displayNameExists('cat',(byId(CATEGORY,'c1')||{}).name,'c1')"), false);
+  assert.equal(run("displayNameExists('cat',(byId(CATEGORY,'c1')||{}).name,'c2')"), true);
+});

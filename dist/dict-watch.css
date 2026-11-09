@@ -677,9 +677,10 @@ fieldset.watch-body:disabled input,fieldset.watch-body:disabled select{backgroun
 /* 部門取込設定の状態・操作表示 */
 .watch-status-chip{padding:2px 8px;border-radius:3px;font-size:12px}.watch-status-chip.is-on{color:#2f8a57;background:#e8f6ed}.watch-status-chip.is-off{color:#7d8791;background:#eef0f2}.watch-op-label{font-size:12px;color:var(--muted)}
 .watch-dept-row .watch-dept-fields{grid-template-columns:1fr 1.2fr 1.5fr .6fr 1fr;align-items:end;padding:14px 0}.watch-dept-row .watch-field-caption{white-space:nowrap}.watch-dept-status,.watch-dept-ops{min-width:0}.watch-dept-status .watch-status-chip{display:inline-flex}.watch-dept-ops>div{display:flex;align-items:center;gap:8px}.watch-dept-ops .watch-dept-delete{font-size:20px}.watch-dept-row{margin:0 24px}
-.watch-dept-columns{display:grid;grid-template-columns:1fr 1.2fr 1.5fr 36px;gap:18px;margin:0 24px;padding:10px 0 6px;border-bottom:1px solid var(--line);color:var(--text-2);font-size:12px}.watch-dept-row .watch-dept-fields{grid-template-columns:1fr 1.2fr 1.5fr 36px}.watch-dept-row .watch-field-caption{display:none}.watch-dept-row .watch-dept-fields{padding:10px 0;align-items:center}
+.watch-dept-columns{display:grid;grid-template-columns:1.2fr 1fr 1.5fr 36px;gap:18px;margin:0 24px;padding:10px 0 6px;border-bottom:1px solid var(--line);color:var(--text-2);font-size:12px}.watch-dept-row .watch-dept-fields{grid-template-columns:1.2fr 1fr 1.5fr 36px}.watch-dept-row .watch-field-caption{display:none}.watch-dept-row .watch-dept-fields{padding:10px 0;align-items:center}
 .watch-path-check{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding-top:2px}.watch-path-check-note{font-size:12px;color:var(--muted)}
 .watch-path-valid{display:none;font-size:12px;color:#2f8a57;background:#e8f6ed;border-radius:3px;padding:2px 8px}.watch-path-valid.is-valid{display:inline-flex}.watch-sec-head .watch-path-valid{margin-left:4px}
+.watch-path-loading{display:inline-flex;align-items:center;gap:6px;margin-left:8px;color:var(--text-2);font-size:12px}.watch-path-loading[hidden]{display:none}.watch-loading-spinner{width:12px;height:12px;border:2px solid #cbd5e1;border-top-color:var(--accent);border-radius:50%;animation:watch-spin .8s linear infinite}@keyframes watch-spin{to{transform:rotate(360deg)}}
 .watch-dept-gate-note{display:inline-block;margin-left:7px;padding:2px 6px;border-radius:3px;background:#fff1d8;color:#98620d;font-size:11px;font-weight:600;white-space:nowrap}
 .watch-dept-gate-note[hidden]{display:none}
 .watch-dept-row,.watch-dept-row .watch-dept-fields{overflow:visible}.watch-dept-row{position:relative;z-index:1}.watch-dept-row:focus-within{z-index:20}.watch-scene-picker{z-index:30}.watch-scene-picker[open]{z-index:40}.watch-scene-options{min-width:260px}
@@ -723,3 +724,74 @@ fieldset.watch-body:disabled input,fieldset.watch-body:disabled select{backgroun
 .watch-page .watch-sec-head [data-wdept-add]{font-weight:700}
 .watch-page .tgl,.watch-page .wf .tgl{width:44px;height:24px}
 .watch-setting-rows .watch-label-tip{position:relative;top:-5px;margin-left:3px;margin-right:0;vertical-align:top}
+/* 部門・部門フォルダー・業務シーンの選択コントロールを同じ見た目に揃える */
+.watch-dept-row .watch-ctl {
+  width: 100%;
+  height: 32px;
+  min-height: 32px;
+  box-sizing: border-box;
+  border: 1px solid #cfd6df;
+  border-radius: 3px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7785' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 10px 6px;
+  padding: 0 30px 0 9px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 30px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.watch-dept-row select.watch-ctl { display: block; }
+.watch-dept-row button.watch-ctl,
+.watch-dept-row summary.watch-ctl {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.watch-dept-row summary.watch-ctl { list-style: none; }
+.watch-dept-row summary.watch-ctl::-webkit-details-marker { display: none; }
+.watch-dept-row button.watch-ctl:disabled {
+  border-color: #cfd6df;
+  background-color: #f5f7f9;
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+.watch-folder-trigger .watch-folder-value,
+.watch-scene-picker summary.watch-ctl { overflow: hidden; text-overflow: ellipsis; }
+/* ドロップダウンパネルの外観も揃える */
+.watch-folder-menu,
+.watch-scene-options {
+  border-color: #cfd6df;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, .16);
+  max-height: 320px;
+}
+.watch-dept-picker { position: relative; }
+.watch-dept-trigger { display: flex; align-items: center; text-align: left; }
+.watch-dept-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.watch-dept-pick { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-radius: 4px; background: none; padding: 7px 8px; font-size: 12.5px; color: var(--text); text-align: left; cursor: pointer; }
+.watch-dept-pick:hover { background: #f2f7fd; }
+.watch-dept-pick.is-selected { background: #eef5ff; color: var(--accent); font-weight: 600; }
+.watch-dept-pick.is-disabled { color: var(--text-3); cursor: not-allowed; opacity: .7; }
+.watch-dept-used { margin-left: auto; font-size: 10.5px; color: var(--text-3); white-space: nowrap; }
+.watch-dept-check { margin-left: auto; color: var(--accent); }
+.watch-dept-row:has(.watch-dept-picker.is-open) { z-index: 30; }
+.watch-sec:has(.watch-dept-picker.is-open) { overflow: visible; position: relative; z-index: 20; }
+.watch-scene-multi { min-width: 0; }
+.watch-scene-multi .grp-form-ms { width: 100%; }
+.watch-scene-multi .msbtn { height: 32px; min-height: 32px; border: 1px solid #cfd6df; border-radius: 3px; background: #fff; padding: 0 30px 0 9px; font-size: 13px; display: flex; align-items: center; }
+.watch-scene-multi .msbtn .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 業務シーンの複数選択メニューが下の部門行に隠れないようにする */
+.watch-dept-row:has(.grp-form-ms.open) { z-index: 40; }
+.watch-sec:has(.grp-form-ms.open) { overflow: visible; position: relative; z-index: 20; }
+.watch-scene-multi .msmenu { z-index: 120; top: 34px; }
+.watch-dept-node { display: flex; align-items: center; border-radius: 4px; }
+.watch-dept-node:hover { background: #f4f8ff; }
+.watch-dept-node .watch-dept-pick { flex: 1; min-width: 0; }

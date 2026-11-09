@@ -4377,7 +4377,7 @@ function seedExportSnapshots() {
     if (files.length === 1 && C.fileNameFromInput !== false) return clean(dispFileName(files[0].id));
     if (String(C.fileName || '').trim()) return clean(C.fileName.trim());
     const cat = files[0] && byId(CATEGORY, (byId(LAYOUT, files[0].layout) || {}).category);
-    return clean(cat && cat.name || '出力データ');
+    return clean((cat && dispCat(cat.id)) || '出力データ');
   }
 
   // ZIP (UTF-8 filenames, STORE): offline, no external dependency.
@@ -4438,7 +4438,7 @@ function seedExportSnapshots() {
       if (!built) return;
       const type = ticketTypeOfFile(files[0]);
       const category = byId(CATEGORY, categoryId);
-      const label = String(category && category.name || type && type.name || files[0].layout || '未分類').replace(/[\\/:*?"<>|]/g, '_');
+      const label = String((category && dispCat(category.id)) || (type && type.name) || files[0].layout || '未分類').replace(/[\\/:*?"<>|]/g, '_');
       const base = exportMergedFileName(files);
       let name = base;
       let n = 2;
@@ -4673,7 +4673,7 @@ function exportFileName() {
   if (!files.length) return '出力データ';
   /* 初期値は帳票カテゴリ名。カテゴリが解決できない場合だけ入力名を使う。 */
   const category = catOf(files[0].layout);
-  if (category && category.name) return category.name;
+  if (category) return dispCat(category.id);
   /* ファイルツリーの名前から拡張子だけ落として .csv にする */
   const base = (name) => String(name || '').replace(/\.[A-Za-z0-9]+$/, '');
   return base(files[0].name);
@@ -5449,6 +5449,9 @@ function renderOrganizationDelete() {
 function deleteOrganization(id) {
  const org=byId(GROUPS,id);if(!org||org.root)return false;
  const ids=new Set([id,...groupDescendantIds(id)]);
+ const usedScenes=BIZ_SCENES.filter(sc=>(sc.departmentIds||[]).some(gid=>ids.has(gid)));
+ const usedWatches=watchDeptsUsingOrg(ids);
+ if(usedScenes.length||usedWatches.length){const names=[...usedScenes.map(s=>s.name),...usedWatches.map(d=>`${(byId(GROUPS,d.groupId)||{}).name||'—'} / ${d.folder||'—'}`)].slice(0,5).join('、');toast(`この組織は業務シーンまたは自動取込設定で使用されています（${names}）。関連設定を解除してから削除してください。`,'error');return false;}
  const users=new Set(GROUPS.filter(g=>ids.has(g.id)).flatMap(g=>g.userIds||[]));
  for(let i=ENT_USERS.length-1;i>=0;i--)if(users.has(ENT_USERS[i].uid))ENT_USERS.splice(i,1);
  for(let i=USERS.length-1;i>=0;i--)if(users.has(USERS[i].id))USERS.splice(i,1);
@@ -6405,8 +6408,8 @@ function renderSceneAccess(sc) {
 }
 function bindSceneAccess() {
  document.querySelectorAll('[data-wmsbtn]').forEach(b=>{if(!b.dataset.wmsbtn.startsWith('scene'))return;b.onclick=()=>{state.dd=state.dd===b.dataset.wmsbtn?null:b.dataset.wmsbtn;render();placeOpenDropdown();};});
- document.querySelectorAll('[data-wmsopt]').forEach(cb=>{if(!cb.dataset.wmsopt.startsWith('scene'))return;cb.onchange=()=>{const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;const set=new Set(sc.departmentIds||[]);cb.checked?set.add(cb.value):set.delete(cb.value);sc.departmentIds=[...set];syncSceneUsers(sc);render();placeOpenDropdown();};});
- ['wmsclear','wmsdel'].forEach(attr=>document.querySelectorAll('[data-'+attr+']').forEach(b=>{if(!b.dataset[attr].startsWith('scene'))return;b.onclick=e=>{e.stopPropagation();const [,value]=b.dataset[attr].split(':');const sc=byId(BIZ_SCENES,state.sceneId);sc.departmentIds=value?(sc.departmentIds||[]).filter(v=>v!==value):[];syncSceneUsers(sc);render();};}));
+ document.querySelectorAll('[data-wmsopt]').forEach(cb=>{if(!cb.dataset.wmsopt.startsWith('scene'))return;cb.onchange=()=>{const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;if(!cb.checked&&watchUsesOrgScene(sc.id,cb.value)){cb.checked=true;toast('この組織は自動取込設定で使用されています。関連付けを解除してから変更してください。','error');return;}const set=new Set(sc.departmentIds||[]);cb.checked?set.add(cb.value):set.delete(cb.value);sc.departmentIds=[...set];syncSceneUsers(sc);render();placeOpenDropdown();};});
+ ['wmsclear','wmsdel'].forEach(attr=>document.querySelectorAll('[data-'+attr+']').forEach(b=>{if(!b.dataset[attr].startsWith('scene'))return;b.onclick=e=>{e.stopPropagation();const [,value]=b.dataset[attr].split(':');const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;const removing=value?[value]:(sc.departmentIds||[]);if(watchUsesOrgScene(sc.id,removing)){toast('この組織は自動取込設定で使用されています。関連付けを解除してから変更してください。','error');return;}sc.departmentIds=value?(sc.departmentIds||[]).filter(v=>v!==value):[];syncSceneUsers(sc);render();};}));
 }
 function sceneEditor(sc) {
   const stepNo = state.sceneStep || 1;
@@ -6472,9 +6475,45 @@ function renderBizScenes() {
 function validateSceneStep1(sc) {
   if (!sc) return false;
   if (!(sc.name || '').trim()) { toast('業務シーン名を入力してください'); return false; }
+  if (sceneNameExists(sc.name, sc.id)) { toast('同じ名前の業務シーンが既に存在します','error'); return false; }
   if (!(sc.departmentIds||[]).length) { toast('データ権限組織を選択してください'); return false; }
   syncSceneUsers(sc);
   return true;
+}
+
+/* ── 原型用バリデーション：名称重複・自動取込参照 ── */
+const _normName = (v) => String(v == null ? '' : v).trim().toLowerCase();
+function sceneNameExists(name, exceptId) {
+  const n = _normName(name);
+  return !!n && BIZ_SCENES.some((sc) => sc.id !== exceptId && _normName(sc.name) === n);
+}
+function typeNameExists(name, exceptId) {
+  const n = _normName(name);
+  return !!n && TICKET_TYPES.some((t) => t.id !== exceptId && _normName(t.name) === n);
+}
+function displayNameExists(type, name, exceptId) {
+  const n = _normName(name);
+  if (!n) return false;
+  if (type === 'biz') return BUSINESS.some((b) => b.id !== exceptId && _normName(dispBiz(b.id)) === n);
+  if (type === 'cat') return CATEGORY.some((c) => c.id !== exceptId && _normName(dispCat(c.id)) === n);
+  return false;
+}
+function watchDeptsUsingScene(sceneId) {
+  return ensureWatchDepartments().filter((d) => (d.sceneIds || []).includes(sceneId));
+}
+function watchDeptsUsingOrg(ids) {
+  const set = new Set(ids);
+  return ensureWatchDepartments().filter((d) => d.groupId && set.has(d.groupId));
+}
+function watchUsesOrgScene(sceneId, orgIds) {
+  const set = new Set(Array.isArray(orgIds) ? orgIds : [orgIds]);
+  return ensureWatchDepartments().some((d) => (d.sceneIds || []).includes(sceneId) && d.groupId && set.has(d.groupId));
+}
+function sceneDeleteBlockMessage(sceneId) {
+  const used = watchDeptsUsingScene(sceneId);
+  if (!used.length) return '';
+  const names = used.slice(0, 5).map((d) => `${(byId(GROUPS, d.groupId) || {}).name || '—'} / ${d.folder || '—'}`).join('、');
+  return `この業務シーンは自動取込設定で使用されています（${names}）。関連付けを解除してから削除してください。`;
 }
 
 /** ② 効果テスト：ファイル投入 → モックの分類結果を生成（原型 createMockClassificationResults） */
@@ -6534,6 +6573,8 @@ function bindBizScenes() {
       if (!canReachMenu('settings-scenes-del')) return;
       const id = b.dataset.scenedel;
       const sc = byId(BIZ_SCENES, id);
+      const block = sceneDeleteBlockMessage(id);
+      if (block) { toast(block, 'error'); return; }
       if (!ask(`「${sc ? sc.name : id}」を削除しますか？`)) return;
       const i = BIZ_SCENES.findIndex((x) => x.id === id);
       if (i >= 0) BIZ_SCENES.splice(i, 1);
@@ -6547,8 +6588,10 @@ function bindBizScenes() {
   if (add) add.onclick = () => {
     if (!canReachMenu('settings-scenes-add')) return;
     cfgState.sceneQ = '';
+    let newSceneName = '新規業務シーン'; let newSceneSeq = 1;
+    while (sceneNameExists(newSceneName)) { newSceneName = `新規業務シーン_${++newSceneSeq}`; }
     const ns = {
-      id: 'cls-' + Date.now(), name: '新規業務シーン',
+      id: 'cls-' + Date.now(), name: newSceneName,
       sceneId: String(2077224056968261700 + BIZ_SCENES.length + 1),
       desc: '', formIds: [], userIds: [], updatedAt: nowStamp(),
     };
@@ -6574,6 +6617,8 @@ function bindBizScenes() {
   if (del) del.onclick = () => {
     const id = state.sceneId;
     const sc = byId(BIZ_SCENES, id);
+    const block = sceneDeleteBlockMessage(id);
+    if (block) { toast(block, 'error'); return; }
     if (!ask(`「${sc ? sc.name : id}」を削除しますか？`)) return;
     const i = BIZ_SCENES.findIndex((x) => x.id === id);
     if (i >= 0) BIZ_SCENES.splice(i, 1);
@@ -6620,6 +6665,7 @@ function bindBizScenes() {
     const el = $('#scRenameInput');
     const v = ((el ? el.value : r.value) || '').trim();
     if (!v) { toast('業務シーン名を入力してください'); return; }
+    if (sceneNameExists(v, r.id)) { toast('同じ名前の業務シーンが既に存在します','error'); return; }
     const sc = byId(BIZ_SCENES, r.id);
     if (sc) { sc.name = v; sc.updatedAt = nowStamp(); }
     state.sceneRename = null; render(); toast('名称を変更しました');
@@ -7058,6 +7104,7 @@ function renderTicketDetail() {
   const list = TICKET_TYPES.filter((x) => !q || x.name.toLowerCase().includes(q));
   let t = byId(TICKET_TYPES, state.typeId);
   if (!t && list[0]) { state.typeId = list[0].id; t = list[0]; }
+  if (t && state.typeNameBackupFor !== t.id) { state.typeNameBackupFor = t.id; state.typeNameBackup = t.name; }
   const items = list.map((x) => {
     const open = state.typeItemMenu === x.id;
     return '<div class="type-item ' + (t && t.id === x.id ? 'on' : '') + '" data-typeid="' + x.id + '">'
@@ -7172,6 +7219,7 @@ function bindTicketDetail() {
   const nxt = $('#tpNext'); if (nxt) nxt.onclick = () => { state.typePage = Math.min(3, state.typePage + 1); render(); };
   const ru = $('#tpReupload'); if (ru) ru.onclick = () => toast('サンプル帳票を再アップロードします（モック）');
   const nmLive = $('#tpName');
+  if (nmLive) nmLive.onfocus = () => { const cur = byId(TICKET_TYPES, state.typeId); if (cur) state.typeNameBackup = cur.name; };
   if (nmLive) nmLive.oninput = () => {
     const cur = byId(TICKET_TYPES, state.typeId);
     if (!cur) return;
@@ -7182,9 +7230,22 @@ function bindTicketDetail() {
   const sv = $('#tpSave'); if (sv) sv.onclick = () => {
     const t = byId(TICKET_TYPES, state.typeId);
     const nm = $('#tpName'); const ds = $('#tpDesc'); const gk = $('#tpGroup');
-    if (nm && nm.value.trim()) t.name = nm.value.trim();
+    const nextName = nm ? nm.value.trim() : '';
+    if (nextName && typeNameExists(nextName, t.id)) {
+      t.name = state.typeNameBackup || t.name;
+      toast('同じ名前の帳票タイプが既に存在します','error');
+      render();
+      return;
+    }
+    const oldName = state.typeNameBackup;
+    if (nextName) t.name = nextName;
     if (ds) t.desc = ds.value;
     if (gk) t.groupKey = gk.value;
+    if (oldName && oldName !== t.name) {
+      CATEGORY.forEach((c) => { if (c.name === oldName) c.name = t.name; });
+      LAYOUT.forEach((l) => { if (l.name === oldName) l.name = t.name; });
+    }
+    state.typeNameBackup = t.name;
     toast('帳票タイプを保存しました');
     render();
   };
@@ -8459,7 +8520,7 @@ function bindTree(treeEl) {
     if (e.target.closest('[data-rename]')) {
       e.stopPropagation();
       if (!canRenameTree()) { toast('名称を変更する権限がありません','error'); return; }
-      if (type !== 'file') { toast('業務シーン・帳票タイプ名は変更できません'); return; }
+      if (type !== 'file' && type !== 'biz' && type !== 'cat') { toast('この項目の名称は変更できません'); return; }
       startRename(node, type, id);
       return;
     }
@@ -10001,7 +10062,7 @@ function bindCfgPages() {
   });
   document.querySelectorAll('[data-grpdel]').forEach(b=>b.onclick=()=>{const g=byId(GROUPS,b.dataset.grpdel);if(!g||g.root)return;state.organizationDelete=g.id;state.groupMenu=null;render();});
   const orgCancel=$('#orgDeleteCancel');if(orgCancel)orgCancel.onclick=()=>{state.organizationDelete=null;render();};
-  const orgOk=$('#orgDeleteOk');if(orgOk)orgOk.onclick=()=>{deleteOrganization(state.organizationDelete);state.organizationDelete=null;render();toast('組織を削除しました');};
+  const orgOk=$('#orgDeleteOk');if(orgOk)orgOk.onclick=()=>{const ok=deleteOrganization(state.organizationDelete);state.organizationDelete=null;render();if(ok)toast('組織を削除しました');};
 
   /* グループ作成／編集ダイアログ */
   if (state.groupForm) {
@@ -10712,21 +10773,28 @@ function bindUploadPanel() {
 function canRenameTree(uid) { return canReachMenu('settings-scenes-edit',uid); }
 function startRename(nodeEl, type, id) {
   if (!canRenameTree()) { toast('名称を変更する権限がありません','error'); return; }
-  /* ツリーではファイル名のみ変更可（業務シーン・帳票タイプはマスタ固定） */
-  if (type !== 'file') {
-    toast('業務シーン・帳票タイプ名は変更できません');
-    return;
-  }
-  const key = 'file:' + id;
-  const current = dispFileName(id);
+  /* ファイル＝ファイル名、フォルダ（業務シーン／帳票タイプ）＝表示名を変更 */
+  const key = type + ':' + id;
+  const master = type === 'file' ? dispFileName(id) : (type === 'biz' ? (byId(BUSINESS, id) || {}).name : (byId(CATEGORY, id) || {}).name);
+  const current = type === 'file' ? dispFileName(id) : (type === 'biz' ? dispBiz(id) : dispCat(id));
   const label = $('.label', nodeEl);
   const input = document.createElement('input');
   input.className = 'rename'; input.value = current;
   label.replaceWith(input); input.focus(); input.select();
   const commit = (save) => {
-    if (save && canRenameTree() && input.value.trim()) {
-      state.rename[key] = input.value.trim();
-      toast('ファイル表示名を変更しました（表示のみ）');
+    if (save && canRenameTree()) {
+      const v = input.value.trim();
+      if (type === 'file') {
+        if (v) { state.rename[key] = v; toast('ファイル表示名を変更しました（表示のみ）'); }
+      } else if (!v || v === master) {
+        delete state.rename[key];
+        toast('フォルダ表示名を設定画面の名前に戻しました（表示のみ）');
+      } else if (displayNameExists(type, v, id)) {
+        toast('同じ名前は使用できません','error');
+      } else {
+        state.rename[key] = v;
+        toast('フォルダ表示名を変更しました（表示のみ）');
+      }
     }
     render();
   };
