@@ -474,10 +474,13 @@ test('classification wizard step 2 previews the file and shows type counts with 
   assert.match(html, /01_令和8年度分市民税・県民税申告書（兼・国保税申告書）/);
   assert.match(html, /id="scRunTest"/);
   assert.match(html, /sc-res-list/);
+  assert.doesNotMatch(html, /10_A団体_住民異動届/);
   run('SCENE_TESTS[state.sceneId].tested = true');
   html = run('renderBizScenes()');
   assert.match(html, /data-resid="form-tax-shimin">3</);
   assert.match(html, /id="scUnjudgedCount">2</);
+  assert.match(html, /class="sc-thumb"/);
+  assert.ok(html.indexOf('未判別') < html.indexOf('01_令和8年度分市民税・県民税申告書'));
 });
 
 test('classification step 1 blocks advancing until name is set', () => {

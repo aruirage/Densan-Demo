@@ -6891,7 +6891,7 @@ function sceneTestPane(sc) {
     + `<div class="sc-test-tools">${tools}</div>`
     + '<div class="sc-test-stage">'
     + `<button type="button" class="sc-page-arrow prev" data-scpage="-1" ${page <= 1 ? 'disabled' : ''} aria-label="前のページ">‹</button>`
-    + `<div class="sc-paper-wrap"><img class="sc-paper" src="assets/review-sample.png" alt="" style="transform:rotate(${rot}deg) scale(${zoom})" /></div>`
+    + `<div class="sc-paper-wrap"><img class="sc-paper" src="${esc(t.previewUrl || 'assets/review-sample.png')}" alt="" style="transform:rotate(${rot}deg) scale(${zoom})" /></div>`
     + `<button type="button" class="sc-page-arrow next" data-scpage="1" ${page >= pages ? 'disabled' : ''} aria-label="次のページ">›</button>`
     + '</div>'
     + `<div class="sc-test-pager">${page} / ${pages}</div>`
@@ -6906,12 +6906,15 @@ function sceneTestPane(sc) {
 /** ② 効果テスト：右ペイン「判別結果」 */
 function sceneResultPane(sc) {
   const t = SCENE_TESTS[sc.id] || {};
-  const { counts, unjudged } = sceneTestCounts(sc, t);
+  const { counts, unjudged, unjudgedPages } = sceneTestCounts(sc, t);
   const threshold = t.threshold != null ? t.threshold : 90;
   const rows = sceneTestForms(sc).map((f) =>
     `<div class="sc-res-row"><span class="sc-res-name">${esc(f.name)}</span><span class="sc-res-count" data-resid="${f.id}">${counts.get(f.id) || 0}</span></div>`).join('');
+  const preview = t.previewUrl || 'assets/review-sample.png';
+  const thumbs = unjudgedPages.map((p) => `<span class="sc-thumb" title="${p} ページ"><img src="${esc(preview)}" alt="" /><b>${p}</b></span>`).join('');
+  const unjudgedRow = `<div class="sc-res-row is-unjudged"><span class="sc-res-name">未判別</span><span class="sc-res-count" id="scUnjudgedCount">${unjudged}</span>${thumbs ? `<div class="sc-unjudged-thumbs">${thumbs}</div>` : ''}</div>`;
   const body = t.fileName
-    ? rows + `<div class="sc-res-row is-unjudged"><span class="sc-res-name">未判別</span><span class="sc-res-count" id="scUnjudgedCount">${unjudged}</span></div>`
+    ? unjudgedRow + rows
     : '<p class="muted center sc-res-empty">ファイルをアップロードすると、判別結果がここに表示されます</p>';
   return '<div class="scene-types sc-result-pane">'
     + '<div class="scene-result-head"><span class="srh">判別結果</span></div>'
@@ -7097,8 +7100,7 @@ function sceneDeleteBlockMessage(sceneId) {
 
 /** ② 効果テスト：判別対象の帳票（選択済みを先頭、未選択も 0 件で表示） */
 function sceneTestForms(sc) {
-  const sel = new Set(sc.formIds || []);
-  return CLASSIFY_FORMS.slice().sort((a, b) => (sel.has(b.id) ? 1 : 0) - (sel.has(a.id) ? 1 : 0));
+  return (sc.formIds || []).map((id) => byId(CLASSIFY_FORMS, id)).filter(Boolean);
 }
 function sceneTestConfidence(sc, form) {
   const i = (sc.formIds || []).indexOf(form.id);
@@ -7106,31 +7108,47 @@ function sceneTestConfidence(sc, form) {
 }
 function sceneTestCounts(sc, t) {
   const counts = new Map();
-  let unjudged = 0;
-  if (!t || !t.tested) return { counts, unjudged };
+  const unjudgedPages = [];
+  if (!t || !t.tested) return { counts, unjudged: 0, unjudgedPages };
   const forms = (sc.formIds || []).map((id) => byId(CLASSIFY_FORMS, id)).filter(Boolean);
   const pages = t.pageCount || 8;
-  if (!forms.length) return { counts, unjudged: pages };
+  if (!forms.length) {
+    for (let i = 1; i <= pages; i++) unjudgedPages.push(i);
+    return { counts, unjudged: pages, unjudgedPages };
+  }
   const base = Math.floor(pages / forms.length), rem = pages % forms.length;
+  let pageNo = 0;
   forms.forEach((f, i) => {
     const share = base + (i < rem ? 1 : 0);
-    if (sceneTestConfidence(sc, f) >= (t.threshold != null ? t.threshold : 90)) counts.set(f.id, share);
-    else unjudged += share;
+    const pass = sceneTestConfidence(sc, f) >= (t.threshold != null ? t.threshold : 90);
+    for (let k = 0; k < share; k++) {
+      pageNo++;
+      if (pass) counts.set(f.id, (counts.get(f.id) || 0) + 1);
+      else unjudgedPages.push(pageNo);
+    }
   });
-  return { counts, unjudged };
+  return { counts, unjudged: unjudgedPages.length, unjudgedPages };
 }
 function refreshSceneCounts(sc, t) {
   const { counts, unjudged } = sceneTestCounts(sc, t);
   document.querySelectorAll('[data-resid]').forEach((el) => { el.textContent = counts.get(el.dataset.resid) || 0; });
   const u = document.getElementById('scUnjudgedCount'); if (u) u.textContent = unjudged;
 }
-function setSceneTestFile(name, size) {
+function setSceneTestFile(fileOrName, size) {
   const sc = byId(BIZ_SCENES, state.sceneId);
   if (!sc) return;
+  const file = fileOrName && typeof fileOrName === 'object' ? fileOrName : null;
+  const name = file ? file.name : String(fileOrName || '');
+  const bytes = file ? file.size : size;
+  const prev = SCENE_TESTS[sc.id];
+  if (prev && prev.previewUrl && String(prev.previewUrl).startsWith('blob:') && typeof URL !== 'undefined' && URL.revokeObjectURL) URL.revokeObjectURL(prev.previewUrl);
+  const isImage = !!(file && file.type && /^image\//.test(file.type));
+  const previewUrl = isImage && typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(file) : 'assets/review-sample.png';
   SCENE_TESTS[sc.id] = {
     fileName: name,
-    fileSize: typeof fmtSize === 'function' ? fmtSize(size) : '',
+    fileSize: typeof fmtSize === 'function' ? fmtSize(bytes) : '',
     page: 1, pageCount: 8, tested: false, threshold: 90, zoom: 1, rot: 0,
+    previewUrl,
   };
   render();
 }
@@ -7280,7 +7298,7 @@ function bindBizScenes() {
   /* ── ② 効果テスト ── */
   const pf = $('#scPickFile'); const fi = $('#scFile');
   if (pf && fi) pf.onclick = () => fi.click();
-  if (fi) fi.onchange = () => { const f = fi.files && fi.files[0]; if (f) setSceneTestFile(f.name, f.size); };
+  if (fi) fi.onchange = () => { const f = fi.files && fi.files[0]; if (f) setSceneTestFile(f, f.size); };
   const drop = $('#scDrop');
   if (drop) {
     drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('over'); };
@@ -7288,7 +7306,7 @@ function bindBizScenes() {
     drop.ondrop = (e) => {
       e.preventDefault(); drop.classList.remove('over');
       const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      if (f) setSceneTestFile(f.name, f.size);
+      if (f) setSceneTestFile(f, f.size);
     };
   }
   const rt = $('#scRunTest');
