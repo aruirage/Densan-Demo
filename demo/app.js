@@ -2472,7 +2472,7 @@ function renderTree() {
       const fullName = nodeLabel(n);
       /* フォルダ（業務シーン・帳票タイプ）＝権限の単位。名称変更と権限設定を置く */
       const ops = (n.type === 'biz' || n.type === 'cat') && canRenameTree()
-        ? [`<button class="redo" title="表示名を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
+        ? [`<button class="redo" title="名称を変更" data-rename="1"><span class="ico i-edit"></span></button>`]
         : [];
       /* 長い名前は省略表示。hover で全文（ファイルは data-tip、フォルダは title） */
       const labelTip = n.type === 'file'
@@ -8089,11 +8089,11 @@ function renderCfgNav() {
  * 新規アップロードは頂栏独立メニューのためサイドバーなし。
  */
 function renderSidebarPane() {
-  const treeTip = '帳票タイプ・ファイルの表示名を変更できます（拡張子は変更不可）。同階層はドラッグで並び替えます';
+  const treeTip = '帳票タイプ・ファイルの名称を変更できます（拡張子は変更不可）。同階層はドラッグで並び替えます';
   return `
   <aside class="panel side with-tree">
   <div class="sidenav-panel">
-      <div class="sidenav-title">読取結果一覧 <span class="info-i" data-tip="業務シーンと帳票タイプの表示名を変更できます。ファイルは右の一覧に出ます">i</span></div>
+      <div class="sidenav-title">読取結果一覧 <span class="info-i" data-tip="業務シーンと帳票タイプの名称を変更できます。ファイルは右の一覧に出ます">i</span></div>
     </div>
     ${renderTreePanel()}
   </aside>`;
@@ -8516,6 +8516,7 @@ function bindTree(treeEl) {
   treeEl.addEventListener('click', (e) => {
     const node = e.target.closest('.node');
     if (!node) return;
+    if (e.target.closest('.rename')) return;
     const type = node.dataset.type, id = node.dataset.id, key = type + ':' + id;
     if (e.target.closest('[data-rename]')) {
       e.stopPropagation();
@@ -10773,7 +10774,7 @@ function bindUploadPanel() {
 function canRenameTree(uid) { return canReachMenu('settings-scenes-edit',uid); }
 function startRename(nodeEl, type, id) {
   if (!canRenameTree()) { toast('名称を変更する権限がありません','error'); return; }
-  /* ファイル＝ファイル名、フォルダ（業務シーン／帳票タイプ）＝表示名を変更 */
+  /* ファイル＝ファイル名、フォルダ（業務シーン／帳票タイプ）＝名称を変更 */
   const key = type + ':' + id;
   const master = type === 'file' ? dispFileName(id) : (type === 'biz' ? (byId(BUSINESS, id) || {}).name : (byId(CATEGORY, id) || {}).name);
   const current = type === 'file' ? dispFileName(id) : (type === 'biz' ? dispBiz(id) : dispCat(id));
@@ -10784,16 +10785,16 @@ function startRename(nodeEl, type, id) {
   const commit = (save) => {
     if (save && canRenameTree()) {
       const v = input.value.trim();
+      if (v === current) { render(); return; }
       if (type === 'file') {
-        if (v) { state.rename[key] = v; toast('ファイル表示名を変更しました（表示のみ）'); }
+        if (v) { state.rename[key] = v; toast('ファイル名を変更しました'); }
       } else if (!v || v === master) {
-        delete state.rename[key];
-        toast('フォルダ表示名を設定画面の名前に戻しました（表示のみ）');
+        if (state.rename[key]) { delete state.rename[key]; toast('名称を設定画面の名前に戻しました'); }
       } else if (displayNameExists(type, v, id)) {
         toast('同じ名前は使用できません','error');
       } else {
         state.rename[key] = v;
-        toast('フォルダ表示名を変更しました（表示のみ）');
+        toast('名称を変更しました');
       }
     }
     render();

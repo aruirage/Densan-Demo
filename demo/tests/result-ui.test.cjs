@@ -693,7 +693,7 @@ test('tree info hint shows one tooltip only: data-tip without a native title', (
   const html = run('renderSidebarPane()');
   const info = html.match(/<span class="info-i"[^>]*>[^<]*<\/span>/);
   assert.ok(info, 'info-i が描画される');
-  assert.match(info[0], /data-tip="[^"]*表示名/);
+  assert.match(info[0], /data-tip="[^"]*名称/);
   /* title があるとブラウザ標準のツールチップと二重に出て重なって見える */
   assert.doesNotMatch(info[0], /\btitle=/);
   assert.equal((html.match(/class="info-i"/g) || []).length, 1);
