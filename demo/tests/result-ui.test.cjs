@@ -473,6 +473,7 @@ test('classification wizard step 2 previews the file and shows type counts with 
   assert.match(html, /sample.pdf/);
   assert.match(html, /01_令和8年度分市民税・県民税申告書（兼・国保税申告書）/);
   assert.match(html, /sc-res-list/);
+  assert.match(html, /id="scRunTest"/);
   assert.doesNotMatch(html, /10_A団体_住民異動届/);
   html = run('renderBizScenes()');
   assert.match(html, /data-resid="form-tax-shimin">3</);
