@@ -6583,11 +6583,6 @@ function sceneTestCounts(sc, t) {
   });
   return { counts, unjudged: unjudgedPages.length, unjudgedPages };
 }
-function refreshSceneCounts(sc, t) {
-  const { counts, unjudged } = sceneTestCounts(sc, t);
-  document.querySelectorAll('[data-resid]').forEach((el) => { el.textContent = counts.get(el.dataset.resid) || 0; });
-  const u = document.getElementById('scUnjudgedCount'); if (u) u.textContent = unjudged;
-}
 function setSceneTestFile(fileOrName, size) {
   const sc = byId(BIZ_SCENES, state.sceneId);
   if (!sc) return;
@@ -6769,8 +6764,8 @@ function bindBizScenes() {
   if (cf) {
     const sc = cur(); const t = SCENE_TESTS[sc && sc.id];
     if (t) {
-      cf.oninput = () => { t.threshold = Number(cf.value); const lab = $('#scConfVal'); if (lab) lab.textContent = cf.value + '%'; refreshSceneCounts(sc, t); };
-      cf.onchange = () => render();
+      cf.oninput = () => { t.threshold = Number(cf.value); const lab = $('#scConfVal'); if (lab) lab.textContent = cf.value + '%'; };
+      cf.onchange = () => { const lab = $('#scConfVal'); if (lab) lab.textContent = cf.value + '%'; };
     }
   }
   document.querySelectorAll('[data-scpage]').forEach((b) => {
