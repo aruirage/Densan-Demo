@@ -645,9 +645,9 @@
 <td>保存失败时保留页面输入</td>
 </tr>
 </tbody></table>
-<p>路径显示使用“¥”，输入兼容反斜杠和“¥”。</p>
-<pre><code class="language-text">来源：¥¥filesv01¥取込¥税務課¥住民税¥scan001.pdf
-目标：¥¥filesv01¥処理済¥税務課¥住民税¥scan001.pdf
+<p>路径保存、比较和画面显示使用半角反斜杠 <code>\</code>；输入兼容半角 <code>¥</code>（日文 Windows 常见的反斜杠显示），保存时统一为 <code>\</code>。全角 <code>￥</code> 不作为分隔符。</p>
+<pre><code class="language-text">来源：\\filesv01\取込\税務課\住民税\scan001.pdf
+目标：\\filesv01\処理済\税務課\住民税\scan001.pdf
 </code></pre>
 <h4>连接测试与失败校验</h4>
 <p>连接测试（接続テスト）由服务器访问共享文件夹。监视路径测试还会读取文件夹目录，因此不立即返回结果。测试结果只对当前路径有效，路径被修改后须重新测试。</p>
@@ -1035,8 +1035,8 @@
 </tr>
 <tr>
 <td>路径分隔符</td>
-<td>半角反斜杠 <code>\</code>、<code>/</code>、<code>¥</code> 视为同一分隔符，连续分隔符合并为一个</td>
-<td><code>\\filesv01\取込\\税務課</code> 与 <code>¥¥filesv01¥取込¥税務課</code> 相同</td>
+<td>半角反斜杠 <code>\</code>、<code>/</code>、半角 <code>¥</code> 视为同一分隔符，连续分隔符合并为一个，保存统一为 <code>\</code></td>
+<td><code>\\filesv01\取込\\税務課</code> 与 <code>¥¥filesv01¥取込¥税務課</code> 相同，保存为 <code>\\filesv01\取込\税務課</code></td>
 </tr>
 <tr>
 <td>首尾空白与末尾分隔符</td>
@@ -1060,8 +1060,8 @@
 </tr>
 <tr>
 <td>保存与显示</td>
-<td>保存和比较使用半角反斜杠 <code>\</code>，画面显示使用 <code>¥</code></td>
-<td>输入 <code>¥¥filesv01¥取込</code>，保存为 <code>\\filesv01\取込</code></td>
+<td>保存、比较和画面显示使用半角反斜杠 <code>\</code>；日文 Windows 字体可能把 <code>\</code> 显示成 <code>¥</code>，但数据仍是 <code>\</code>，不转成全角 <code>￥</code></td>
+<td>输入 <code>¥¥filesv01¥取込</code>，保存并显示为 <code>\\filesv01\取込</code></td>
 </tr>
 </tbody></table>
 <p>错误记录本期只在后台保存，不提供错误一览画面；2期在仪表盘展示错误记录（対象外扩展名、失败阶段、原因等）。</p>

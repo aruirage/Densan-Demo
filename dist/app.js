@@ -6541,7 +6541,7 @@ const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' 
 const watchRow = (label, inner, wide, off) => `<div class="wf${off ? ' is-off' : ''}"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
 
 /** 自動取込設定。組織フォルダーで対象範囲を決め、選択した業務シーン内でAI分類する。 */
-const watchPathDisplay = (value) => String(value || '').split('\\').join('¥');
+const watchPathDisplay = (value) => String(value || '').split('¥').join('\\');
 const watchPathValue = (value) => String(value || '').split('¥').join('\\');
 function watchDeptScenes(groupId) {
   if(!groupId)return [];
@@ -6702,7 +6702,7 @@ function watchResolveFile(relativePath, aiCategoryId) {
   });
   if(!dept)return {error:'組織フォルダーが未設定のため未取込（スキャン範囲外）',skipped:true,source:relativePath};
   if(!watchDeptTypes(dept).some(c=>c.id===aiCategoryId))return {error:'組織の業務シーン内で帳票タイプを判別できません',departmentId:dept.groupId,source:relativePath};
-  return {departmentId:dept.groupId,categoryId:aiCategoryId,archiveRelativePath:segments.join('¥'),dedupScope:dept.groupId+'|'+aiCategoryId};
+  return {departmentId:dept.groupId,categoryId:aiCategoryId,archiveRelativePath:segments.join('\\'),dedupScope:dept.groupId+'|'+aiCategoryId};
 }
 
 function renderWatch() {
