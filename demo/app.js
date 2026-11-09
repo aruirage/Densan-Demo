@@ -5995,8 +5995,8 @@ const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' 
 const watchRow = (label, inner, wide, off) => `<div class="wf${off ? ' is-off' : ''}"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
 
 /** 自動取込設定。組織フォルダーで対象範囲を決め、選択した業務シーン内でAI分類する。 */
-const watchPathDisplay = (value) => String(value || '').split('¥').join('\\');
-const watchPathValue = (value) => String(value || '').split('¥').join('\\');
+const watchPathDisplay = (value) => String(value || '').replace(/[¥￥]/g, '\\');
+const watchPathValue = (value) => String(value || '').replace(/[¥￥]/g, '\\');
 function watchDeptScenes(groupId) {
   if(!groupId)return [];
   return BIZ_SCENES.filter(sc=>expandGroupSelection(sc.departmentIds||[]).includes(groupId));
@@ -6123,7 +6123,7 @@ function ensureWatchDepartments() {
   const r=WATCH.roots[0];if(r&&!r.moveTo)r.moveTo='\\\\filesv01\\処理済';
   return WATCH.departments;
 }
-function watchFolderKey(value) {return String(value||'').trim().replace(/[\\/¥]+/g,'/').replace(/^\/+|\/+$/g,'').toLowerCase();}
+function watchFolderKey(value) {return String(value||'').trim().replace(/[\\/¥￥]+/g,'/').replace(/^\/+|\/+$/g,'').toLowerCase();}
 function watchValidateSettings() {
   const root=WATCH.roots[0]||{};
   const normalize=v=>watchPathValue(v).trim().replace(/[\\/]+/g,'/').replace(/\/$/,'').toLowerCase();
@@ -6133,8 +6133,8 @@ function watchValidateSettings() {
   if(source===target||source.startsWith(target+'/')||target.startsWith(source+'/'))return '監視フォルダーと処理後フォルダーは別の階層に設定してください';
   const depts=ensureWatchDepartments().filter(d=>d.on),used=new Set(),usedDeptGroups=new Set();
   if(!depts.length)return '有効な組織を設定してください';
-  const validName=n=>n&&n!=='.'&&n!=='..'&&!/[\\/¥:*?"<>|]/.test(n);
-  const validPath=p=>{const parts=String(p||'').split(/[\\/¥]+/).filter(Boolean);return parts.length>0&&parts.every(validName);};
+  const validName=n=>n&&n!=='.'&&n!=='..'&&!/[\\/¥￥:*?"<>|]/.test(n);
+  const validPath=p=>{const parts=String(p||'').split(/[\\/¥￥]+/).filter(Boolean);return parts.length>0&&parts.every(validName);};
   for(const d of depts){
     if(!byId(GROUPS,d.groupId))return '組織を選択してください';
     if(usedDeptGroups.has(d.groupId))return '組織が重複しています';
@@ -6147,11 +6147,11 @@ function watchValidateSettings() {
   return '';
 }
 function watchResolveFile(relativePath, aiCategoryId) {
-  const segments=String(relativePath||'').split(/[\\/¥]+/).filter(Boolean);
+  const segments=String(relativePath||'').split(/[\\/¥￥]+/).filter(Boolean);
   if(segments.some(s=>s==='.'||s==='..'))return {error:'監視フォルダー外のパスです'};
   const dept=ensureWatchDepartments().find(d=>{
     if(!d.on)return false;
-    const parts=String(d.folder||'').split(/[\\/¥]+/).filter(Boolean);
+    const parts=String(d.folder||'').split(/[\\/¥￥]+/).filter(Boolean);
     return parts.length>0&&parts.length<=segments.length&&parts.every((p,i)=>watchFolderKey(p)===watchFolderKey(segments[i]));
   });
   if(!dept)return {error:'組織フォルダーが未設定のため未取込（スキャン範囲外）',skipped:true,source:relativePath};
@@ -6265,8 +6265,8 @@ function bindWatchDepartments() {
     const d=get(b.dataset.wdeptTest), root=WATCH.roots[0]||{};
     const folder=String(d&&d.folder||'').trim();
     const path=watchPathValue(root.path).trim();
-    const parts=folder.split(/[\\/¥]+/).filter(Boolean);
-    const valid=!!path&&parts.length>0&&parts.every(p=>p!=='.'&&p!=='..'&&!/[\\/¥:*?"<>|]/.test(p));
+    const parts=folder.split(/[\\/¥￥]+/).filter(Boolean);
+    const valid=!!path&&parts.length>0&&parts.every(p=>p!=='.'&&p!=='..'&&!/[\\/¥￥:*?"<>|]/.test(p));
     toast(valid?'組織フォルダーのパスは有効です':'組織フォルダーのパスを確認してください',valid?'success':'error');
   });
 }

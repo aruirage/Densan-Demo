@@ -1822,3 +1822,10 @@ test('scene form picker is multi-select without category labels or close buttons
   assert.doesNotMatch(html, /cat-badge/);
   assert.doesNotMatch(html, /scPickClose|scPickCancel/);
 });
+
+test('watch paths accept half-width and full-width yen and normalize to backslash', () => {
+  const run = app();
+  assert.equal(run("watchPathValue('¥¥filesv01¥取込')"), '\\\\filesv01\\取込');
+  assert.equal(run("watchPathValue('￥￥filesv01￥取込')"), '\\\\filesv01\\取込');
+  assert.equal(run("watchPathDisplay('￥￥filesv01￥取込')"), '\\\\filesv01\\取込');
+});
