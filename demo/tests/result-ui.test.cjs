@@ -1794,3 +1794,10 @@ test('phase one: tree folder display names are unique per level', () => {
   assert.equal(run("displayNameExists('cat',(byId(CATEGORY,'c1')||{}).name,'c1')"), false);
   assert.equal(run("displayNameExists('cat',(byId(CATEGORY,'c1')||{}).name,'c2')"), true);
 });
+
+test('phase one: business tree nodes map to business scenes', () => {
+  const run = app();
+  assert.equal(run("sceneOfBusinessId('b2').id"), 'cls-zeimu');
+  assert.equal(run("businessOfSceneId('cls-zeimu').id"), 'b2');
+  assert.equal(run("sceneOfBusinessId('b6').id"), 'cls-korei');
+});

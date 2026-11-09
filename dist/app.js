@@ -7037,6 +7037,12 @@ function typeNameExists(name, exceptId) {
   const n = _normName(name);
   return !!n && TICKET_TYPES.some((t) => t.id !== exceptId && _normName(t.name) === n);
 }
+const BUSINESS_SCENE_ID = { b1: 'cls-jyumin', b2: 'cls-zeimu', b3: 'cls-hoiku', b4: 'cls-jido', b5: 'cls-kaigo', b6: 'cls-korei' };
+function sceneOfBusinessId(bizId) { return byId(BIZ_SCENES, BUSINESS_SCENE_ID[bizId]); }
+function businessOfSceneId(sceneId) {
+  const bid = Object.keys(BUSINESS_SCENE_ID).find((k) => BUSINESS_SCENE_ID[k] === sceneId);
+  return bid ? byId(BUSINESS, bid) : null;
+}
 function displayNameExists(type, name, exceptId) {
   const n = _normName(name);
   if (!n) return false;
@@ -7213,7 +7219,11 @@ function bindBizScenes() {
     if (!v) { toast('業務シーン名を入力してください'); return; }
     if (sceneNameExists(v, r.id)) { toast('同じ名前の業務シーンが既に存在します','error'); return; }
     const sc = byId(BIZ_SCENES, r.id);
-    if (sc) { sc.name = v; sc.updatedAt = nowStamp(); }
+    if (sc) {
+      sc.name = v; sc.updatedAt = nowStamp();
+      const b = businessOfSceneId(sc.id);
+      if (b) { b.name = v; delete state.rename['biz:' + b.id]; }
+    }
     state.sceneRename = null; render(); toast('名称を変更しました');
   };
 
@@ -7240,7 +7250,12 @@ function bindBizScenes() {
     if (!canReachMenu('settings-scenes-edit')) return;
     const sc = cur(); if (!sc) return;
     const nm = $('#scName'); const ds = $('#scDesc');
-    if (nm) { if (!nm.value.trim()) { toast('業務シーン名を入力してください'); return; } sc.name = nm.value.trim(); }
+    if (nm) {
+      if (!nm.value.trim()) { toast('業務シーン名を入力してください'); return; }
+      sc.name = nm.value.trim();
+      const b = businessOfSceneId(sc.id);
+      if (b) { b.name = sc.name; delete state.rename['biz:' + b.id]; }
+    }
     if (ds) sc.desc = ds.value;
     sc.updatedAt = nowStamp();
     if ((state.sceneStep || 1) === 1) {
@@ -11342,10 +11357,12 @@ function startRename(nodeEl, type, id) {
         if (v) { state.rename[key] = v; toast('ファイル名を変更しました'); }
       } else if (!v || v === master) {
         if (state.rename[key]) { delete state.rename[key]; toast('名称を設定画面の名前に戻しました'); }
+        if (type === 'biz') { const sc = sceneOfBusinessId(id); if (sc && v !== master) sc.name = master; }
       } else if (displayNameExists(type, v, id)) {
         toast('同じ名前は使用できません','error');
       } else {
         state.rename[key] = v;
+        if (type === 'biz') { const sc = sceneOfBusinessId(id); if (sc) sc.name = v; }
         toast('名称を変更しました');
       }
     }
