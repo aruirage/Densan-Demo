@@ -6898,7 +6898,6 @@ function sceneTestPane(sc) {
     + `<div class="sc-test-file">${esc(t.fileName)}${t.fileSize ? `（${esc(t.fileSize)}）` : ''}</div>`
     + '<div class="sc-test-actions">'
     + '<button class="btn primary" id="scPickFile">ファイル選択</button>'
-    + '<button class="btn primary" id="scRunTest">テスト</button>'
     + '<input type="file" id="scFile" accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff" hidden />'
     + '</div></div>';
 }
@@ -7309,8 +7308,6 @@ function bindBizScenes() {
       if (f) setSceneTestFile(f, f.size);
     };
   }
-  const rt = $('#scRunTest');
-  if (rt) rt.onclick = () => { const t = SCENE_TESTS[state.sceneId]; if (!t) return; t.tested = true; render(); };
   const cf = $('#scConf');
   if (cf) {
     const sc = cur(); const t = SCENE_TESTS[sc && sc.id];
