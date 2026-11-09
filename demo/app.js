@@ -10803,14 +10803,21 @@ function startRename(nodeEl, type, id) {
       if (v === current) { render(); return; }
       if (type === 'file') {
         if (v) { state.rename[key] = v; toast('ファイル名を変更しました'); }
-      } else if (!v || v === master) {
-        if (state.rename[key]) { delete state.rename[key]; toast('名称を設定画面の名前に戻しました'); }
-        if (type === 'biz') { const sc = sceneOfBusinessId(id); if (sc && v !== master) sc.name = master; }
+      } else if (!v) {
+        toast('名称を入力してください','error');
       } else if (displayNameExists(type, v, id)) {
         toast('同じ名前は使用できません','error');
+      } else if (type === 'biz') {
+        const b = byId(BUSINESS, id); if (b) b.name = v;
+        const sc = sceneOfBusinessId(id); if (sc) sc.name = v;
+        delete state.rename[key];
+        toast('名称を変更しました');
       } else {
-        state.rename[key] = v;
-        if (type === 'biz') { const sc = sceneOfBusinessId(id); if (sc) sc.name = v; }
+        const oldNames = new Set([master, current]);
+        const c = byId(CATEGORY, id); if (c) c.name = v;
+        TICKET_TYPES.forEach((t) => { if (oldNames.has(t.name)) t.name = v; });
+        LAYOUT.forEach((l) => { if (oldNames.has(l.name)) l.name = v; });
+        delete state.rename[key];
         toast('名称を変更しました');
       }
     }
