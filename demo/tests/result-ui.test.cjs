@@ -458,7 +458,8 @@ test('classification wizard step 2 runs the effect test and renders ranked resul
   const run = app();
   run('state.page = "bizScenes"; state.sceneId = "cls-zeimu"; state.sceneStep = 2; render = () => {}');
   let html = run('renderBizScenes()');
-  assert.match(html, /分類結果/);
+  assert.match(html, /判別結果/);
+  assert.match(html, /効果テスト/);
   assert.match(html, /ファイルをアップロードすると/);
   assert.match(html, /id="scPickFile"/);
   assert.match(html, /id="scPrev"/);

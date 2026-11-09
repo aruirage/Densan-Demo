@@ -6891,7 +6891,7 @@ function sceneResultPane(sc) {
   const body = (t.tested && rows)
     ? `<table class="scene-result"><thead><tr><th>順位</th><th>帳票タイプ</th><th>区分</th><th>自信度</th></tr></thead><tbody>${rows}</tbody></table>`
     : '<p class="muted center">ファイルをアップロードすると、分類結果がここに表示されます</p>';
-  return '<div class="scene-types"><div class="scene-result-head"><span class="srh">分類結果</span></div>'
+  return '<div class="scene-types"><div class="scene-result-head"><span class="srh">判別結果</span></div>'
     + '<div class="scene-result-body">' + body + '</div></div>';
 }
 
@@ -6958,7 +6958,7 @@ function bindSceneAccess() {
 }
 function sceneEditor(sc) {
   const stepNo = state.sceneStep || 1;
-  const bar = '<div class="wiz">' + ['AI分類設定', '判別結果'].map((lb, i) =>
+  const bar = '<div class="wiz">' + ['AI判別設定', '効果テスト'].map((lb, i) =>
     '<button class="wiz-step ' + (stepNo === i + 1 ? 'on' : '') + ' ' + (stepNo > i + 1 ? 'done' : '') + '" data-scenestep="' + (i + 1) + '">'
     + '<span class="wiz-no">' + (i + 1) + '</span><span class="wiz-label">' + lb + '</span></button>'
     + (i === 0 ? '<span class="wiz-line ' + (stepNo > 1 ? 'on' : '') + '"></span>' : '')).join('') + '</div>';
