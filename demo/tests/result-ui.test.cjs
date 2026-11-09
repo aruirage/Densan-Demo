@@ -454,7 +454,7 @@ test('classification forms and business divisions are named after the sample fil
 
 
 
-test('classification wizard step 2 runs the effect test and renders ranked results', () => {
+test('classification wizard step 2 previews the file and shows type counts with confidence', () => {
   const run = app();
   run('state.page = "bizScenes"; state.sceneId = "cls-zeimu"; state.sceneStep = 2; render = () => {}');
   let html = run('renderBizScenes()');
@@ -463,7 +463,8 @@ test('classification wizard step 2 runs the effect test and renders ranked resul
   assert.match(html, /ファイルをアップロードすると/);
   assert.match(html, /id="scPickFile"/);
   assert.match(html, /id="scPrev"/);
-  assert.match(html, /判別結果/);
+  assert.match(html, /id="scConf"/);
+  assert.match(html, /判別時の確信度/);
   assert.doesNotMatch(html, /完成/);
   assert.doesNotMatch(html, /id="scSave"/);
   assert.doesNotMatch(html, /id="scNext"/);
@@ -471,8 +472,12 @@ test('classification wizard step 2 runs the effect test and renders ranked resul
   html = run('renderBizScenes()');
   assert.match(html, /sample.pdf/);
   assert.match(html, /01_令和8年度分市民税・県民税申告書（兼・国保税申告書）/);
-  assert.match(html, /96.0 %/);
-  assert.match(html, /scene-result/);
+  assert.match(html, /id="scRunTest"/);
+  assert.match(html, /sc-res-list/);
+  run('SCENE_TESTS[state.sceneId].tested = true');
+  html = run('renderBizScenes()');
+  assert.match(html, /data-resid="form-tax-shimin">3</);
+  assert.match(html, /id="scUnjudgedCount">2</);
 });
 
 test('classification step 1 blocks advancing until name is set', () => {

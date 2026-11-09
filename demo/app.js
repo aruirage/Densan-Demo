@@ -6325,28 +6325,55 @@ function sceneFormsPane(sc) {
 /** ② 効果テスト：左ペイン（アップロード／原型 Step2ClassificationEffectTest） */
 function sceneTestPane(sc) {
   const t = SCENE_TESTS[sc.id] || {};
-  return '<div class="wiz-pane"><div class="scene-drop" id="scDrop">'
-    + '<svg class="cloud" viewBox="0 0 48 34" aria-hidden="true">'
-    + '<path d="M13 26h22a7 7 0 0 0 .6-13.9A10 10 0 0 0 16 10.5 6.5 6.5 0 0 0 13 26Z"/>'
-    + '<path d="M24 33V19m0 0-5 5m5-5 5 5"/></svg>'
-    + '<p class="sd-title">ここにファイルをドラッグ・ドロップ</p>'
-    + '<p class="sd-note">単一のファイルをアップロードできます。最大20MB、各ファイルは最大10ページです。ファイル形式は png, jpg, jpeg, pdf, tif, tiff です。</p>'
-    + '<button class="btn primary" id="scPickFile"><span class="ico i-upload"></span>ファイル選択</button>'
+  if (!t.fileName) {
+    return '<div class="wiz-pane"><div class="scene-drop" id="scDrop">'
+      + '<svg class="cloud" viewBox="0 0 48 34" aria-hidden="true">'
+      + '<path d="M13 26h22a7 7 0 0 0 .6-13.9A10 10 0 0 0 16 10.5 6.5 6.5 0 0 0 13 26Z"/>'
+      + '<path d="M24 33V19m0 0-5 5m5-5 5 5"/></svg>'
+      + '<p class="sd-title">ここにファイルをドラッグ・ドロップ</p>'
+      + '<p class="sd-note">単一のファイルをアップロードできます。最大20MB、各ファイルは最大10ページです。ファイル形式は png, jpg, jpeg, pdf, tif, tiff です。</p>'
+      + '<button class="btn primary" id="scPickFile"><span class="ico i-upload"></span>ファイル選択</button>'
+      + '<input type="file" id="scFile" accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff" hidden />'
+      + '</div></div>';
+  }
+  const pages = t.pageCount || 8;
+  const page = Math.min(Math.max(1, t.page || 1), pages);
+  const zoom = t.zoom || 1, rot = t.rot || 0;
+  const tools = [['select', '選択'], ['rot', '回転'], ['reset', 'リセット'], ['zoomIn', '拡大'], ['zoomOut', '縮小']]
+    .map(([k, label]) => `<button type="button" class="sc-test-tool" data-sctool="${k}" title="${label}" aria-label="${label}" ${k === 'select' ? 'disabled' : ''}>${RV_ICON[k]}</button>`).join('');
+  return '<div class="wiz-pane sc-test-pane">'
+    + `<div class="sc-test-tools">${tools}</div>`
+    + '<div class="sc-test-stage">'
+    + `<button type="button" class="sc-page-arrow prev" data-scpage="-1" ${page <= 1 ? 'disabled' : ''} aria-label="前のページ">‹</button>`
+    + `<div class="sc-paper-wrap"><img class="sc-paper" src="assets/review-sample.png" alt="" style="transform:rotate(${rot}deg) scale(${zoom})" /></div>`
+    + `<button type="button" class="sc-page-arrow next" data-scpage="1" ${page >= pages ? 'disabled' : ''} aria-label="次のページ">›</button>`
+    + '</div>'
+    + `<div class="sc-test-pager">${page} / ${pages}</div>`
+    + `<div class="sc-test-file">${esc(t.fileName)}${t.fileSize ? `（${esc(t.fileSize)}）` : ''}</div>`
+    + '<div class="sc-test-actions">'
+    + '<button class="btn primary" id="scPickFile">ファイル選択</button>'
+    + '<button class="btn primary" id="scRunTest">テスト</button>'
     + '<input type="file" id="scFile" accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff" hidden />'
-    + (t.fileName ? `<div class="sd-file"><b>${esc(t.fileName)}</b>${t.fileSize ? `<span class="muted">（${esc(t.fileSize)}）</span>` : ''}<button class="link" id="scClearFile">クリア</button></div>` : '')
     + '</div></div>';
 }
 
-/** ② 効果テスト：右ペイン「分類結果」 */
+/** ② 効果テスト：右ペイン「判別結果」 */
 function sceneResultPane(sc) {
   const t = SCENE_TESTS[sc.id] || {};
-  const rows = (t.results || []).map((r) => `<tr><td class="muted">${r.rank}</td><td>${esc(r.formName)}</td>`
-    + `<td><span class="cat-badge">${esc(r.category)}</span></td><td class="conf">${r.confidence.toFixed(1)} %</td></tr>`).join('');
-  const body = (t.tested && rows)
-    ? `<table class="scene-result"><thead><tr><th>順位</th><th>帳票タイプ</th><th>区分</th><th>自信度</th></tr></thead><tbody>${rows}</tbody></table>`
-    : '<p class="muted center">ファイルをアップロードすると、分類結果がここに表示されます</p>';
-  return '<div class="scene-types"><div class="scene-result-head"><span class="srh">判別結果</span></div>'
-    + '<div class="scene-result-body">' + body + '</div></div>';
+  const { counts, unjudged } = sceneTestCounts(sc, t);
+  const threshold = t.threshold != null ? t.threshold : 90;
+  const rows = sceneTestForms(sc).map((f) =>
+    `<div class="sc-res-row"><span class="sc-res-name">${esc(f.name)}</span><span class="sc-res-count" data-resid="${f.id}">${counts.get(f.id) || 0}</span></div>`).join('');
+  const body = t.fileName
+    ? rows + `<div class="sc-res-row is-unjudged"><span class="sc-res-name">未判別</span><span class="sc-res-count" id="scUnjudgedCount">${unjudged}</span></div>`
+    : '<p class="muted center sc-res-empty">ファイルをアップロードすると、判別結果がここに表示されます</p>';
+  return '<div class="scene-types sc-result-pane">'
+    + '<div class="scene-result-head"><span class="srh">判別結果</span></div>'
+    + '<div class="sc-res-list">' + body + '</div>'
+    + '<div class="sc-conf">'
+    + `<div class="sc-conf-head"><span>判別時の確信度</span><b id="scConfVal">${threshold}%</b></div>`
+    + `<input type="range" id="scConf" min="0" max="100" step="1" value="${threshold}" />`
+    + '</div></div>';
 }
 
 /** 「帳票追加」ピッカー（原型 FormPickerModal） */
@@ -6522,20 +6549,42 @@ function sceneDeleteBlockMessage(sceneId) {
   return `この業務シーンは自動取込設定で使用されています（${names}）。関連付けを解除してから削除してください。`;
 }
 
-/** ② 効果テスト：ファイル投入 → モックの分類結果を生成（原型 createMockClassificationResults） */
+/** ② 効果テスト：判別対象の帳票（選択済みを先頭、未選択も 0 件で表示） */
+function sceneTestForms(sc) {
+  const sel = new Set(sc.formIds || []);
+  return CLASSIFY_FORMS.slice().sort((a, b) => (sel.has(b.id) ? 1 : 0) - (sel.has(a.id) ? 1 : 0));
+}
+function sceneTestConfidence(sc, form) {
+  const i = (sc.formIds || []).indexOf(form.id);
+  return i >= 0 ? Number((96 - i * 4.5).toFixed(1)) : 0;
+}
+function sceneTestCounts(sc, t) {
+  const counts = new Map();
+  let unjudged = 0;
+  if (!t || !t.tested) return { counts, unjudged };
+  const forms = (sc.formIds || []).map((id) => byId(CLASSIFY_FORMS, id)).filter(Boolean);
+  const pages = t.pageCount || 8;
+  if (!forms.length) return { counts, unjudged: pages };
+  const base = Math.floor(pages / forms.length), rem = pages % forms.length;
+  forms.forEach((f, i) => {
+    const share = base + (i < rem ? 1 : 0);
+    if (sceneTestConfidence(sc, f) >= (t.threshold != null ? t.threshold : 90)) counts.set(f.id, share);
+    else unjudged += share;
+  });
+  return { counts, unjudged };
+}
+function refreshSceneCounts(sc, t) {
+  const { counts, unjudged } = sceneTestCounts(sc, t);
+  document.querySelectorAll('[data-resid]').forEach((el) => { el.textContent = counts.get(el.dataset.resid) || 0; });
+  const u = document.getElementById('scUnjudgedCount'); if (u) u.textContent = unjudged;
+}
 function setSceneTestFile(name, size) {
   const sc = byId(BIZ_SCENES, state.sceneId);
   if (!sc) return;
-  const forms = (sc.formIds || []).map((id) => byId(CLASSIFY_FORMS, id)).filter(Boolean);
-  const src = forms.length ? forms : CLASSIFY_FORMS.slice(0, 3);
   SCENE_TESTS[sc.id] = {
     fileName: name,
     fileSize: typeof fmtSize === 'function' ? fmtSize(size) : '',
-    tested: true,
-    results: src.map((f, i) => ({
-      rank: i + 1, formName: f.name, category: f.category,
-      confidence: Number((96 - i * 4.5).toFixed(1)),
-    })),
+    page: 1, pageCount: 8, tested: false, threshold: 90, zoom: 1, rot: 0,
   };
   render();
 }
@@ -6696,8 +6745,30 @@ function bindBizScenes() {
       if (f) setSceneTestFile(f.name, f.size);
     };
   }
-  const cf = $('#scClearFile');
-  if (cf) cf.onclick = () => { delete SCENE_TESTS[state.sceneId]; render(); };
+  const rt = $('#scRunTest');
+  if (rt) rt.onclick = () => { const t = SCENE_TESTS[state.sceneId]; if (!t) return; t.tested = true; render(); };
+  const cf = $('#scConf');
+  if (cf) {
+    const sc = cur(); const t = SCENE_TESTS[sc && sc.id];
+    if (t) {
+      cf.oninput = () => { t.threshold = Number(cf.value); const lab = $('#scConfVal'); if (lab) lab.textContent = cf.value + '%'; refreshSceneCounts(sc, t); };
+      cf.onchange = () => render();
+    }
+  }
+  document.querySelectorAll('[data-scpage]').forEach((b) => {
+    b.onclick = () => { const t = SCENE_TESTS[state.sceneId]; if (!t) return; t.page = Math.min(Math.max(1, (t.page || 1) + Number(b.dataset.scpage)), t.pageCount || 8); render(); };
+  });
+  document.querySelectorAll('[data-sctool]').forEach((b) => {
+    b.onclick = () => {
+      const t = SCENE_TESTS[state.sceneId]; if (!t) return;
+      const k = b.dataset.sctool;
+      if (k === 'rot') t.rot = ((t.rot || 0) + 90) % 360;
+      else if (k === 'reset') { t.rot = 0; t.zoom = 1; t.page = 1; }
+      else if (k === 'zoomIn') t.zoom = Math.min(2, (t.zoom || 1) + 0.15);
+      else if (k === 'zoomOut') t.zoom = Math.max(0.5, (t.zoom || 1) - 0.15);
+      render();
+    };
+  });
 
   /* ── 保存／完成 ── */
   const sv = $('#scSave');
