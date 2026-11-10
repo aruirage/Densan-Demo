@@ -1807,3 +1807,13 @@ test('automatic upload does not validate folder organization against scene permi
   run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-x",sceneIds:["cls-zeimu"],folders:["住民異動窓口"],folder:"住民異動窓口",on:true}];');
   assert.equal(run('watchValidateSettings()'), '');
 });
+
+test('automatic upload folder dropdown keeps the original folder hierarchy', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-tree",sceneIds:["cls-zeimu"],folders:["税務窓口"],on:true}]; state.watchFolderMenu="wd-tree"; render=()=>{};');
+  const html = run('renderWatch()');
+  assert.match(html, /watch-folder-tree-row/);
+  assert.match(html, /data-wdept-folder-toggle="税務窓口"/);
+  assert.match(html, /padding-left:0px/);
+  assert.match(html, /padding-left:14px/);
+});

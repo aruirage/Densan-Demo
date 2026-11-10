@@ -822,3 +822,7 @@ fieldset.watch-body:disabled input,fieldset.watch-body:disabled select{backgroun
 .watch-folder-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;background:#eef4fb;color:#285e94;border:1px solid #d6e4f4;border-radius:3px;padding:2px 4px 2px 7px;font-size:11px}
 .watch-folder-chip>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .watch-folder-chip button{border:0;background:transparent;color:#5b7fa6;cursor:pointer;font-size:12px;line-height:1;padding:0 2px}
+
+.watch-folder-tree-row{display:flex;align-items:center;gap:2px;min-width:0}
+.watch-folder-tree-row .watch-folder-opt{flex:1;min-width:0;padding:4px 6px}
+.watch-folder-tree-row .watch-folder-opt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -5967,8 +5967,19 @@ function watchDeptFolders(dept) {
   const list = Array.isArray(dept.folders) ? dept.folders : (dept.folder ? [dept.folder] : []);
   return [...new Set(list.map((x) => String(x || '').trim()).filter(Boolean))];
 }
+function watchCanonicalFolder(folder) {
+  const raw = String(folder || '').trim();
+  if (!raw) return raw;
+  const byName = GROUPS.find((g) => !g.root && watchFolderKey(g.name) === watchFolderKey(raw));
+  if (byName) return watchGroupPath(byName.id) || raw;
+  const gid = watchFolderGroupId(raw);
+  if (!gid) return raw;
+  const g = byId(GROUPS, gid);
+  if (g && watchFolderKey(raw) === watchFolderKey(g.name)) return watchGroupPath(gid) || raw;
+  return raw;
+}
 function watchSetFolders(dept, folders) {
-  dept.folders = [...new Set((folders || []).map((x) => String(x || '').trim()).filter(Boolean))];
+  dept.folders = [...new Set((folders || []).map((x) => watchCanonicalFolder(x)).filter(Boolean))];
   dept.folder = dept.folders[0] || '';
 }
 function watchFolderPaths(nodes, parent) {
@@ -6042,6 +6053,23 @@ function watchResolveFile(relativePath, aiCategoryId) {
   return {departmentId:gid,categoryId:aiCategoryId,archiveRelativePath:segments.join('\\'),dedupScope:gid+'|'+aiCategoryId};
 }
 
+function renderWatchFolderTreeMulti(nodes, parent, selected, depth, deptId, sceneId, usedFolders) {
+  const expanded = state.watchFolderExpanded || {};
+  const used = new Set(usedFolders || []);
+  return (nodes || []).map((n) => {
+    const path = parent ? parent + '/' + n.name : n.name;
+    const hasKids = !!(n.children && n.children.length);
+    const open = hasKids && expanded[path] !== false;
+    const on = (selected || []).includes(path);
+    const isUsed = !on && used.has(path);
+    const caret = hasKids
+      ? `<button type="button" class="watch-folder-caret" data-wdept-folder-toggle="${esc(path)}" aria-label="${open ? '折りたたむ' : '展開'}">${open ? '▾' : '▸'}</button>`
+      : '<span class="watch-folder-caret is-leaf" aria-hidden="true"></span>';
+    const row = `<div class="watch-folder-tree-row${isUsed ? ' is-disabled' : ''}" style="padding-left:${depth * 14}px">${caret}<label class="watch-folder-opt${isUsed ? ' is-disabled' : ''}"><input type="checkbox" data-wdept-folder-opt="${deptId}" data-scene-id="${sceneId}" value="${esc(path)}" ${on ? 'checked' : ''} ${isUsed ? 'disabled' : ''}/><span title="${esc(path)}">${esc(n.name)}</span></label></div>`;
+    return row + (open ? renderWatchFolderTreeMulti(n.children, path, selected, depth + 1, deptId, sceneId, usedFolders) : '');
+  }).join('');
+}
+
 function renderWatch() {
   if (!state.watchSnapshot) state.watchSnapshot = JSON.stringify(WATCH);
   const x=WATCH,row=watchRow,root=x.roots[0],depts=ensureWatchDepartments();
@@ -6053,8 +6081,7 @@ function renderWatch() {
     const sceneDeptRows=active?watchSceneDeptRows(sc):[];
     const types=active?watchDeptTypes(d):[];
     const usedFolders=depts.filter(o=>o.id!==d.id).flatMap(o=>watchDeptFolders(o));
-    const folderOptions=watchFolderPaths(watchFolderTree(),'');
-    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu watch-folder-multi-menu" role="listbox" aria-multiselectable="true">${folderOptions.map(p=>{const on=folders.includes(p);const used=!on&&usedFolders.includes(p);return `<label class="watch-folder-opt${used?' is-disabled':''}"><input type="checkbox" data-wdept-folder-opt="${d.id}" data-scene-id="${sc.id}" value="${esc(p)}" ${on?'checked':''} ${used?'disabled':''}/><span>${esc(p)}</span></label>`;}).join('')}</div>`:'';
+    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu watch-folder-multi-menu" role="listbox" aria-multiselectable="true">${renderWatchFolderTreeMulti(watchFolderTree(),'',folders,0,d.id,sc.id,usedFolders)}</div>`:'';
     const chips=folders.map(f=>`<span class="watch-folder-chip"><span>${esc(f)}</span><button type="button" data-wdept-folder-del="${d.id}" data-folder="${esc(f)}" aria-label="削除">×</button></span>`).join('');
     return `<div class="watch-dept-card watch-dept-row${folders.length?'':' is-empty'}" data-watch-dept="${d.id}" data-scene-id="${sc.id}">
       <div class="watch-dept-fields">
