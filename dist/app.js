@@ -5824,7 +5824,7 @@ function deleteOrganization(id) {
  const ids=new Set([id,...groupDescendantIds(id)]);
  const usedScenes=BIZ_SCENES.filter(sc=>(sc.departmentIds||[]).some(gid=>ids.has(gid)));
  const usedWatches=watchDeptsUsingOrg(ids);
- if(usedScenes.length||usedWatches.length){const names=[...usedScenes.map(s=>s.name),...usedWatches.map(d=>`${(byId(GROUPS,d.groupId)||{}).name||'—'} / ${d.folder||'—'}`)].slice(0,5).join('、');toast(`この組織は業務シーンまたは自動取込設定で使用されています（${names}）。関連設定を解除してから削除してください。`,'error');return false;}
+ if(usedScenes.length||usedWatches.length){const names=[...usedScenes.map(s=>s.name),...usedWatches.flatMap(d=>watchDeptFolders(d).map(f=>`${(byId(GROUPS,watchFolderGroupId(f)||d.groupId)||{}).name||'—'} / ${f}`))].slice(0,5).join('、');toast(`この組織は業務シーンまたは自動取込設定で使用されています（${names}）。関連設定を解除してから削除してください。`,'error');return false;}
  const users=new Set(GROUPS.filter(g=>ids.has(g.id)).flatMap(g=>g.userIds||[]));
  for(let i=ENT_USERS.length-1;i>=0;i--)if(users.has(ENT_USERS[i].uid))ENT_USERS.splice(i,1);
  for(let i=USERS.length-1;i>=0;i--)if(users.has(USERS[i].id))USERS.splice(i,1);
@@ -6412,7 +6412,7 @@ function watchFolderTree() {
  *  組織が親フォルダーに一致していれば配下は対象内。
  *  子フォルダーだけが設定されている場合は、親フォルダー直下のファイルは未割当として扱う。 */
 function watchUnassignedFolders() {
-  const depts = ensureWatchDepartments().filter((d) => d.on && d.folder).map((d) => watchFolderKey(d.folder));
+  const depts = ensureWatchDepartments().filter((d) => d.on).flatMap((d) => watchDeptFolders(d)).map((f) => watchFolderKey(f));
   const covered = (path) => depts.some((d) => path === d || path.startsWith(d + '/'));
   const out = [];
   const walk = (nodes, parent) => {
@@ -6510,17 +6510,36 @@ function watchFolderGroupId(folder) {
   GROUPS.filter(g=>!g.root).forEach((g)=>{ const p=watchFolderKey(watchGroupPath(g.id)); if(p && (key===p||key.startsWith(p+'/'))){ if(p.length>bestLen){best=g.id;bestLen=p.length;} } });
   return best;
 }
+function watchDeptFolders(dept) {
+  const list = Array.isArray(dept.folders) ? dept.folders : (dept.folder ? [dept.folder] : []);
+  return [...new Set(list.map((x) => String(x || '').trim()).filter(Boolean))];
+}
+function watchSetFolders(dept, folders) {
+  dept.folders = [...new Set((folders || []).map((x) => String(x || '').trim()).filter(Boolean))];
+  dept.folder = dept.folders[0] || '';
+}
+function watchFolderPaths(nodes, parent) {
+  const out = [];
+  (nodes || []).forEach((n) => {
+    const path = parent ? parent + '/' + n.name : n.name;
+    out.push(path);
+    out.push(...watchFolderPaths(n.children, path));
+  });
+  return out;
+}
 function watchDeptSync(dept) {
   const sid = (dept.sceneIds || [])[0];
   dept.sceneIds = byId(BIZ_SCENES, sid) ? [sid] : [];
-  if (dept.folder) { const gid = watchFolderGroupId(dept.folder); if (gid) dept.groupId = gid; }
+  watchSetFolders(dept, watchDeptFolders(dept));
+  if (dept.folders[0]) { const gid = watchFolderGroupId(dept.folders[0]); if (gid) dept.groupId = gid; }
   delete dept.mappings;
 }
 function ensureWatchDepartments() {
   if(WATCH.departments){WATCH.departments.forEach(watchDeptSync);return WATCH.departments;}
   const available=GROUPS.filter(g=>!g.root);
   const tax=byId(GROUPS,((byId(BIZ_SCENES,'cls-zeimu')||{}).departmentIds||[])[0])||byId(GROUPS,'g4')||available[0]||{};const welfare=byId(GROUPS,((byId(BIZ_SCENES,'cls-hoiku')||{}).departmentIds||[])[0])||byId(GROUPS,'g6')||available[1]||available[0]||{};
-  WATCH.departments=[{id:'wd-tax',groupId:tax.id||'',folder:(byId(GROUPS,tax.id)||{}).name||'',sceneIds:['cls-zeimu'],on:true},{id:'wd-welfare',groupId:welfare.id||'',folder:(byId(GROUPS,welfare.id)||{}).name||'',sceneIds:['cls-hoiku'],on:true}];
+  const taxFolder=(byId(GROUPS,tax.id)||{}).name||''; const welfareFolder=(byId(GROUPS,welfare.id)||{}).name||'';
+  WATCH.departments=[{id:'wd-tax',groupId:tax.id||'',folder:taxFolder,folders:[taxFolder].filter(Boolean),sceneIds:['cls-zeimu'],on:true},{id:'wd-welfare',groupId:welfare.id||'',folder:welfareFolder,folders:[welfareFolder].filter(Boolean),sceneIds:['cls-hoiku'],on:true}];
   WATCH.departments.forEach(watchDeptSync);
   const r=WATCH.roots[0];if(r&&!r.moveTo)r.moveTo='\\\\filesv01\\処理済';
   return WATCH.departments;
@@ -6533,34 +6552,42 @@ function watchValidateSettings() {
   if(!source)return '監視フォルダーを入力してください';
   if(!target)return '処理後フォルダーを入力してください';
   if(source===target||source.startsWith(target+'/')||target.startsWith(source+'/'))return '監視フォルダーと処理後フォルダーは別の階層に設定してください';
-  const depts=ensureWatchDepartments().filter(d=>d.on),used=new Set();
+  const depts=ensureWatchDepartments().filter(d=>d.on&&watchDeptFolders(d).length),used=new Set();
   if(!depts.length)return '有効な業務シーンを設定してください';
   const validName=n=>n&&n!=='.'&&n!=='..'&&!/[\\/¥￥:*?"<>|]/.test(n);
   const validPath=p=>{const parts=String(p||'').split(/[\\/¥￥]+/).filter(Boolean);return parts.length>0&&parts.every(validName);};
   for(const d of depts){
     const sc=byId(BIZ_SCENES,(d.sceneIds||[])[0]);
     if(!sc)return '業務シーンを選択してください';
-    if(!validPath(d.folder))return '組織フォルダーを確認してください';
-    const gid=watchFolderGroupId(d.folder)||d.groupId;
-    if(!byId(GROUPS,gid))return 'フォルダーが組織配下にありません';
-    if(!expandGroupSelection(sc.departmentIds||[]).includes(gid))return 'フォルダーがデータ権限組織の範囲外です';
     if(!watchDeptTypes(d).length)return 'この業務シーンの帳票类别がありません';
-    const folder=watchFolderKey(d.folder);
-    if([...used].some(k=>k===folder||folder.startsWith(k+'/')||k.startsWith(folder+'/')))return '組織フォルダーが重複しています';used.add(folder);
+    for(const raw of watchDeptFolders(d)){
+      if(!validPath(raw))return '組織フォルダーを確認してください';
+      const gid=watchFolderGroupId(raw)||d.groupId;
+      if(!byId(GROUPS,gid))return 'フォルダーが組織配下にありません';
+      if(!expandGroupSelection(sc.departmentIds||[]).includes(gid))return 'フォルダーがデータ権限組織の範囲外です';
+      const folder=watchFolderKey(raw);
+      if([...used].some(k=>k===folder||folder.startsWith(k+'/')||k.startsWith(folder+'/')))return '組織フォルダーが重複しています';used.add(folder);
+    }
   }
   return '';
 }
 function watchResolveFile(relativePath, aiCategoryId) {
   const segments=String(relativePath||'').split(/[\\/¥￥]+/).filter(Boolean);
   if(segments.some(s=>s==='.'||s==='..'))return {error:'監視フォルダー外のパスです'};
-  const dept=ensureWatchDepartments().find(d=>{
+  let dept=null, matchedFolder='';
+  ensureWatchDepartments().some((d)=>{
     if(!d.on)return false;
-    const parts=String(d.folder||'').split(/[\\/¥￥]+/).filter(Boolean);
-    return parts.length>0&&parts.length<=segments.length&&parts.every((p,i)=>watchFolderKey(p)===watchFolderKey(segments[i]));
+    return watchDeptFolders(d).some((f)=>{
+      const parts=String(f||'').split(/[\\/¥￥]+/).filter(Boolean);
+      const hit=parts.length>0&&parts.length<=segments.length&&parts.every((p,i)=>watchFolderKey(p)===watchFolderKey(segments[i]));
+      if(hit&&(!matchedFolder||parts.length>String(matchedFolder).split(/[\\/¥￥]+/).filter(Boolean).length)){ dept=d; matchedFolder=f; }
+      return hit;
+    });
   });
   if(!dept)return {error:'組織フォルダーが未設定のため未取込（スキャン範囲外）',skipped:true,source:relativePath};
-  if(!watchDeptTypes(dept).some(c=>c.id===aiCategoryId))return {error:'組織の業務シーン内で帳票タイプを判別できません',departmentId:dept.groupId,source:relativePath};
-  return {departmentId:dept.groupId,categoryId:aiCategoryId,archiveRelativePath:segments.join('\\'),dedupScope:dept.groupId+'|'+aiCategoryId};
+  const gid=watchFolderGroupId(matchedFolder)||dept.groupId;
+  if(!watchDeptTypes(dept).some(c=>c.id===aiCategoryId))return {error:'組織の業務シーン内で帳票タイプを判別できません',departmentId:gid,source:relativePath};
+  return {departmentId:gid,categoryId:aiCategoryId,archiveRelativePath:segments.join('\\'),dedupScope:gid+'|'+aiCategoryId};
 }
 
 function renderWatch() {
@@ -6568,18 +6595,22 @@ function renderWatch() {
   const x=WATCH,row=watchRow,root=x.roots[0],depts=ensureWatchDepartments();
   const configured=new Map(depts.map((d)=>[(d.sceneIds||[])[0],d]));
   const departmentCards=BIZ_SCENES.map((sc)=>{
-    const d=configured.get(sc.id)||{id:'wd-'+sc.id,sceneIds:[sc.id],folder:'',groupId:'',on:true};
-    const active=!!d.folder;
+    const d=configured.get(sc.id)||{id:'wd-'+sc.id,sceneIds:[sc.id],folder:'',folders:[],groupId:'',on:true};
+    const folders=watchDeptFolders(d);
+    const active=folders.length>0;
     const sceneDeptRows=active?watchSceneDeptRows(sc):[];
     const types=active?watchDeptTypes(d):[];
-    const usedFolders=depts.filter(o=>o.id!==d.id&&o.folder).map(o=>o.folder);
-    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu" role="listbox" aria-label="フォルダ">${renderWatchFolderNodes(watchFolderTree(),'',d.folder,0,usedFolders)}</div>`:'';
-    return `<div class="watch-dept-card watch-dept-row${d.folder?'':' is-empty'}" data-watch-dept="${d.id}" data-scene-id="${sc.id}">
+    const usedFolders=depts.filter(o=>o.id!==d.id).flatMap(o=>watchDeptFolders(o));
+    const allowedOrgs=new Set(expandGroupSelection(sc.departmentIds||[]));
+    const folderOptions=watchFolderPaths(watchFolderTree(),'').filter((p)=>allowedOrgs.has(watchFolderGroupId(p)));
+    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu watch-folder-multi-menu" role="listbox" aria-multiselectable="true">${folderOptions.map(p=>{const on=folders.includes(p);const used=!on&&usedFolders.includes(p);return `<label class="watch-folder-opt${used?' is-disabled':''}"><input type="checkbox" data-wdept-folder-opt="${d.id}" data-scene-id="${sc.id}" value="${esc(p)}" ${on?'checked':''} ${used?'disabled':''}/><span>${esc(p)}</span></label>`;}).join('')}</div>`:'';
+    const chips=folders.map(f=>`<span class="watch-folder-chip"><span>${esc(f)}</span><button type="button" data-wdept-folder-del="${d.id}" data-folder="${esc(f)}" aria-label="削除">×</button></span>`).join('');
+    return `<div class="watch-dept-card watch-dept-row${folders.length?'':' is-empty'}" data-watch-dept="${d.id}" data-scene-id="${sc.id}">
       <div class="watch-dept-fields">
         <div class="watch-scene-name" title="${esc(sc.name)}">${esc(sc.name)}</div>
         <div class="watch-auto-cell">${types.length?types.map(c=>`<span class="pill">${esc(c.name)}</span>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
         <div class="watch-dept-tree">${sceneDeptRows.length?sceneDeptRows.map(r=>`<div class="watch-dept-tree-row${r.authorized?'':' is-context'}" style="padding-left:${r.depth*12}px" title="${esc(r.name)}">${esc(r.name)}</div>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
-        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-ctl watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified&&!x.pathLoading?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}"><span class="watch-folder-value">${d.folder?esc(String(d.folder).split('/').join(' / ')):'フォルダを選択'}</span></button>${folderMenu}</div>
+        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-ctl watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified&&!x.pathLoading?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}"><span class="watch-folder-value">${folders.length?folders.length+' 件選択':'フォルダを選択'}</span></button>${folderMenu}<div class="watch-folder-chips">${chips}</div></div>
       </div>
     </div>`;
   }).join('');
@@ -6658,16 +6689,25 @@ function bindWatchDepartments() {
     state.watchFolderExpanded[path]=state.watchFolderExpanded[path]===false;
     render();
   });
-  document.querySelectorAll('[data-wdept-folder-pick]').forEach(b=>b.onclick=e=>{
-    e.stopPropagation();
-    const row=b.closest('[data-watch-dept]');
-    const id=row&&row.dataset.watchDept, sid=row&&row.dataset.sceneId;
-    if(!id)return;
+  document.querySelectorAll('[data-wdept-folder-opt]').forEach((cb)=>cb.onchange=()=>{
+    const id=cb.dataset.wdeptFolderOpt, sid=cb.dataset.sceneId;
     let d=get(id);
-    if(!d){ d={id,sceneIds:sid?[sid]:[],folder:'',groupId:'',on:true}; WATCH.departments.push(d); }
-    d.folder=b.dataset.wdeptFolderPick;
-    watchDeptSync(d);
-    state.watchFolderMenu=null;
+    if(!d){ d={id,sceneIds:sid?[sid]:[],folder:'',folders:[],groupId:'',on:true}; WATCH.departments.push(d); }
+    const set=new Set(watchDeptFolders(d));
+    cb.checked?set.add(cb.value):set.delete(cb.value);
+    watchSetFolders(d, [...set]);
+    if(!d.folders.length) WATCH.departments=WATCH.departments.filter((x)=>x!==d);
+    else watchDeptSync(d);
+    state.watchFolderMenu=id;
+    render();
+  });
+  document.querySelectorAll('[data-wdept-folder-del]').forEach((b)=>b.onclick=(e)=>{
+    e.stopPropagation();
+    const id=b.dataset.wdeptFolderDel; let d=get(id);
+    if(!d)return;
+    watchSetFolders(d, watchDeptFolders(d).filter((f)=>f!==b.dataset.folder));
+    if(!d.folders.length) WATCH.departments=WATCH.departments.filter((x)=>x!==d);
+    else watchDeptSync(d);
     render();
   });
   if(!document._watchFolderOutside){
@@ -6951,23 +6991,23 @@ function displayNameExists(type, name, exceptId) {
   return false;
 }
 function watchActiveDepts() {
-  return ensureWatchDepartments().filter((d) => d.on !== false && String(d.folder || '').trim());
+  return ensureWatchDepartments().filter((d) => d.on !== false && watchDeptFolders(d).length);
 }
 function watchDeptsUsingScene(sceneId) {
   return watchActiveDepts().filter((d) => (d.sceneIds || []).includes(sceneId));
 }
 function watchDeptsUsingOrg(ids) {
   const set = new Set(ids);
-  return watchActiveDepts().filter((d) => d.groupId && set.has(d.groupId));
+  return watchActiveDepts().filter((d) => watchDeptFolders(d).some((f) => set.has(watchFolderGroupId(f) || d.groupId)));
 }
 function watchUsesOrgScene(sceneId, orgIds) {
   const set = new Set(Array.isArray(orgIds) ? orgIds : [orgIds]);
-  return watchActiveDepts().some((d) => (d.sceneIds || []).includes(sceneId) && d.groupId && set.has(d.groupId));
+  return watchActiveDepts().some((d) => (d.sceneIds || []).includes(sceneId) && watchDeptFolders(d).some((f) => set.has(watchFolderGroupId(f) || d.groupId)));
 }
 function sceneDeleteBlockMessage(sceneId) {
   const used = watchDeptsUsingScene(sceneId);
   if (!used.length) return '';
-  const names = used.slice(0, 5).map((d) => `${(byId(GROUPS, d.groupId) || {}).name || '—'} / ${d.folder || '—'}`).join('、');
+  const names = used.flatMap((d) => watchDeptFolders(d).map((f) => `${(byId(GROUPS, watchFolderGroupId(f) || d.groupId) || {}).name || '—'} / ${f}`)).slice(0, 5).join('、');
   return `この業務シーンは自動取込設定で使用されています（${names}）。関連付けを解除してから削除してください。`;
 }
 
