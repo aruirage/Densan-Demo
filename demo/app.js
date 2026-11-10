@@ -5831,6 +5831,19 @@ function watchDeptScenes(groupId) {
 function watchSceneDepartments(sc) {
   return expandGroupSelection(sc.departmentIds || []).map((id) => byId(GROUPS, id)).filter(Boolean);
 }
+function watchSceneDeptRows(sc) {
+  const auth = new Set(expandGroupSelection(sc.departmentIds || []));
+  const rows = [];
+  const hasAuth = (gid) => auth.has(gid) || GROUPS.some((g) => g.parentId === gid && hasAuth(g.id));
+  const walk = (parentId, depth) => GROUPS.filter((g) => (g.parentId || null) === (parentId || null) && !g.root).forEach((g) => {
+    if (!hasAuth(g.id)) return;
+    rows.push({ id: g.id, name: g.name, depth, authorized: auth.has(g.id) });
+    walk(g.id, depth + 1);
+  });
+  const root = GROUPS.find((g) => g.root);
+  if (root) walk(root.id, 0);
+  return rows;
+}
 function watchDeptTypes(dept) {
   const names = (dept.sceneIds || []).flatMap(id => ((byId(BIZ_SCENES,id)||{}).formIds||[]).map(fid => (byId(CLASSIFY_FORMS,fid)||{}).name)).filter(Boolean);
   const ids = new Set(LAYOUT.filter(l=>names.includes(l.name)).map(l=>l.category));
@@ -6009,12 +6022,12 @@ function renderWatch() {
   const departmentCards=depts.map((d,di)=>{
     const scene=byId(BIZ_SCENES,(d.sceneIds||[])[0]);
     const sceneOpts='<option value="">選択してください</option>'+BIZ_SCENES.map(sc=>`<option value="${sc.id}" ${scene&&scene.id===sc.id?'selected':''}>${esc(sc.name)}</option>`).join('');
-    const sceneDepts=scene?watchSceneDepartments(scene):[];
+    const sceneDeptRows=scene?watchSceneDeptRows(scene):[];
     const types=watchDeptTypes(d);
     return `<div class="watch-dept-card watch-dept-row${d.on?'':' is-off'}" data-watch-dept="${d.id}">
       <div class="watch-dept-fields">
         <select class="fld watch-scene-select" data-wdept-scene="${d.id}">${sceneOpts}</select>
-        <div class="watch-auto-cell">${sceneDepts.length?sceneDepts.map(g=>`<span class="pill">${esc(g.name)}</span>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
+        <div class="watch-dept-tree">${sceneDeptRows.length?sceneDeptRows.map(r=>`<div class="watch-dept-tree-row${r.authorized?'':' is-context'}" style="padding-left:${r.depth*12}px" title="${esc(r.name)}">${esc(r.name)}</div>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
         <input class="fld mono watch-folder-input" data-wdept-folder="${d.id}" value="${esc(d.folder)}" placeholder="例：税務窓口/住民税/申告書" />
         <div class="watch-auto-cell">${types.length?types.map(c=>`<span class="pill">${esc(c.name)}</span>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
         <button type="button" class="icon-btn watch-dept-delete" data-wdept-del="${d.id}" title="組織設定を削除" aria-label="組織設定を削除">×</button>

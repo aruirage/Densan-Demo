@@ -1517,6 +1517,10 @@ test('自動取込設定: 業務シーンから対象部門と帳票类别を自
   assert.match(html, /<span>対象部門（自動）<\/span>/);
   assert.match(html, /<span>帳票类别<\/span>/);
   assert.match(html, /class="pill"/);
+  assert.match(html, /watch-dept-tree/);
+  assert.ok(html.indexOf('税務窓口') < html.indexOf('税務承認者'));
+  assert.match(html, /padding-left:0px[^>]*>税務窓口/);
+  assert.match(html, /padding-left:12px[^>]*>税務承認者/);
   assert.doesNotMatch(html, /data-wdept-group-trigger=|data-gfopt="wdeptScene:/);
 });
 
