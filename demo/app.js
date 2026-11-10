@@ -5997,8 +5997,13 @@ function watchDeptSync(dept) {
 function ensureWatchDepartments() {
   if(WATCH.departments){WATCH.departments.forEach(watchDeptSync);return WATCH.departments;}
   const available=GROUPS.filter(g=>!g.root);
-  const tax=byId(GROUPS,((byId(BIZ_SCENES,'cls-zeimu')||{}).departmentIds||[])[0])||byId(GROUPS,'g4')||available[0]||{};const welfare=byId(GROUPS,((byId(BIZ_SCENES,'cls-hoiku')||{}).departmentIds||[])[0])||byId(GROUPS,'g6')||available[1]||available[0]||{};
-  const taxFolder=(byId(GROUPS,tax.id)||{}).name||''; const welfareFolder=(byId(GROUPS,welfare.id)||{}).name||'';
+  const tax=byId(GROUPS,((byId(BIZ_SCENES,'cls-zeimu')||{}).departmentIds||[])[0])||byId(GROUPS,'g4')||available[0]||{};
+  const hoikuScene=byId(BIZ_SCENES,'cls-hoiku');
+  const hoikuRows=hoikuScene?watchSceneDeptRows(hoikuScene):[];
+  const hoikuDept=hoikuRows.find(r=>r.id==='g6'&&r.authorized)||hoikuRows.find(r=>r.authorized&&r.depth>0)||null;
+  const welfare=byId(GROUPS,hoikuDept?hoikuDept.id:null)||byId(GROUPS,'g6')||available[1]||available[0]||{};
+  const taxFolder=watchGroupPath(tax.id)||(byId(GROUPS,tax.id)||{}).name||'';
+  const welfareFolder=watchGroupPath(welfare.id)||(byId(GROUPS,welfare.id)||{}).name||'';
   WATCH.departments=[{id:'wd-tax',groupId:tax.id||'',folder:taxFolder,folders:[taxFolder].filter(Boolean),sceneIds:['cls-zeimu'],on:true},{id:'wd-welfare',groupId:welfare.id||'',folder:welfareFolder,folders:[welfareFolder].filter(Boolean),sceneIds:['cls-hoiku'],on:true}];
   WATCH.departments.forEach(watchDeptSync);
   const r=WATCH.roots[0];if(r&&!r.moveTo)r.moveTo='\\\\filesv01\\処理済';
