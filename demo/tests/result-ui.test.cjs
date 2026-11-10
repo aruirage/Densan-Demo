@@ -1082,7 +1082,7 @@ test('automatic upload maps department folders and scene categories under one re
  assert.match(html,/data-wdept-folder-trigger=/);
  assert.match(html,/帳票类别/);
  assert.doesNotMatch(html,/data-wdept-group-trigger=|data-gfopt="wdeptScene:/);
- assert.match(html,/既存の業務シーンをすべて表示/);assert.doesNotMatch(html,/data-wmap-/);
+ assert.match(html,/業務シーンごとにデータ権限組織と帳票类别を自動表示/);assert.doesNotMatch(html,/data-wmap-/);
  assert.equal(run('ensureWatchDepartments().length'),2);
 });
 
