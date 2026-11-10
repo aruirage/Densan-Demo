@@ -681,7 +681,7 @@ test('row download icon opens a hover menu with three export formats', () => {
 test('the usage-settings pages drop the settings side menu and span the full width', () => {
   const run = app();
   /* 利用設定の各画面は左メニューなしの全幅（辞書登録・辞書監視も同じ扱い） */
-  assert.equal(run('JSON.stringify(CFG_NO_SIDEBAR)'), '["users","roles","security","logs","api","dictionary","watch"]');
+  assert.equal(run('JSON.stringify(CFG_NO_SIDEBAR)'), '["users","roles","security","logs","dictionary","watch"]');
   /* render() は noSidePane のとき aside を描かず、layout-pane を 1 カラムにする */
   assert.match(source, /const noSidePane = CFG_NO_SIDEBAR\.includes\(route\)/);
   assert.match(source, /isReview \|\| isFullPane \|\| noSidePane \|\| isTypeList\) \? '' : \(isCfg \? renderCfgNav\(\)/);

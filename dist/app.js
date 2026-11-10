@@ -1951,7 +1951,7 @@ const HEADER_MENUS = {
     { id: 'ticketDetail', label: '帳票タイプ設定', menuNode: 'settings-type' },
     { id: 'bizScenes', label: '業務シーン設定', menuNode: 'settings-scenes' },
   ] },
-  /* 利用設定の子（製品 5 項目 ＋ 外部API） */
+  /* 利用設定の子（製品 5 項目） */
   usage: { label: '利用設定', items: [
     { id: 'dictionary', label: '辞書登録', menuNode: 'usage-dict' },
     { id: 'users', label: 'ユーザー管理', menuNode: 'usage-users' },
@@ -1977,7 +1977,6 @@ const PAGE_MENU_NODE = {
   logs: 'usage-logs',
   dictionary: 'usage-dict',
   watch: 'usage-watch',
-  api: 'usage-api',
   permissions: 'usage-permissions',
 };
 
@@ -3775,7 +3774,6 @@ const TABS_DEF = {
   ticketDetail: { id: 'ticketDetail', label: '帳票タイプ設定', route: 'ticketDetail' },
   bizScenes: { id: 'bizScenes', label: '業務シーン設定', route: 'bizScenes' },
   permissions: { id: 'permissions', label: '帳票権限管理', route: 'permissions' },
-  api: { id: 'api', label: '外部API連携', route: 'api' },
   users: { id: 'users', label: 'ユーザー管理', route: 'users' },
   roles: { id: 'roles', label: '権限設定', route: 'roles' },
   security: { id: 'security', label: 'セキュリティ設定', route: 'security' },
@@ -5072,138 +5070,6 @@ function renderTicketTypes() {
 }
 
 
-/** 外部API連携（客户回答：外部システムから API 呼び出し／Webhook／ハッシュで二重取込防止） */
-/* ── アクセス設定（外部API）: 通知先URL / APIキー管理 / API URL ── */
-const ACCESS_TABS = [
-  { id: 'notify', label: '通知先URL' },
-  { id: 'keys', label: 'APIキー管理' },
-  { id: 'url', label: 'API URL' },
-];
-
-const ACCESS_STATE = {
-  tab: 'notify',              // notify | keys | url（既定は通知先URL）
-  notifyEditing: false,
-  notifyDraft: '',
-  notifyUrl: '',
-  signKey: '',
-};
-
-/** SK- + 32桁の16進（署名鍵・APIキー共通のダミー形式） */
-function randomHexKey() {
-  let out = '';
-  for (let i = 0; i < 32; i += 1) out += '0123456789ABCDEF'[Math.floor(Math.random() * 16)];
-  return 'SK-' + out;
-}
-
-const API_KEY_STATUS = { '7日間': 7, '1年': 365, '3年': 1095 };
-function shiftStamp(base, days) {
-  const d = new Date(String(base).replace(/-/g, '/'));
-  d.setDate(d.getDate() + days);
-  const p2 = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
-}
-function endOfDay(stamp) {
-  return String(stamp).slice(0, 10) + ' 23:59:59';
-}
-
-let ACCESS_KEYS = [
-  { id: 'ak1', name: 'tz', key: 'SK-D434F02F394A44E78C7B5F7186A07E28', created: '2026-08-20 10:33:14', from: '2026-08-20 00:00:00', to: '2029-08-20 23:59:59', status: '有効', owner: 'test202604010001' },
-  { id: 'ak2', name: 'test', key: 'SK-CBEA34FA5CC94D83B253815B52AF51D9', created: '2026-05-08 09:41:44', from: '2026-05-08 00:00:00', to: '2029-05-08 23:59:59', status: '有効', owner: 'test202604010001' },
-  { id: 'ak3', name: '112', key: 'SK-5C93E0E432D4D3FADB9A23DF7A93419', created: '2026-04-21 11:29:09', from: '2026-04-21 00:00:00', to: '2026-04-28 23:59:59', status: '有効', owner: 'test202604010001' },
-];
-let ACCESS_KEY_EDIT = null;   // { mode: 'add' | 'edit', id?, name, term }
-
-/** 外部API：公開エンドポイント一覧（URL はデモ用のダミー） */
-const API_BASE = 'https://llmocr.example.jp/api-admin/ai/open/v1';
-const API_MODULES = [
-  { id: 'upload', name: 'ファイルアップロード', method: 'POST', path: '/files/upload', desc: 'PDF／画像をアップロードし、document_id を発行します。' },
-  { id: 'recognize', name: '帳票読取', method: 'POST', path: '/recognize', desc: 'アップロード済み文書の読取を開始します（fileNo 指定）。' },
-  { id: 'task-one', name: '帳票読取結果照会', method: 'GET', path: '/task/single/{fileNo}', desc: '1 件の読取結果（項目・値・ステータス）を照会します。' },
-  { id: 'task-batch', name: 'タスク読取結果照会', method: 'GET', path: '/task/batch/{batchNo}', desc: 'バッチ単位で読取結果をまとめて照会します。' },
-  { id: 'classify-batch', name: '分類結果照会', method: 'GET', path: '/classify/batch/{batchNo}', desc: 'バッチ単位で分類結果（帳票タイプ判定）を照会します。' },
-];
-
-/** アクセス設定：通知先URLタブ（既定は閲覧のみ。「編集」で編集モードに入る） */
-function renderAccessNotifyTab() {
-  const S = ACCESS_STATE;
-  const editing = !!S.notifyEditing;
-  const v = editing ? S.notifyDraft : S.notifyUrl;
-  const actions = editing
-    ? '<button class="btn teal" id="accNotifySave">保存</button>'
-    : '<button class="btn teal" id="accNotifyEdit">編集</button>';
-  return `
-  <section class="access-card">
-    <div class="access-card-head">
-      <h2 class="access-card-title">外部通知設定</h2>
-      ${actions}
-    </div>
-    <label class="access-field">
-      <span class="access-label">通知先URL</span>
-      <input class="fld access-readonly" id="accNotifyUrl" value="${esc(v)}" ${editing ? '' : 'readonly'} placeholder="通知先URLを入力してください" />
-    </label>
-    <label class="access-field">
-      <span class="access-label">署名鍵</span>
-      <span class="access-inline">
-        <input class="fld access-readonly" id="accSignKey" value="${esc(S.signKey)}" readonly placeholder="生成ボタンをクリックしてください" />
-        ${editing ? '<button class="btn teal" id="accSignGen">生成</button>' : ''}
-      </span>
-    </label>
-  </section>`;
-}
-
-function renderAccessKeysTab() {
-  const rows = ACCESS_KEYS.map((k, i) => `
-    <tr>
-      <td style="color:var(--text-2)">${i + 1}</td>
-      <td>${esc(k.name)}</td>
-      <td><code class="access-key">${esc(k.key)}</code></td>
-      <td style="white-space:nowrap;color:var(--text-2)">${esc(k.created)}</td>
-      <td style="white-space:nowrap;color:var(--text-2)">${esc(k.from)}</td>
-      <td style="white-space:nowrap;color:var(--text-2)">${esc(k.to)}</td>
-      <td><span class="st ${k.status === '有効' ? 'ok' : 'wait'}"><span class="dot"></span>${esc(k.status)}</span></td>
-      <td style="color:var(--text-2)">${esc(k.owner)}</td>
-      <td class="access-ops"><div class="acts">
-        <button class="act-text" data-acckey="edit" data-id="${esc(k.id)}"><span class="ico i-edit"></span>編集</button>
-        <button class="act-text danger" data-acckey="del" data-id="${esc(k.id)}"><span class="ico i-delete"></span>削除</button>
-      </div></td>
-    </tr>`).join('');
-  return `
-  <section class="access-card">
-    <div class="access-card-head">
-      <h2 class="access-card-title">APIキー</h2>
-      <button class="btn teal" id="accKeyAdd">新規追加</button>
-    </div>
-    <div class="tablewrap">
-      <table class="access-table">
-        <thead><tr>
-          <th style="width:56px">No.</th><th style="width:140px">API名</th><th style="width:300px">APIキー</th>
-          <th style="width:170px">作成日時</th><th style="width:170px">開始日</th><th style="width:170px">終了日</th>
-          <th style="width:90px">ステータス</th><th style="width:180px">作成者</th>
-          <th style="width:170px">操作・処理</th>
-        </tr></thead>
-        <tbody>${rows || '<tr><td colspan="9" class="empty-cell">データなし</td></tr>'}</tbody>
-      </table>
-    </div>
-  </section>`;
-}
-
-/** アクセス設定：API URLタブ */
-function renderAccessUrlTab() {
-  const modules = API_MODULES.map((m) => {
-    const url = API_BASE + m.path;
-    return `
-    <section class="api-module">
-      <h4 class="api-module-name">${esc(m.name)}</h4>
-      <div class="api-url-row">
-        <span class="k">API URL</span>
-        <code class="api-url">${esc(url)}</code>
-        <button type="button" class="icon-btn api-copy" data-copy="${esc(url)}" title="URLをコピー" aria-label="URLをコピー"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><rect x="5.2" y="5.2" width="8.3" height="8.3" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.8 3.4V3.1a1.4 1.4 0 0 0-1.4-1.4H3.6a1.4 1.4 0 0 0-1.4 1.4v5.8a1.4 1.4 0 0 0 1.4 1.4h.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
-      </div>
-    </section>`;
-  }).join('');
-  return `<div class="api-modules">${modules}</div>`;
-}
-
 /** ユーザー追加／編集ダイアログ（製品の「ユーザー追加」に合わせる） */
 
 /* ══ 一覧の「操作・処理履歴」を操作記録に正規化（serve.py 注入） ══
@@ -5466,45 +5332,6 @@ function renderUserAddDialog() {
   </div>`;
 }
 
-/** APIキー追加／編集ダイアログ */
-function renderAccessKeyDialog() {
-  const d = ACCESS_KEY_EDIT;
-  if (!d) return '';
-  const isEdit = d.mode === 'edit';
-  const terms = Object.keys(API_KEY_STATUS);
-  return `
-  <div class="modal-back" id="accKeyBack">
-    <div class="modal access-key-modal" style="width:min(560px,100%)">
-      <div class="modal-head"><b>${isEdit ? 'API キー編集' : 'API キー'}</b><span class="spacer"></span><button class="icon-btn" id="accKeyClose"><span class="ico i-close"></span></button></div>
-      <div class="modal-canvas access-key-canvas">
-        <label class="access-field">
-          <span class="access-label">名称</span>
-          <input class="fld" id="accKeyName" value="${esc(d.name)}" placeholder="入力してください" />
-        </label>
-        ${isEdit ? '' : `
-        <label class="access-field">
-          <span class="access-label">有効期限</span>
-          <select class="fld" id="accKeyTerm">${terms.map((t) => `<option ${t === (d.term || '1年') ? 'selected' : ''}>${t}</option>`).join('')}</select>
-        </label>`}
-      </div>
-      <div class="modal-foot">
-        <span class="spacer"></span>
-        <button class="btn" id="accKeyCancel">キャンセル</button>
-        <button class="btn teal" id="accKeyOk">OK</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function renderApiPage() {
-  const tab = ACCESS_STATE.tab || 'url';
-  const body = tab === 'notify' ? renderAccessNotifyTab() : tab === 'keys' ? renderAccessKeysTab() : renderAccessUrlTab();
-  return `${cfgHeader('API設定', '')}
-  <div class="access-tabs" role="tablist">
-    ${ACCESS_TABS.map((t) => `<button type="button" role="tab" class="access-tab ${tab === t.id ? 'on' : ''}" data-acctab="${t.id}" aria-selected="${tab === t.id}">${esc(t.label)}</button>`).join('')}
-  </div>
-  <div class="access-body">${body}</div>`;
-}
 /** ユーザー → 所属グループ（帳票権限の付与単位）。uid 経由で GROUPS を逆引きする */
 function userGroups(u) {
   return GROUPS.filter(g=>(g.userIds||[]).includes(u && u.uid));
@@ -8705,7 +8532,7 @@ function renderMyTasks() {
 
 /** 左の設定メニュー（renderCfgNav）を出さない設定画面。全幅（1 カラム）で見せる。 */
 /* 利用設定の各画面は、左の設定メニューを出さず全幅で表示する */
-const CFG_NO_SIDEBAR = ['users', 'roles', 'security', 'logs', 'api', 'dictionary', 'watch'];
+const CFG_NO_SIDEBAR = ['users', 'roles', 'security', 'logs', 'dictionary', 'watch'];
 
 /** 帳票設定／利用設定の左メニュー（製品の構成に合わせる） */
 function renderCfgNav() {
@@ -8906,7 +8733,7 @@ function render() {
   const prevMainEl = app.querySelector('.maincol');
   const prevMainTop = prevMainEl ? prevMainEl.scrollTop : 0;
   const prevWinY = window.scrollY || 0;
-  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices', 'account'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
+  let route = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices', 'account'].includes(state.page) ? state.page : 'result';   // 不正値は読取結果一覧へ
   /* メニュー権限の無い画面は開かず、到達可能な先頭へ寄せる（削除線ではなく非表示） */
   if (route !== 'review' && !canReachPage(route)) {
     const fallback = ['home', 'upload', 'result', 'myTasks', 'ticketDetail', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices'].find((p) => canReachPage(p)) || 'home';
@@ -8925,7 +8752,7 @@ function render() {
   }
   const isTypeList = false;
   const isTypeDetail = route === 'ticketDetail';      // 左：タイプ一覧／右：Step1〜4
-  const isCfg = ['permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(route);
+  const isCfg = ['permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'account'].includes(route);
   const isScene = route === 'bizScenes';        // 業務シーン設定（左：業務シーンリスト／右：ガイド or 編集）
   const isFullPane = isTypeDetail || isScene || route === 'notices' || route === 'account';
   const noSidePane = CFG_NO_SIDEBAR.includes(route);   // 利用設定の各画面：左の設定メニューを出さず全幅で見せる
@@ -8977,7 +8804,6 @@ function render() {
           : isTypeList ? renderTicketTypes()
           : isReview ? renderReview()
           : isCfg ? (route === 'permissions' ? renderPermissions()
-                : route === 'api' ? renderApiPage()
                   : route === 'users' ? renderUsers()
                     : route === 'roles' ? renderRoles()
                       : route === 'dictionary' ? renderDictionary()
@@ -10204,116 +10030,6 @@ function bindCfgPages() {
     });
   }
 
-  /* アクセス設定：タブ切替 */
-  document.querySelectorAll('[data-acctab]').forEach((b) => {
-    b.onclick = () => { ACCESS_STATE.tab = b.dataset.acctab; render(); };
-  });
-  /* アクセス設定：通知先URLタブ */
-  const notifyEdit = $('#accNotifyEdit');
-  if (notifyEdit) notifyEdit.onclick = () => {
-    ACCESS_STATE.notifyEditing = true;
-    ACCESS_STATE.notifyDraft = ACCESS_STATE.notifyUrl;
-    render();
-    const el = $('#accNotifyUrl');
-    if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
-  };
-  const notifySave = $('#accNotifySave');
-  if (notifySave) notifySave.onclick = () => {
-    const input = $('#accNotifyUrl');
-    if (input) ACCESS_STATE.notifyUrl = input.value;
-    ACCESS_STATE.notifyEditing = false;
-    render();
-    toast('通知先URLを保存しました');
-  };
-  const notifyInput = $('#accNotifyUrl');
-  if (notifyInput) {
-    notifyInput.oninput = () => { ACCESS_STATE.notifyDraft = notifyInput.value; };
-  }
-  const signGen = $('#accSignGen');
-  if (signGen) signGen.onclick = () => {
-    ACCESS_STATE.signKey = randomHexKey();
-    render();
-    toast('署名鍵を生成しました');
-  };
-  /* アクセス設定：APIキー管理タブ */
-  const keyAdd = $('#accKeyAdd');
-  if (keyAdd) keyAdd.onclick = () => {
-    ACCESS_KEY_EDIT = { mode: 'add', name: '', term: '1年' };
-    render();
-    const el = $('#accKeyName'); if (el) el.focus();
-  };
-  document.querySelectorAll('[data-acckey]').forEach((b) => {
-    b.onclick = () => {
-      const id = b.dataset.id;
-      if (b.dataset.acckey === 'del') {
-        ACCESS_KEYS = ACCESS_KEYS.filter((k) => k.id !== id);
-        render();
-        toast('APIキーを削除しました');
-        return;
-      }
-      const k = ACCESS_KEYS.find((x) => x.id === id);
-      if (!k) return;
-      ACCESS_KEY_EDIT = { mode: 'edit', id, name: k.name };
-      render();
-    };
-  });
-  /* アクセス設定：APIキーダイアログ */
-  if (ACCESS_KEY_EDIT) {
-    const back = $('#accKeyBack');
-    const closeKeyDlg = () => { ACCESS_KEY_EDIT = null; render(); };
-    if (back) back.onclick = (e) => { if (e.target === back) closeKeyDlg(); };
-    const x = $('#accKeyClose'); if (x) x.onclick = closeKeyDlg;
-    const cancel = $('#accKeyCancel'); if (cancel) cancel.onclick = closeKeyDlg;
-    const nameInput = $('#accKeyName');
-    if (nameInput) nameInput.oninput = () => { ACCESS_KEY_EDIT.name = nameInput.value; };
-    const termInput = $('#accKeyTerm');
-    if (termInput) termInput.onchange = () => { ACCESS_KEY_EDIT.term = termInput.value; };
-    const ok = $('#accKeyOk');
-    if (ok) ok.onclick = () => {
-      const name = (ACCESS_KEY_EDIT.name || '').trim();
-      if (!name) { toast('名称を入力してください'); return; }
-      if (ACCESS_KEY_EDIT.mode === 'edit') {
-        const k = ACCESS_KEYS.find((x2) => x2.id === ACCESS_KEY_EDIT.id);
-        if (k) k.name = name;
-        toast('APIキーを更新しました');
-      } else {
-        const term = ACCESS_KEY_EDIT.term || '1年';
-        const created = nowStamp();
-        ACCESS_KEYS = [{
-          id: 'ak' + Date.now(),
-          name,
-          key: randomHexKey(),
-          created,
-          from: String(created).slice(0, 10) + ' 00:00:00',
-          to: endOfDay(shiftStamp(created, API_KEY_STATUS[term] || 365)),
-          status: '有効',
-          owner: 'test202604010001',
-        }, ...ACCESS_KEYS];
-        toast('APIキーを追加しました');
-      }
-      ACCESS_KEY_EDIT = null;
-      render();
-    };
-  }
-  /* API URL コピー */
-  document.querySelectorAll('[data-copy]').forEach((b) => {
-    b.onclick = async () => {
-      const text = b.dataset.copy || '';
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(text);
-        } else {
-          const ta = document.createElement('textarea');
-          ta.value = text; document.body.appendChild(ta); ta.select();
-          document.execCommand('copy'); ta.remove();
-        }
-        toast('API URL をコピーしました');
-      } catch (err) {
-        toast('コピーできませんでした。URL を選択してコピーしてください');
-      }
-    };
-  });
-
   // ユーザー管理
   const uq = $('#cfgUserQ');
   if (uq) { uq.oninput = () => { cfgState.userQ = uq.value; }; uq.onchange = () => render(); uq.onkeydown = (e) => { if (e.key === 'Enter') render(); }; }
@@ -11483,7 +11199,7 @@ function applyHash() {
     else if (k === 'rename') { const [target, text] = val.split('|'); state.rename[target] = text; }
     else if (k === 'f') { const [key, v2] = val.split(':'); state.filters[key] = v2; }
     else if (k === 'open') state.filterOpen = true;
-    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'api', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices', 'account'].includes(val) ? val : 'result';
+    else if (k === 'page') state.page = ['home', 'upload', 'result', 'myTasks', 'review', 'ticketTypes', 'ticketDetail', 'bizScenes', 'permissions', 'users', 'roles', 'security', 'logs', 'dictionary', 'watch', 'notices', 'account'].includes(val) ? val : 'result';
     else if (k === 'review' && val) {
       state.reviewId = val;
       state.page = 'review';
