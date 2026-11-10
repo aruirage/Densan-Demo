@@ -5277,8 +5277,7 @@ function deleteOrganization(id) {
  const org=byId(GROUPS,id);if(!org||org.root)return false;
  const ids=new Set([id,...groupDescendantIds(id)]);
  const usedScenes=BIZ_SCENES.filter(sc=>(sc.departmentIds||[]).some(gid=>ids.has(gid)));
- const usedWatches=watchDeptsUsingOrg(ids);
- if(usedScenes.length||usedWatches.length){const names=[...usedScenes.map(s=>s.name),...usedWatches.flatMap(d=>watchDeptFolders(d).map(f=>`${(byId(GROUPS,watchFolderGroupId(f)||d.groupId)||{}).name||'—'} / ${f}`))].slice(0,5).join('、');toast(`この組織は業務シーンまたは自動取込設定で使用されています（${names}）。関連設定を解除してから削除してください。`,'error');return false;}
+ if(usedScenes.length){const names=usedScenes.map(s=>s.name).slice(0,5).join('、');toast(`この組織は業務シーンで使用されています（${names}）。関連設定を解除してから削除してください。`,'error');return false;}
  const users=new Set(GROUPS.filter(g=>ids.has(g.id)).flatMap(g=>g.userIds||[]));
  for(let i=ENT_USERS.length-1;i>=0;i--)if(users.has(ENT_USERS[i].uid))ENT_USERS.splice(i,1);
  for(let i=USERS.length-1;i>=0;i--)if(users.has(USERS[i].id))USERS.splice(i,1);
@@ -6018,7 +6017,6 @@ function watchValidateSettings() {
       if(!validPath(raw))return '組織フォルダーを確認してください';
       const gid=watchFolderGroupId(raw)||d.groupId;
       if(!byId(GROUPS,gid))return 'フォルダーが組織配下にありません';
-      if(!expandGroupSelection(sc.departmentIds||[]).includes(gid))return 'フォルダーがデータ権限組織の範囲外です';
       const folder=watchFolderKey(raw);
       if([...used].some(k=>k===folder||folder.startsWith(k+'/')||k.startsWith(folder+'/')))return '組織フォルダーが重複しています';used.add(folder);
     }
@@ -6055,8 +6053,7 @@ function renderWatch() {
     const sceneDeptRows=active?watchSceneDeptRows(sc):[];
     const types=active?watchDeptTypes(d):[];
     const usedFolders=depts.filter(o=>o.id!==d.id).flatMap(o=>watchDeptFolders(o));
-    const allowedOrgs=new Set(expandGroupSelection(sc.departmentIds||[]));
-    const folderOptions=watchFolderPaths(watchFolderTree(),'').filter((p)=>allowedOrgs.has(watchFolderGroupId(p)));
+    const folderOptions=watchFolderPaths(watchFolderTree(),'');
     const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu watch-folder-multi-menu" role="listbox" aria-multiselectable="true">${folderOptions.map(p=>{const on=folders.includes(p);const used=!on&&usedFolders.includes(p);return `<label class="watch-folder-opt${used?' is-disabled':''}"><input type="checkbox" data-wdept-folder-opt="${d.id}" data-scene-id="${sc.id}" value="${esc(p)}" ${on?'checked':''} ${used?'disabled':''}/><span>${esc(p)}</span></label>`;}).join('')}</div>`:'';
     const chips=folders.map(f=>`<span class="watch-folder-chip"><span>${esc(f)}</span><button type="button" data-wdept-folder-del="${d.id}" data-folder="${esc(f)}" aria-label="削除">×</button></span>`).join('');
     return `<div class="watch-dept-card watch-dept-row${folders.length?'':' is-empty'}" data-watch-dept="${d.id}" data-scene-id="${sc.id}">
@@ -6454,16 +6451,8 @@ function watchDeptsUsingOrg(ids) {
   const set = new Set(ids);
   return watchActiveDepts().filter((d) => watchDeptFolders(d).some((f) => set.has(watchFolderGroupId(f) || d.groupId)));
 }
-function watchUsesOrgScene(sceneId, orgIds) {
-  const set = new Set(Array.isArray(orgIds) ? orgIds : [orgIds]);
-  return watchActiveDepts().some((d) => (d.sceneIds || []).includes(sceneId) && watchDeptFolders(d).some((f) => set.has(watchFolderGroupId(f) || d.groupId)));
-}
-function sceneDeleteBlockMessage(sceneId) {
-  const used = watchDeptsUsingScene(sceneId);
-  if (!used.length) return '';
-  const names = used.flatMap((d) => watchDeptFolders(d).map((f) => `${(byId(GROUPS, watchFolderGroupId(f) || d.groupId) || {}).name || '—'} / ${f}`)).slice(0, 5).join('、');
-  return `この業務シーンは自動取込設定で使用されています（${names}）。関連付けを解除してから削除してください。`;
-}
+function watchUsesOrgScene(sceneId, orgIds) { return false; }
+function sceneDeleteBlockMessage(sceneId) { return ''; }
 
 /** ② 効果テスト：判別対象の帳票（選択済みを先頭、未選択も 0 件で表示） */
 function sceneTestForms(sc) {
@@ -6559,7 +6548,6 @@ function bindBizScenes() {
       if (!ask(`「${sc ? sc.name : id}」を削除しますか？`)) return;
       const i = BIZ_SCENES.findIndex((x) => x.id === id);
       if (i >= 0) BIZ_SCENES.splice(i, 1);
-      WATCH.departments = (WATCH.departments || []).filter((d) => !(d.sceneIds || []).includes(id));
       delete SCENE_TESTS[id];
       if (state.sceneId === id) { state.sceneId = null; state.sceneStep = 1; }
       state.sceneMenu = null;

@@ -1741,14 +1741,14 @@ test('phase one: scene and type names are unique, used scenes cannot be deleted'
   assert.equal(run("sceneNameExists('税務関係','cls-zeimu')"), false);
   assert.equal(run("typeNameExists('高齢者等実態調査票','T7')"), true);
   assert.equal(run("typeNameExists('高齢者等実態調査票','T8')"), false);
-  assert.match(run("sceneDeleteBlockMessage('cls-zeimu')"), /自動取込設定/);
+  assert.equal(run("sceneDeleteBlockMessage('cls-zeimu')"), '');
   assert.equal(run("sceneDeleteBlockMessage('cls-jyumin')"), '');
 });
 
-test('phase one: deleting an organization used by scenes or watch is blocked', () => {
+test('phase one: deleting an organization used by scenes is blocked', () => {
   const run = watchApp();
   run('globalThis.msgs=[]; toast=(m)=>globalThis.msgs.push(m); const wd=ensureWatchDepartments()[0]; globalThis.gid=wd.groupId; globalThis.sc=wd.sceneIds[0];');
-  assert.equal(run("watchUsesOrgScene(globalThis.sc, globalThis.gid)"), true);
+  assert.equal(run("watchUsesOrgScene(globalThis.sc, globalThis.gid)"), false);
   assert.equal(run("deleteOrganization(globalThis.gid)"), false);
   assert.equal(run("!!byId(GROUPS, globalThis.gid)"), true);
 });
@@ -1800,4 +1800,10 @@ test('automatic upload allows multiple folders per business scene', () => {
   assert.equal((html.match(/watch-folder-chip/g) || []).length >= 2, true);
   assert.match(html, /2 件選択/);
   assert.match(html, /data-wdept-folder-opt="wd-multi"/);
+});
+
+test('automatic upload does not validate folder organization against scene permissions', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-x",sceneIds:["cls-zeimu"],folders:["住民異動窓口"],folder:"住民異動窓口",on:true}];');
+  assert.equal(run('watchValidateSettings()'), '');
 });
