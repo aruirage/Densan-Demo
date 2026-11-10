@@ -6483,8 +6483,20 @@ function renderWatchFolderNodes(nodes, parent, selected, depth, usedFolders) {
     return row + (open ? renderWatchFolderNodes(n.children, path, selected, depth + 1, usedFolders) : '');
   }).join('');
 }
+function watchGroupPath(gid) {
+  const parts=[]; let g=byId(GROUPS,gid);
+  while(g && !g.root){ parts.unshift(g.name); g=byId(GROUPS,g.parentId); }
+  return parts.join('/');
+}
+function watchFolderGroupId(folder) {
+  const key=watchFolderKey(folder); if(!key) return '';
+  let best='', bestLen=-1;
+  GROUPS.filter(g=>!g.root).forEach((g)=>{ const p=watchFolderKey(watchGroupPath(g.id)); if(p && (key===p||key.startsWith(p+'/'))){ if(p.length>bestLen){best=g.id;bestLen=p.length;} } });
+  return best;
+}
 function watchDeptSync(dept) {
-  dept.sceneIds=(dept.sceneIds||[]).filter(id=>watchDeptScenes(dept.groupId).some(sc=>sc.id===id));
+  if (dept.folder) { const gid = watchFolderGroupId(dept.folder); if (gid) dept.groupId = gid; }
+  dept.sceneIds = watchDeptScenes(dept.groupId).map((sc)=>sc.id);
   delete dept.mappings;
 }
 function ensureWatchDepartments() {
@@ -6504,18 +6516,17 @@ function watchValidateSettings() {
   if(!source)return '監視フォルダーを入力してください';
   if(!target)return '処理後フォルダーを入力してください';
   if(source===target||source.startsWith(target+'/')||target.startsWith(source+'/'))return '監視フォルダーと処理後フォルダーは別の階層に設定してください';
-  const depts=ensureWatchDepartments().filter(d=>d.on),used=new Set(),usedDeptGroups=new Set();
-  if(!depts.length)return '有効な組織を設定してください';
+  const depts=ensureWatchDepartments().filter(d=>d.on),used=new Set();
+  if(!depts.length)return '有効なフォルダーを設定してください';
   const validName=n=>n&&n!=='.'&&n!=='..'&&!/[\\/¥￥:*?"<>|]/.test(n);
   const validPath=p=>{const parts=String(p||'').split(/[\\/¥￥]+/).filter(Boolean);return parts.length>0&&parts.every(validName);};
   for(const d of depts){
-    if(!byId(GROUPS,d.groupId))return '組織を選択してください';
-    if(usedDeptGroups.has(d.groupId))return '組織が重複しています';
-    usedDeptGroups.add(d.groupId);
     if(!validPath(d.folder))return '組織フォルダーを確認してください';
+    const gid=watchFolderGroupId(d.folder)||d.groupId;
+    if(!byId(GROUPS,gid))return 'フォルダーが組織配下にありません';
+    if(!watchDeptScenes(gid).length)return 'この組織に許可された業務シーンがありません';
     const folder=watchFolderKey(d.folder);
     if([...used].some(k=>k===folder||folder.startsWith(k+'/')||k.startsWith(folder+'/')))return '組織フォルダーが重複しています';used.add(folder);
-    if(!(d.sceneIds||[]).length)return '業務シーンを選択してください';
   }
   return '';
 }
@@ -6541,14 +6552,13 @@ function renderWatch() {
     const usedByOthers=depts.filter(o=>o.id!==d.id&&o.folder).map(o=>o.folder);
     const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu" role="listbox" aria-label="組織フォルダー">${renderWatchFolderNodes(watchFolderTree(),'',d.folder,0,usedByOthers)}</div>`:'';
     const usedGroups=depts.filter(o=>o.id!==d.id&&o.groupId).map(o=>o.groupId);
-    const deptName=(byId(GROUPS,d.groupId)||{}).name||'選択してください';
-    const deptRoot=(GROUPS.find(g=>g.root)||{}).id||null;
-    const deptMenu=state.watchDeptMenu===d.id?`<div class="watch-folder-menu watch-dept-menu" role="listbox" aria-label="組織">${renderWatchDeptNodes(deptRoot,0,d.id,d.groupId,usedGroups)}</div>`:'';
+    const deptName=(byId(GROUPS,d.groupId)||{}).name||'—';
     return `<div class="watch-dept-card watch-dept-row${d.on?'':' is-off'}" data-watch-dept="${d.id}">
       <div class="watch-dept-fields">
-        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-ctl watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified&&!x.pathLoading?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}" title="${x.pathVerified?esc(String(d.folder||'').split('/').join(' / ')):(x.pathLoading?'フォルダーを取得中です':'監視パスの接続テストが必要です')}"><span class="watch-folder-value">${x.pathLoading?'フォルダーを取得中…':(x.pathVerified?(d.folder?esc(String(d.folder).split('/').join(' / ')):'選択してください'):'監視パスを先に接続テスト')}</span></button>${folderMenu}</div>
-        <div class="watch-dept-picker${state.watchDeptMenu===d.id?' is-open':''}"><button type="button" class="fld watch-ctl watch-dept-trigger" data-wdept-group-trigger="${d.id}" aria-haspopup="listbox" aria-expanded="${state.watchDeptMenu===d.id}"><span class="watch-dept-value">${esc(deptName)}</span></button>${deptMenu}</div>
-        <div class="watch-scene-multi">${scenes.length?groupFormMulti('wdeptScene:'+d.id,'業務シーンを選択してください',scenes.map(sc=>[sc.id,sc.name]),d.sceneIds||[]):'<span class="watch-scope-line">この組織に許可された業務シーンがありません</span>'}</div>
+        <input class="fld mono watch-folder-input" data-wdept-folder="${d.id}" value="${esc(d.folder)}" placeholder="例：税務窓口/住民税/申告書" />
+        <div class="watch-dept-name">${esc(deptName)}</div>
+        <div class="watch-auto-cell">${scenes.length?scenes.map(sc=>`<span class="pill">${esc(sc.name)}</span>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
+        <div class="watch-auto-cell">${types.length?types.map(c=>`<span class="pill">${esc(c.name)}</span>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
         <button type="button" class="icon-btn watch-dept-delete" data-wdept-del="${d.id}" title="組織設定を削除" aria-label="組織設定を削除">×</button>
       </div>
     </div>`;
@@ -6561,9 +6571,9 @@ function renderWatch() {
       <div class="watch-path-field"><span class="watch-field-caption"><i class="req">*</i>処理後パス（分離先） <span class="info-i" data-tip="監視パスとは別の場所に設定します。処理後ファイルは元の相対フォルダー構成を保ったまま保存します。">i</span><span class="watch-path-valid ${x.moveVerified?'is-valid':''}">${x.moveVerified?'有効':''}</span></span><div class="watch-path-control"><input class="fld mono" data-wroot-move="${root.id}" value="${esc(watchPathDisplay(root.moveTo))}" placeholder="処理後パスを入力してください" /><button type="button" class="btn primary sm" data-wroot-test="move">接続テスト</button></div></div>
     </div></fieldset></section>
   <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="自動取込設定">
-    <section class="watch-sec"><h3 class="watch-sec-head">組織別取込設定 <span class="spacer"></span><button class="btn primary sm" type="button" data-wdept-add="1">＋ 組織を追加</button></h3>
-    <p class="watch-sec-desc">組織フォルダー配下を再帰的に読み取り、選択した業務シーンの帳票タイプをAI分類します。分類や確認は該当組織の権限に従います。</p>
-    <div class="watch-dept-columns"><span>組織フォルダー <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span><span>組織</span><span>業務シーン</span><span></span></div>${departmentCards}</section>
+    <section class="watch-sec"><h3 class="watch-sec-head">組織別取込設定 <span class="spacer"></span><button class="btn primary sm" type="button" data-wdept-add="1">＋ フォルダーを追加</button></h3>
+    <p class="watch-sec-desc">フォルダーを指定すると、組織・業務シーン・帳票タイプを自動で表示します。フォルダーは部門配下の任意のサブフォルダー（帳票カテゴリフォルダーを含む）を指定できます。</p>
+    <div class="watch-dept-columns"><span>組織フォルダー <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span><span>組織</span><span>業務シーン</span><span>帳票类别</span><span></span></div>${departmentCards}</section>
     <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法<span class="info-i watch-label-tip" data-tip="組織・帳票タイプごとに判定します。同じファイルでも組織が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
   </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div>${renderWatchSaveDialog()}</div>`;
 }
@@ -6574,6 +6584,7 @@ function bindWatchDepartments() {
   document.querySelectorAll('[data-wdept-add]').forEach(b=>b.onclick=()=>{depts.push({id:'wd-'+Date.now(),groupId:'',folder:'',sceneIds:[],on:true});render();});
   document.querySelectorAll('[data-wdept-del]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();WATCH.departments=depts.filter(d=>d.id!==b.dataset.wdeptDel);render();});
   document.querySelectorAll('[data-wdept-on]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();const d=get(b.dataset.wdeptOn);d.on=!d.on;render();});
+  document.querySelectorAll('[data-wdept-folder]').forEach((inp)=>inp.onchange=()=>{ const d=get(inp.dataset.wdeptFolder); if(!d) return; d.folder=inp.value.trim(); watchDeptSync(d); render(); });
   document.querySelectorAll('[data-wdept-group-trigger]').forEach(b=>b.onclick=()=>{
     const id=b.dataset.wdeptGroupTrigger;
     state.watchDeptMenu=state.watchDeptMenu===id?null:id;

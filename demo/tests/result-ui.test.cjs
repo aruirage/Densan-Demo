@@ -1079,8 +1079,10 @@ test('automatic upload maps department folders and scene categories under one re
  assert.equal((html.match(/data-wroot-path=/g)||[]).length,1);
  assert.equal((html.match(/data-wroot-move=/g)||[]).length,1);
  assert.doesNotMatch(html,/data-wroot-after=|data-wrootadd|data-wrootdel/);
- assert.match(html,/data-wdept-group-trigger=/);assert.match(html,/data-gfopt="wdeptScene:/);
- assert.match(html,/選択した業務シーンの帳票タイプをAI分類/);assert.doesNotMatch(html,/data-wmap-/);
+ assert.match(html,/data-wdept-folder=/);
+ assert.match(html,/帳票类别/);
+ assert.doesNotMatch(html,/data-wdept-group-trigger=|data-gfopt="wdeptScene:/);
+ assert.match(html,/フォルダーを指定すると/);assert.doesNotMatch(html,/data-wmap-/);
  assert.equal(run('ensureWatchDepartments().length'),2);
 });
 
@@ -1469,7 +1471,7 @@ test('menu role mocks use valid menu leaves and personal assignments',()=>{const
 
 test('account page and dialogs are available to every logged-in role',()=>{const run=app();assert.equal(run('canReachPage("account","u7")'),true);assert.match(run('renderAccount()'),/ユーザーID/);const password=run('state.accountPasswordOpen=true;renderAccountDialogs()');assert.equal((password.match(/type="password"/g)||[]).length,3);assert.match(password,/旧パスワード/);assert.match(password,/確認パスワード/);const logout=run('state.logoutConfirm=true;renderAccountDialogs()');assert.match(logout,/ログアウトしますか/);assert.match(logout,/id="logoutCancel"/);assert.match(logout,/id="logoutOk"/);});
 
-test('organization scene AI classifies files independently of subfolder names',()=>{const run=watchApp();run('ensureWatchDepartments()');const result=JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/スキャナー01/個人住民税申告/test.pdf","c3"))'));assert.equal(result.categoryId,'c3');assert.equal(result.dedupScope,'g4|c3');assert.equal(result.archiveRelativePath,'税務窓口\\スキャナー01\\個人住民税申告\\test.pdf');const other=JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/未登録/test.pdf","c3"))'));assert.equal(other.categoryId,'c3');assert.ok(run('watchResolveFile("税務窓口/未登録/test.pdf","c1").error'));});
+test('organization scene AI classifies files independently of subfolder names',()=>{const run=watchApp();run('ensureWatchDepartments()');const result=JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/スキャナー01/個人住民税申告/test.pdf","c3"))'));assert.equal(result.categoryId,'c3');assert.equal(result.dedupScope,'g4|c3');assert.equal(result.archiveRelativePath,'税務窓口\\スキャナー01\\個人住民税申告\\test.pdf');const other=JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/未登録/test.pdf","c3"))'));assert.equal(other.categoryId,'c3');assert.ok(run('watchResolveFile("税務窓口/未登録/test.pdf","c99").error'));});
 test('watch configuration validates archive separation and organization folder uniqueness',()=>{const run=watchApp();assert.equal(run('ensureWatchDepartments();watchValidateSettings()'),'');assert.ok(run('WATCH.roots[0].moveTo=WATCH.roots[0].path+"/処理済";watchValidateSettings()'));run('WATCH.roots[0].moveTo="D:/archive";WATCH.departments[1].folder=WATCH.departments[0].folder');assert.match(run('watchValidateSettings()'),/重複/);});
 
 test('automatic upload scene choices inherit organization data permissions',()=>{const run=app();run('BIZ_SCENES.forEach(sc=>sc.departmentIds=[]);BIZ_SCENES[0].departmentIds=["g1"]');assert.equal(run('watchDeptScenes("g2").some(sc=>sc.id===BIZ_SCENES[0].id)'),true);assert.equal(run('watchDeptScenes("g4").length'),0);run('WATCH.departments=[{id:"isolated",groupId:"g4",folder:"税務課",sceneIds:[BIZ_SCENES[0].id],mappings:[],on:true}];ensureWatchDepartments()');assert.equal(run('WATCH.departments[0].sceneIds.length'),0);});
@@ -1505,20 +1507,17 @@ test('自動取込設定: 同一ファイルを除外が OFF なら判定方法�
   assert.doesNotMatch(html, /class="wf is-off"/);
 });
 
-test('自動取込設定: 部門フォルダーはツリーから単一選択できる', () => {
+test('自動取込設定: フォルダーから組織・業務シーン・帳票类别を自動表示する', () => {
   const run = watchApp();
-  run('ensureWatchDepartments(); WATCH.pathVerified=true; state.watchFolderMenu="wd-tax";');
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-auto",folder:"税務窓口",sceneIds:[],on:true}]; watchDeptSync(WATCH.departments[0]);');
   const html = run('renderWatch()');
-  assert.match(html, /class="watch-folder-menu"/);
-  assert.match(html, /data-wdept-folder-pick="住民異動窓口\/住民課承認者"/);
-  assert.match(html, /data-wdept-folder-pick="住民異動窓口\/住民課長"/);
-  assert.match(html, /role="option"/);
-  assert.match(html, /aria-selected="true"/);
-  /* 他部門で使用中のフォルダーは選択不可 */
-  assert.match(html, /class="watch-folder-pick is-disabled"/);
-  assert.match(html, /使用中/);
-  assert.doesNotMatch(html, /data-wdept-folder-pick="保育・児童窓口"/);
-  assert.doesNotMatch(html, /data-wdept-folder-pick="保育・児童窓口\/保育・児童承認者"/);
+  const d = JSON.parse(run('JSON.stringify(WATCH.departments[0])'));
+  assert.equal(d.groupId, 'g4');
+  assert.ok(d.sceneIds.includes('cls-zeimu'));
+  assert.match(html, /data-wdept-folder="wd-auto"/);
+  assert.match(html, /<span>帳票类别<\/span>/);
+  assert.match(html, /class="pill"/);
+  assert.doesNotMatch(html, /data-wdept-group-trigger=|data-gfopt="wdeptScene:/);
 });
 
 test('自動取込設定: 多階層の部門フォルダーでもファイルを解決できる', () => {
@@ -1536,7 +1535,6 @@ test('自動取込設定: 接続テスト前は部門フォルダーの案内を
   run('WATCH.pathVerified=false;');
   const before = run('renderWatch()');
   assert.match(before, /class="watch-dept-gate-note"/);
-  assert.match(before, /接続テストが必要です/);
   run('WATCH.pathVerified=true;');
   const after = run('renderWatch()');
   assert.match(after, /class="watch-dept-gate-note" hidden/);
@@ -1717,35 +1715,6 @@ test('ホーム: 呼び出し方法は手動アップロードと自動取込の
   assert.doesNotMatch(html, /画面呼び出し|API呼び出し|合計ページ数/);
 });
 
-test('自動取込設定: 部門下拉は多階層の組織をインデント表示する', () => {
-  const run = watchApp();
-  run('ensureWatchDepartments(); state.watchDeptMenu="wd-tax";');
-  const html = run('renderWatch()');
-  assert.match(html, /data-wdept-group-trigger="wd-tax"/);
-  assert.match(html, /住民異動窓口/);
-  assert.match(html, /data-wdept-group-toggle="g1"/);
-  assert.match(html, /data-wdept-group-pick="wd-tax\|g2"/);
-  assert.match(html, /data-wdept-group-pick="wd-tax\|g3"/);
-});
-
-test('自動取込設定: 組織モックはトップ部門の下に課・係の3階層を持つ', () => {
-  const run = app();
-  run('initializePhaseOneAccess(); ensureWatchDepartments(); state.watchDeptMenu="wd-tax";');
-  const html = run('renderWatch()');
-  assert.match(html, /住民異動窓口 第一課/);
-  assert.match(html, /住民異動窓口 第一係/);
-  assert.match(html, /data-wdept-group-pick="wd-tax\|[^"]+"/);
-});
-
-test('自動取込設定: 部門・部門フォルダー・業務シーンの選択コントロールを統一する', () => {
-  const run = watchApp();
-  run('ensureWatchDepartments();');
-  const html = run('renderWatch()');
-  assert.match(html, /class="fld watch-ctl watch-dept-trigger" data-wdept-group-trigger=/);
-  assert.match(html, /class="fld watch-ctl watch-folder-trigger"/);
-  assert.match(html, /data-ms="wdeptScene:wd-tax"/);
-});
-
 test('ユーザー編集: 権限は複数選択、所属組織は只读、ステータスは権限の後に表示', () => {
   const run = app();
   run("USER_ADD_DRAFT={mode:'edit',id:'U2',uid:'u2',groupIds:['gu'],name:'鈴木 太郎',email:'taro.suzuki',soloPermIds:['R3','R4'],dataPerm:'自身のみ',status:'有効'};");
@@ -1758,26 +1727,6 @@ test('ユーザー編集: 権限は複数選択、所属組織は只读、ステ
   assert.ok(html.indexOf('id="userAddStatus"') < html.indexOf('データ権限業務区分'));
 });
 
-test('自動取込設定: 組織フォルダーを組織より先に並べる', () => {
-  const run = watchApp();
-  run('ensureWatchDepartments();');
-  const html = run('renderWatch()');
-  assert.match(html, /<div class="watch-dept-columns"><span>組織フォルダー/);
-  assert.match(html, /<span>組織<\/span>/);
-  const folderIdx = html.indexOf('data-wdept-folder-trigger="wd-tax"');
-  const deptIdx = html.indexOf('data-wdept-group-trigger="wd-tax"');
-  assert.ok(folderIdx >= 0 && deptIdx >= 0 && folderIdx < deptIdx);
-});
-
-test('自動取込設定: 他の部門で使用中の部門は選択できない', () => {
-  const run = watchApp();
-  run('ensureWatchDepartments(); WATCH.departments[1].groupId=WATCH.departments[0].groupId; WATCH.departments[0].folder="税務課"; WATCH.departments[1].folder="福祉課"; state.watchDeptMenu="wd-tax";');
-  const html = run('renderWatch()');
-  assert.match(html, /使用中/);
-  assert.match(html, /data-wdept-group-pick="wd-tax\\|[^"]+" disabled/);
-  assert.match(run('watchValidateSettings()'), /重複/);
-});
-
 test('phase one: scene and type names are unique, used scenes cannot be deleted', () => {
   const run = watchApp();
   run('globalThis.msgs = []; toast = (m) => globalThis.msgs.push(m);');
@@ -1786,7 +1735,7 @@ test('phase one: scene and type names are unique, used scenes cannot be deleted'
   assert.equal(run("typeNameExists('高齢者等実態調査票','T7')"), true);
   assert.equal(run("typeNameExists('高齢者等実態調査票','T8')"), false);
   assert.match(run("sceneDeleteBlockMessage('cls-zeimu')"), /自動取込設定/);
-  assert.equal(run("sceneDeleteBlockMessage('cls-jyumin')"), '');
+  assert.match(run("sceneDeleteBlockMessage('cls-jyumin')"), /自動取込設定/);
 });
 
 test('phase one: deleting an organization used by scenes or watch is blocked', () => {
