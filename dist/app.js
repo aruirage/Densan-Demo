@@ -6577,13 +6577,12 @@ function watchResolveFile(relativePath, aiCategoryId) {
   const segments=String(relativePath||'').split(/[\\/¥￥]+/).filter(Boolean);
   if(segments.some(s=>s==='.'||s==='..'))return {error:'監視フォルダー外のパスです'};
   let dept=null, matchedFolder='';
-  ensureWatchDepartments().some((d)=>{
-    if(!d.on)return false;
-    return watchDeptFolders(d).some((f)=>{
+  ensureWatchDepartments().forEach((d)=>{
+    if(!d.on)return;
+    watchDeptFolders(d).forEach((f)=>{
       const parts=String(f||'').split(/[\\/¥￥]+/).filter(Boolean);
       const hit=parts.length>0&&parts.length<=segments.length&&parts.every((p,i)=>watchFolderKey(p)===watchFolderKey(segments[i]));
       if(hit&&(!matchedFolder||parts.length>String(matchedFolder).split(/[\\/¥￥]+/).filter(Boolean).length)){ dept=d; matchedFolder=f; }
-      return hit;
     });
   });
   if(!dept)return {error:'組織フォルダーが未設定のため未取込（スキャン範囲外）',skipped:true,source:relativePath};

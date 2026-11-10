@@ -1826,3 +1826,16 @@ test('automatic upload allows parent folder in another scene when a child is alr
   assert.match(html, /data-wdept-folder-opt="wd-b"[^>]*value="税務窓口"[^>]*>(?![^<]*<\/label>[\s\S]*disabled)/);
   assert.match(html, /value="税務窓口\/税務承認者"[^>]*disabled/);
 });
+
+test('parent and child folders in different scenes use the most specific folder', () => {
+  const run = watchApp();
+  run('WATCH.departments=[{id:"a",sceneIds:["cls-zeimu"],folders:["税務窓口"],on:true},{id:"b",sceneIds:["cls-hoiku"],folders:["税務窓口/住民税"],on:true}]');
+  const aCat = run('watchDeptTypes(WATCH.departments[0])[0].id');
+  const bCat = run('watchDeptTypes(WATCH.departments[1])[0].id');
+  const child = JSON.parse(run(`JSON.stringify(watchResolveFile("税務窓口/住民税/test.pdf","${bCat}"))`));
+  assert.equal(child.categoryId, bCat);
+  assert.equal(child.departmentId, 'g4');
+  const parent = JSON.parse(run(`JSON.stringify(watchResolveFile("税務窓口/その他/test.pdf","${aCat}"))`));
+  assert.equal(parent.categoryId, aCat);
+  assert.equal(parent.departmentId, 'g4');
+});
