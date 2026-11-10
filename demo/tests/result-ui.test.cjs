@@ -1784,3 +1784,10 @@ test('watch paths accept half-width and full-width yen and normalize to backslas
   assert.equal(run("watchPathValue('￥￥filesv01￥取込')"), '\\\\filesv01\\取込');
   assert.equal(run("watchPathDisplay('￥￥filesv01￥取込')"), '\\\\filesv01\\取込');
 });
+
+test('automatic upload ignores scene rows without a folder when checking references', () => {
+  const run = watchApp();
+  run('WATCH.departments=[{id:"blank",sceneIds:["cls-jyumin"],folder:"",groupId:"g1",on:true}];');
+  assert.equal(run("sceneDeleteBlockMessage('cls-jyumin')"), '');
+  assert.equal(run("watchDeptsUsingOrg(['g1']).length"), 0);
+});

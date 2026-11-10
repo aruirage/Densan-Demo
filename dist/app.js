@@ -6544,6 +6544,7 @@ function watchValidateSettings() {
     const gid=watchFolderGroupId(d.folder)||d.groupId;
     if(!byId(GROUPS,gid))return 'フォルダーが組織配下にありません';
     if(!expandGroupSelection(sc.departmentIds||[]).includes(gid))return 'フォルダーがデータ権限組織の範囲外です';
+    if(!watchDeptTypes(d).length)return 'この業務シーンの帳票类别がありません';
     const folder=watchFolderKey(d.folder);
     if([...used].some(k=>k===folder||folder.startsWith(k+'/')||k.startsWith(folder+'/')))return '組織フォルダーが重複しています';used.add(folder);
   }
@@ -6944,16 +6945,19 @@ function displayNameExists(type, name, exceptId) {
   if (type === 'cat') return CATEGORY.some((c) => c.id !== exceptId && _normName(dispCat(c.id)) === n);
   return false;
 }
+function watchActiveDepts() {
+  return ensureWatchDepartments().filter((d) => d.on !== false && String(d.folder || '').trim());
+}
 function watchDeptsUsingScene(sceneId) {
-  return ensureWatchDepartments().filter((d) => (d.sceneIds || []).includes(sceneId));
+  return watchActiveDepts().filter((d) => (d.sceneIds || []).includes(sceneId));
 }
 function watchDeptsUsingOrg(ids) {
   const set = new Set(ids);
-  return ensureWatchDepartments().filter((d) => d.groupId && set.has(d.groupId));
+  return watchActiveDepts().filter((d) => d.groupId && set.has(d.groupId));
 }
 function watchUsesOrgScene(sceneId, orgIds) {
   const set = new Set(Array.isArray(orgIds) ? orgIds : [orgIds]);
-  return ensureWatchDepartments().some((d) => (d.sceneIds || []).includes(sceneId) && d.groupId && set.has(d.groupId));
+  return watchActiveDepts().some((d) => (d.sceneIds || []).includes(sceneId) && d.groupId && set.has(d.groupId));
 }
 function sceneDeleteBlockMessage(sceneId) {
   const used = watchDeptsUsingScene(sceneId);
@@ -7056,6 +7060,7 @@ function bindBizScenes() {
       if (!ask(`「${sc ? sc.name : id}」を削除しますか？`)) return;
       const i = BIZ_SCENES.findIndex((x) => x.id === id);
       if (i >= 0) BIZ_SCENES.splice(i, 1);
+      WATCH.departments = (WATCH.departments || []).filter((d) => !(d.sceneIds || []).includes(id));
       delete SCENE_TESTS[id];
       if (state.sceneId === id) { state.sceneId = null; state.sceneStep = 1; }
       state.sceneMenu = null;
