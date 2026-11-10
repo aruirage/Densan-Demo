@@ -1817,3 +1817,12 @@ test('automatic upload blocks duplicate or parent-child folder selection in the 
   assert.equal(run("watchFolderRelation('税務窓口','税務窓口/税務承認者')"), true);
   assert.equal(run("watchFolderRelation('税務窓口','住民異動窓口')"), false);
 });
+
+test('automatic upload allows parent folder in another scene when a child is already used', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-a",sceneIds:["cls-zeimu"],folders:["税務窓口/税務承認者"],on:true},{id:"wd-b",sceneIds:["cls-hoiku"],folders:["税務窓口"],on:true}]; state.watchFolderMenu="wd-b"; render=()=>{};');
+  assert.equal(run('watchValidateSettings()'), '');
+  const html = run('renderWatch()');
+  assert.match(html, /data-wdept-folder-opt="wd-b"[^>]*value="税務窓口"[^>]*>(?![^<]*<\/label>[\s\S]*disabled)/);
+  assert.match(html, /value="税務窓口\/税務承認者"[^>]*disabled/);
+});

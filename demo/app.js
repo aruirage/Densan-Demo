@@ -6005,7 +6005,7 @@ function watchValidateSettings() {
   if(!source)return '監視フォルダーを入力してください';
   if(!target)return '処理後フォルダーを入力してください';
   if(source===target||source.startsWith(target+'/')||target.startsWith(source+'/'))return '監視フォルダーと処理後フォルダーは別の階層に設定してください';
-  const depts=ensureWatchDepartments().filter(d=>d.on&&watchDeptFolders(d).length),used=new Set();
+  const depts=ensureWatchDepartments().filter(d=>d.on&&watchDeptFolders(d).length),usedExact=new Set();
   if(!depts.length)return '有効な業務シーンを設定してください';
   const validName=n=>n&&n!=='.'&&n!=='..'&&!/[\\/¥￥:*?"<>|]/.test(n);
   const validPath=p=>{const parts=String(p||'').split(/[\\/¥￥]+/).filter(Boolean);return parts.length>0&&parts.every(validName);};
@@ -6013,12 +6013,16 @@ function watchValidateSettings() {
     const sc=byId(BIZ_SCENES,(d.sceneIds||[])[0]);
     if(!sc)return '業務シーンを選択してください';
     if(!watchDeptTypes(d).length)return 'この業務シーンの帳票タイプがありません';
-    for(const raw of watchDeptFolders(d)){
+    const sceneFolders=watchDeptFolders(d);
+    for(let i=0;i<sceneFolders.length;i++){
+      const raw=sceneFolders[i];
       if(!validPath(raw))return '組織フォルダーを確認してください';
       const gid=watchFolderGroupId(raw)||d.groupId;
       if(!byId(GROUPS,gid))return 'フォルダーが組織配下にありません';
       const folder=watchFolderKey(raw);
-      if([...used].some(k=>k===folder||folder.startsWith(k+'/')||k.startsWith(folder+'/')))return '組織フォルダーが重複しています';used.add(folder);
+      if(usedExact.has(folder))return '組織フォルダーが重複しています';
+      if(sceneFolders.some((other,j)=>j!==i&&watchFolderRelation(raw,other)))return '組織フォルダーが重複しています';
+      usedExact.add(folder);
     }
   }
   return '';
@@ -6050,7 +6054,9 @@ function renderWatchFolderTreeMulti(nodes, parent, selected, depth, deptId, scen
     const hasKids = !!(n.children && n.children.length);
     const open = hasKids && expanded[path] !== false;
     const on = (selected || []).includes(path);
-    const isUsed = !on && ((usedFolders || []).some((u) => watchFolderRelation(u, path)) || (selected || []).some((s) => watchFolderRelation(s, path)));
+    const otherExact = (usedFolders || []).some((u) => watchFolderKey(u) === watchFolderKey(path));
+    const sameSceneOverlap = (selected || []).some((s) => watchFolderRelation(s, path));
+    const isUsed = !on && (otherExact || sameSceneOverlap);
     const caret = hasKids
       ? `<button type="button" class="watch-folder-caret" data-wdept-folder-toggle="${esc(path)}" aria-label="${open ? '折りたたむ' : '展開'}">${open ? '▾' : '▸'}</button>`
       : '<span class="watch-folder-caret is-leaf" aria-hidden="true"></span>';
@@ -6163,7 +6169,7 @@ function bindWatchDepartments() {
     const set=new Set(watchDeptFolders(d));
     if(cb.checked){
       const others=WATCH.departments.filter((x)=>x.id!==id).flatMap((x)=>watchDeptFolders(x));
-      if([...others,...set].some((f)=>watchFolderRelation(f,cb.value))){ cb.checked=false; toast('同じフォルダーまたは親子関係のフォルダーは選択できません','error'); render(); return; }
+      if(others.some((f)=>watchFolderKey(f)===watchFolderKey(cb.value)) || [...set].some((f)=>watchFolderRelation(f,cb.value))){ cb.checked=false; toast('同じフォルダーまたは同一シーン内の親子フォルダーは選択できません','error'); render(); return; }
       set.add(cb.value);
     } else set.delete(cb.value);
     watchSetFolders(d, [...set]);
