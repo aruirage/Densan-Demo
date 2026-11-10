@@ -1079,7 +1079,7 @@ test('automatic upload maps department folders and scene categories under one re
  assert.equal((html.match(/data-wroot-path=/g)||[]).length,1);
  assert.equal((html.match(/data-wroot-move=/g)||[]).length,1);
  assert.doesNotMatch(html,/data-wroot-after=|data-wrootadd|data-wrootdel/);
- assert.match(html,/data-wdept-folder=/);
+ assert.match(html,/data-wdept-folder-trigger=/);
  assert.match(html,/帳票类别/);
  assert.doesNotMatch(html,/data-wdept-group-trigger=|data-gfopt="wdeptScene:/);
  assert.match(html,/既存の業務シーンをすべて表示/);assert.doesNotMatch(html,/data-wmap-/);
@@ -1513,7 +1513,8 @@ test('自動取込設定: 業務シーンから対象部門と帳票类别を自
   assert.deepEqual(d.sceneIds, ['cls-zeimu']);
   assert.equal(d.groupId, 'g4');
   assert.doesNotMatch(html, /data-wdept-scene=/);
-  assert.match(html, /data-wdept-folder="wd-auto"/);
+  assert.match(html, /data-wdept-folder-trigger="wd-auto"/);
+  assert.match(html, /watch-dept-scroll/);
   assert.equal((html.match(/class="watch-dept-card watch-dept-row/g) || []).length, 6);
   assert.doesNotMatch(html, /data-wdept-add=|data-wdept-del=/);
   assert.match(html, /<span>データ権限組織<\/span>/);

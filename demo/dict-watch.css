@@ -809,3 +809,5 @@ fieldset.watch-body:disabled input,fieldset.watch-body:disabled select{backgroun
 
 .watch-scene-name{font-size:13px;font-weight:500;color:var(--text);padding-top:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .watch-dept-row.is-empty .watch-dept-tree{opacity:.55}
+
+.watch-dept-scroll{max-height:420px;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--line)}
