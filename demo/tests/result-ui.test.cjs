@@ -1082,7 +1082,7 @@ test('automatic upload maps department folders and scene categories under one re
  assert.match(html,/data-wdept-folder=/);
  assert.match(html,/帳票类别/);
  assert.doesNotMatch(html,/data-wdept-group-trigger=|data-gfopt="wdeptScene:/);
- assert.match(html,/業務シーンを選ぶと/);assert.doesNotMatch(html,/data-wmap-/);
+ assert.match(html,/既存の業務シーンをすべて表示/);assert.doesNotMatch(html,/data-wmap-/);
  assert.equal(run('ensureWatchDepartments().length'),2);
 });
 
@@ -1512,8 +1512,10 @@ test('自動取込設定: 業務シーンから対象部門と帳票类别を自
   const d = JSON.parse(run('JSON.stringify(WATCH.departments[0])'));
   assert.deepEqual(d.sceneIds, ['cls-zeimu']);
   assert.equal(d.groupId, 'g4');
-  assert.match(html, /data-wdept-scene="wd-auto"/);
+  assert.doesNotMatch(html, /data-wdept-scene=/);
   assert.match(html, /data-wdept-folder="wd-auto"/);
+  assert.equal((html.match(/class="watch-dept-card watch-dept-row/g) || []).length, 6);
+  assert.doesNotMatch(html, /data-wdept-add=|data-wdept-del=/);
   assert.match(html, /<span>対象部門（自動）<\/span>/);
   assert.match(html, /<span>帳票类别<\/span>/);
   assert.match(html, /class="pill"/);
