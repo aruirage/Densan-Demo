@@ -6028,9 +6028,9 @@ function renderWatch() {
     return `<div class="watch-dept-card watch-dept-row${d.folder?'':' is-empty'}" data-watch-dept="${d.id}">
       <div class="watch-dept-fields">
         <div class="watch-scene-name" title="${esc(sc.name)}">${esc(sc.name)}</div>
+        <div class="watch-auto-cell">${types.length?types.map(c=>`<span class="pill">${esc(c.name)}</span>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
         <div class="watch-dept-tree">${sceneDeptRows.length?sceneDeptRows.map(r=>`<div class="watch-dept-tree-row${r.authorized?'':' is-context'}" style="padding-left:${r.depth*12}px" title="${esc(r.name)}">${esc(r.name)}</div>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
         <input class="fld mono watch-folder-input" data-wdept-folder="${d.id}" data-wdept-scene-id="${sc.id}" value="${esc(d.folder)}" placeholder="例：税務窓口/住民税/申告書" />
-        <div class="watch-auto-cell">${types.length?types.map(c=>`<span class="pill">${esc(c.name)}</span>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
       </div>
     </div>`;
   }).join('');
@@ -6044,7 +6044,7 @@ function renderWatch() {
   <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="自動取込設定">
     <section class="watch-sec"><h3 class="watch-sec-head">業務シーン別取込設定</h3>
     <p class="watch-sec-desc">既存の業務シーンをすべて表示します。対象部門と帳票类别は自動で带出します。フォルダーは対象部門配下の任意のサブフォルダー（帳票カテゴリフォルダーを含む）を指定できます。</p>
-    <div class="watch-dept-columns"><span>業務シーン</span><span>対象部門（自動）</span><span>フォルダ <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span><span>帳票类别</span></div>${departmentCards}</section>
+    <div class="watch-dept-columns"><span>業務シーン</span><span>帳票类别</span><span>権限組織</span><span>フォルダ <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span></div>${departmentCards}</section>
     <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法<span class="info-i watch-label-tip" data-tip="組織・帳票タイプごとに判定します。同じファイルでも組織が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
   </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div>${renderWatchSaveDialog()}</div>`;
 }

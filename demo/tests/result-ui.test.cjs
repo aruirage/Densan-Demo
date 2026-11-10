@@ -1516,7 +1516,7 @@ test('自動取込設定: 業務シーンから対象部門と帳票类别を自
   assert.match(html, /data-wdept-folder="wd-auto"/);
   assert.equal((html.match(/class="watch-dept-card watch-dept-row/g) || []).length, 6);
   assert.doesNotMatch(html, /data-wdept-add=|data-wdept-del=/);
-  assert.match(html, /<span>対象部門（自動）<\/span>/);
+  assert.match(html, /<span>権限組織<\/span>/);
   assert.match(html, /<span>帳票类别<\/span>/);
   assert.match(html, /class="pill"/);
   assert.match(html, /watch-dept-tree/);
