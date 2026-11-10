@@ -6389,8 +6389,15 @@ function watchSceneDeptRows(sc) {
   if (root) walk(root.id, 0);
   return rows;
 }
+function watchDeptTypeNames(dept) {
+  return (dept.sceneIds || []).flatMap(id => ((byId(BIZ_SCENES,id)||{}).formIds||[]).map(fid => (byId(CLASSIFY_FORMS,fid)||{}).name)).filter(Boolean);
+}
 function watchDeptTypes(dept) {
-  const names = (dept.sceneIds || []).flatMap(id => ((byId(BIZ_SCENES,id)||{}).formIds||[]).map(fid => (byId(CLASSIFY_FORMS,fid)||{}).name)).filter(Boolean);
+  const names = watchDeptTypeNames(dept);
+  return TICKET_TYPES.filter((t) => names.includes(t.name));
+}
+function watchDeptCategories(dept) {
+  const names = watchDeptTypeNames(dept);
   const ids = new Set(LAYOUT.filter(l=>names.includes(l.name)).map(l=>l.category));
   return CATEGORY.filter(c=>ids.has(c.id));
 }
@@ -6558,7 +6565,7 @@ function watchValidateSettings() {
   for(const d of depts){
     const sc=byId(BIZ_SCENES,(d.sceneIds||[])[0]);
     if(!sc)return '業務シーンを選択してください';
-    if(!watchDeptTypes(d).length)return 'この業務シーンの帳票タイプがありません';
+    if(!watchDeptCategories(d).length)return 'この業務シーンの帳票タイプがありません';
     const sceneFolders=watchDeptFolders(d);
     for(let i=0;i<sceneFolders.length;i++){
       const raw=sceneFolders[i];
@@ -6587,7 +6594,7 @@ function watchResolveFile(relativePath, aiCategoryId) {
   });
   if(!dept)return {error:'組織フォルダーが未設定のため未取込（スキャン範囲外）',skipped:true,source:relativePath};
   const gid=watchFolderGroupId(matchedFolder)||dept.groupId;
-  if(!watchDeptTypes(dept).some(c=>c.id===aiCategoryId))return {error:'組織の業務シーン内で帳票タイプを判別できません',departmentId:gid,source:relativePath};
+  if(!watchDeptCategories(dept).some(c=>c.id===aiCategoryId))return {error:'組織の業務シーン内で帳票タイプを判別できません',departmentId:gid,source:relativePath};
   return {departmentId:gid,categoryId:aiCategoryId,archiveRelativePath:segments.join('\\'),dedupScope:gid+'|'+aiCategoryId};
 }
 
