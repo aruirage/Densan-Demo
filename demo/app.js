@@ -6028,7 +6028,7 @@ function watchValidateSettings() {
   for(const d of depts){
     const sc=byId(BIZ_SCENES,(d.sceneIds||[])[0]);
     if(!sc)return '業務シーンを選択してください';
-    if(!watchDeptTypes(d).length)return 'この業務シーンの帳票类别がありません';
+    if(!watchDeptTypes(d).length)return 'この業務シーンの帳票タイプがありません';
     for(const raw of watchDeptFolders(d)){
       if(!validPath(raw))return '組織フォルダーを確認してください';
       const gid=watchFolderGroupId(raw)||d.groupId;
@@ -6106,8 +6106,8 @@ function renderWatch() {
     </div></fieldset></section>
   <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="自動取込設定">
     <section class="watch-sec"><h3 class="watch-sec-head">業務シーン別取込設定</h3>
-    <p class="watch-sec-desc">業務シーンごとにデータ権限組織と帳票类别を自動表示し、フォルダーは任意のサブフォルダーから選択できます。</p>
-    <div class="watch-dept-columns"><span>業務シーン</span><span>帳票类别</span><span>データ権限組織</span><span>フォルダ <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span></div><div class="watch-dept-scroll">${departmentCards}</div></section>
+    <p class="watch-sec-desc">業務シーンごとにデータ権限組織と帳票タイプを自動表示し、フォルダーは任意のサブフォルダーから選択できます。</p>
+    <div class="watch-dept-columns"><span>業務シーン</span><span>帳票タイプ</span><span>データ権限組織</span><span>フォルダ <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span></div><div class="watch-dept-scroll">${departmentCards}</div></section>
     <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法<span class="info-i watch-label-tip" data-tip="組織・帳票タイプごとに判定します。同じファイルでも組織が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
   </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div>${renderWatchSaveDialog()}</div>`;
 }

@@ -1080,9 +1080,9 @@ test('automatic upload maps department folders and scene categories under one re
  assert.equal((html.match(/data-wroot-move=/g)||[]).length,1);
  assert.doesNotMatch(html,/data-wroot-after=|data-wrootadd|data-wrootdel/);
  assert.match(html,/data-wdept-folder-trigger=/);
- assert.match(html,/帳票类别/);
+ assert.match(html,/帳票タイプ/);
  assert.doesNotMatch(html,/data-wdept-group-trigger=|data-gfopt="wdeptScene:/);
- assert.match(html,/業務シーンごとにデータ権限組織と帳票类别を自動表示/);assert.doesNotMatch(html,/data-wmap-/);
+ assert.match(html,/業務シーンごとにデータ権限組織と帳票タイプを自動表示/);assert.doesNotMatch(html,/data-wmap-/);
  assert.equal(run('ensureWatchDepartments().length'),2);
 });
 
@@ -1366,7 +1366,7 @@ test('phase one: menu rights contain only page access plus user department and r
 test('phase one: organization edit only exposes name and disabled parent, never role assignment', () => {
  const run=app();const html=run("state.groupForm={mode:'edit',id:'g1',name:'総務部',parentId:ROOT_GROUP_ID,userIds:['u2'],permIds:['R3']};groupFormDialog()");
  assert.match(html,/上位組織/);assert.match(html,/org-parent-readonly[^>]*disabled readonly/);assert.match(html,/組織名/);
- assert.doesNotMatch(html,/data-gfopt|gfPerm|所属ユーザー|帳票类别/);
+ assert.doesNotMatch(html,/data-gfopt|gfPerm|所属ユーザー|帳票タイプ/);
 });
 test('phase one: scene access defaults to all members of selected departments and descendants', () => {
  const run=app();
@@ -1505,7 +1505,7 @@ test('自動取込設定: 同一ファイルを除外が OFF なら判定方法�
   assert.doesNotMatch(html, /class="wf is-off"/);
 });
 
-test('自動取込設定: 業務シーンから対象部門と帳票类别を自動表示する', () => {
+test('自動取込設定: 業務シーンから対象部門と帳票タイプを自動表示する', () => {
   const run = watchApp();
   run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-auto",sceneIds:["cls-zeimu"],folder:"税務窓口",on:true}]; watchDeptSync(WATCH.departments[0]);');
   const html = run('renderWatch()');
@@ -1518,7 +1518,7 @@ test('自動取込設定: 業務シーンから対象部門と帳票类别を自
   assert.equal((html.match(/class="watch-dept-card watch-dept-row/g) || []).length, 6);
   assert.doesNotMatch(html, /data-wdept-add=|data-wdept-del=/);
   assert.match(html, /<span>データ権限組織<\/span>/);
-  assert.match(html, /<span>帳票类别<\/span>/);
+  assert.match(html, /<span>帳票タイプ<\/span>/);
   assert.match(html, /class="pill"/);
   assert.match(html, /watch-dept-tree/);
   assert.ok(html.indexOf('税務窓口') < html.indexOf('税務承認者'));
