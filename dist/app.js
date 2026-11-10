@@ -6426,22 +6426,6 @@ function watchUnassignedFolders() {
   walk(watchFolderTree(), '');
   return out;
 }
-/** 保存前の確認ダイアログ（組織未割当フォルダー）。 */
-function renderWatchSaveDialog() {
-  if (!state.watchSaveConfirm) return '';
-  const unassigned = watchUnassignedFolders();
-  return `<div class="modal-back" id="watchSaveBack" role="presentation">
-    <div class="modal watch-save-modal" role="dialog" aria-labelledby="watchSaveTitle" aria-modal="true">
-      <div class="modal-head"><b id="watchSaveTitle">ご注意</b></div>
-      <div class="modal-canvas watch-save-body">
-        <p class="watch-confirm-q"><span class="watch-confirm-icon" aria-hidden="true">!</span><span>設定を保存しますか？</span></p>
-        <p class="watch-save-explanation">組織に割り当てていないフォルダーは自動取込の対象外です。</p>
-        <div class="watch-save-detail"><span class="watch-save-detail-label">対象外のフォルダー</span><span>${unassigned.map((f) => esc(f.path)).join('、')}</span></div>
-      </div>
-      <div class="modal-foot"><span class="spacer"></span><button type="button" class="btn" id="watchSaveCancel">キャンセル</button><button type="button" class="btn primary" id="watchSaveOk">保存</button></div>
-    </div>
-  </div>`;
-}
 function saveWatchSettings() {
   WATCH.updatedAt = nowStamp();
   state.watchSnapshot = JSON.stringify(WATCH);
@@ -6655,7 +6639,7 @@ function renderWatch() {
     <p class="watch-sec-desc">業務シーンごとにデータ権限組織と帳票タイプを自動表示し、フォルダーは任意のサブフォルダーから選択できます。</p>
     <div class="watch-dept-columns"><span>業務シーン</span><span>帳票タイプ</span><span>データ権限組織</span><span>フォルダ <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span></div><div class="watch-dept-scroll">${departmentCards}</div></section>
     <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法<span class="info-i watch-label-tip" data-tip="組織・帳票タイプごとに判定します。同じファイルでも組織が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
-  </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div>${renderWatchSaveDialog()}</div>`;
+  </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div></div>`;
 }
 function bindWatchDepartments() {
   const depts=ensureWatchDepartments();const get=id=>depts.find(d=>d.id===id);
@@ -10028,17 +10012,9 @@ function bindCfgPages() {
     document.querySelectorAll('[data-watchsave]').forEach((b) => {
       b.onclick = () => {
         const error=WATCH.on?watchValidateSettings():'';if(error){toast(error,'error');return;}
-        const unassigned=watchUnassignedFolders();
-        if(unassigned.length){state.watchSaveConfirm=true;render();return;}
         saveWatchSettings();
       };
     });
-    const saveBack=$('#watchSaveBack');
-    if(saveBack)saveBack.onclick=(e)=>{if(e.target===saveBack){state.watchSaveConfirm=false;render();}};
-    const saveCancel=$('#watchSaveCancel');
-    if(saveCancel)saveCancel.onclick=()=>{state.watchSaveConfirm=false;render();};
-    const saveOk=$('#watchSaveOk');
-    if(saveOk)saveOk.onclick=()=>saveWatchSettings();
     /* 監視パス：パス・処理後のファイル（削除／そのまま）・有効切替・追加・削除 */
     document.querySelectorAll('[data-wroot-path]').forEach((el) => {
       el.oninput = () => {

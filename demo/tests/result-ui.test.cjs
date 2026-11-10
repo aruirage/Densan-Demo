@@ -1565,16 +1565,11 @@ test('自動取込設定: 組織フォルダー内の未登録子フォルダー
   assert.equal(r.archiveRelativePath,'税務窓口\\未登録\\test.pdf');
 });
 
-test('自動取込設定: 未割当フォルダーがある場合は保存時に確認する', () => {
+test('自動取込設定: 未割当フォルダーがあっても保存確認ダイアログを出さない', () => {
   const run = watchApp();
   run('ensureWatchDepartments(); WATCH.departments.push({id:"wd-new",groupId:"g4",folder:"総務部",sceneIds:["cls-zeimu"],mappings:[],on:true}); state.watchSaveConfirm=true;');
   const html = run('renderWatch()');
-  assert.match(html, /ご注意/);
-  assert.match(html, /設定を保存しますか？/);
-  assert.match(html, /対象外のフォルダー/);
-  assert.match(html, /id="watchSaveCancel"/);
-  assert.match(html, /id="watchSaveOk"/);
-  assert.doesNotMatch(html, /data-wf="unmappedPolicy"/);
+  assert.doesNotMatch(html, /ご注意|watchSaveOk|watchSaveCancel/);
 });
 
 test('自動取込ダッシュボード: 実際に取り込んだファイルの失敗理由を表示する', () => {
@@ -1600,10 +1595,6 @@ test('自動取込設定: 部門に割り当てられていないフォルダー
   run('ensureWatchDepartments(); WATCH_GROUP_FILES.g1=2;');
   assert.equal(run('watchUnassignedFolders().length'), 1);
   assert.equal(run('watchUnassignedFolders()[0].files'), 2);
-  run('state.watchSaveConfirm=true;');
-  const html = run('renderWatch()');
-  assert.match(html, /対象外のフォルダー/);
-  assert.match(html, /住民異動窓口/);
   run('WATCH.departments.push({id:"wd-new",groupId:"g1",folder:"住民異動窓口",sceneIds:["cls-zeimu"],mappings:[],on:true});');
   assert.equal(run('watchUnassignedFolders().length'), 0);
 });

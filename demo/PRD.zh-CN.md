@@ -272,8 +272,6 @@ flowchart LR
 
 ![自动取入配置：取入与再试行设置](prd/assets/watch-retry.png)
 
-![保存确认弹窗](prd/assets/watch-confirm.png)
-
 ![自动取入配置：无効状态](prd/assets/watch-disabled.png)
 
 | 项目 | 规则 |
