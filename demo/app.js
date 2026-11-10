@@ -5967,6 +5967,11 @@ function watchDeptFolders(dept) {
   const list = Array.isArray(dept.folders) ? dept.folders : (dept.folder ? [dept.folder] : []);
   return [...new Set(list.map((x) => String(x || '').trim()).filter(Boolean))];
 }
+function watchFolderRelation(a, b) {
+  const A = watchFolderKey(a), B = watchFolderKey(b);
+  if (!A || !B) return false;
+  return A === B || A.startsWith(B + '/') || B.startsWith(A + '/');
+}
 function watchCanonicalFolder(folder) {
   const raw = String(folder || '').trim();
   if (!raw) return raw;
@@ -6061,7 +6066,7 @@ function renderWatchFolderTreeMulti(nodes, parent, selected, depth, deptId, scen
     const hasKids = !!(n.children && n.children.length);
     const open = hasKids && expanded[path] !== false;
     const on = (selected || []).includes(path);
-    const isUsed = !on && used.has(path);
+    const isUsed = !on && ((usedFolders || []).some((u) => watchFolderRelation(u, path)) || (selected || []).some((s) => watchFolderRelation(s, path)));
     const caret = hasKids
       ? `<button type="button" class="watch-folder-caret" data-wdept-folder-toggle="${esc(path)}" aria-label="${open ? '折りたたむ' : '展開'}">${open ? '▾' : '▸'}</button>`
       : '<span class="watch-folder-caret is-leaf" aria-hidden="true"></span>';
@@ -6172,7 +6177,11 @@ function bindWatchDepartments() {
     let d=get(id);
     if(!d){ d={id,sceneIds:sid?[sid]:[],folder:'',folders:[],groupId:'',on:true}; WATCH.departments.push(d); }
     const set=new Set(watchDeptFolders(d));
-    cb.checked?set.add(cb.value):set.delete(cb.value);
+    if(cb.checked){
+      const others=WATCH.departments.filter((x)=>x.id!==id).flatMap((x)=>watchDeptFolders(x));
+      if([...others,...set].some((f)=>watchFolderRelation(f,cb.value))){ cb.checked=false; toast('同じフォルダーまたは親子関係のフォルダーは選択できません','error'); render(); return; }
+      set.add(cb.value);
+    } else set.delete(cb.value);
     watchSetFolders(d, [...set]);
     if(!d.folders.length) WATCH.departments=WATCH.departments.filter((x)=>x!==d);
     else watchDeptSync(d);

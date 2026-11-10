@@ -1795,7 +1795,7 @@ test('automatic upload ignores scene rows without a folder when checking referen
 
 test('automatic upload allows multiple folders per business scene', () => {
   const run = watchApp();
-  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-multi",sceneIds:["cls-zeimu"],folders:["税務窓口","税務窓口/税務承認者"],on:true}]; state.watchFolderMenu="wd-multi"; render=()=>{};');
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-multi",sceneIds:["cls-zeimu"],folders:["税務窓口","住民異動窓口"],on:true}]; state.watchFolderMenu="wd-multi"; render=()=>{};');
   const html = run('renderWatch()');
   assert.equal((html.match(/watch-folder-chip/g) || []).length >= 2, true);
   assert.match(html, /2 件選択/);
@@ -1816,4 +1816,13 @@ test('automatic upload folder dropdown keeps the original folder hierarchy', () 
   assert.match(html, /data-wdept-folder-toggle="税務窓口"/);
   assert.match(html, /padding-left:0px/);
   assert.match(html, /padding-left:14px/);
+});
+
+test('automatic upload blocks duplicate or parent-child folder selection in the dropdown', () => {
+  const run = watchApp();
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-dup",sceneIds:["cls-zeimu"],folders:["税務窓口"],on:true}]; state.watchFolderMenu="wd-dup"; render=()=>{};');
+  const html = run('renderWatch()');
+  assert.match(html, /value="税務窓口\/税務承認者"[^>]*disabled/);
+  assert.equal(run("watchFolderRelation('税務窓口','税務窓口/税務承認者')"), true);
+  assert.equal(run("watchFolderRelation('税務窓口','住民異動窓口')"), false);
 });
