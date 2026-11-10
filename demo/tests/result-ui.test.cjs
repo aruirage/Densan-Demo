@@ -1082,7 +1082,7 @@ test('automatic upload maps department folders and scene categories under one re
  assert.match(html,/data-wdept-folder=/);
  assert.match(html,/帳票类别/);
  assert.doesNotMatch(html,/data-wdept-group-trigger=|data-gfopt="wdeptScene:/);
- assert.match(html,/フォルダーを指定すると/);assert.doesNotMatch(html,/data-wmap-/);
+ assert.match(html,/業務シーンを選ぶと/);assert.doesNotMatch(html,/data-wmap-/);
  assert.equal(run('ensureWatchDepartments().length'),2);
 });
 
@@ -1472,9 +1472,7 @@ test('menu role mocks use valid menu leaves and personal assignments',()=>{const
 test('account page and dialogs are available to every logged-in role',()=>{const run=app();assert.equal(run('canReachPage("account","u7")'),true);assert.match(run('renderAccount()'),/ユーザーID/);const password=run('state.accountPasswordOpen=true;renderAccountDialogs()');assert.equal((password.match(/type="password"/g)||[]).length,3);assert.match(password,/旧パスワード/);assert.match(password,/確認パスワード/);const logout=run('state.logoutConfirm=true;renderAccountDialogs()');assert.match(logout,/ログアウトしますか/);assert.match(logout,/id="logoutCancel"/);assert.match(logout,/id="logoutOk"/);});
 
 test('organization scene AI classifies files independently of subfolder names',()=>{const run=watchApp();run('ensureWatchDepartments()');const result=JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/スキャナー01/個人住民税申告/test.pdf","c3"))'));assert.equal(result.categoryId,'c3');assert.equal(result.dedupScope,'g4|c3');assert.equal(result.archiveRelativePath,'税務窓口\\スキャナー01\\個人住民税申告\\test.pdf');const other=JSON.parse(run('JSON.stringify(watchResolveFile("税務窓口/未登録/test.pdf","c3"))'));assert.equal(other.categoryId,'c3');assert.ok(run('watchResolveFile("税務窓口/未登録/test.pdf","c99").error'));});
-test('watch configuration validates archive separation and organization folder uniqueness',()=>{const run=watchApp();assert.equal(run('ensureWatchDepartments();watchValidateSettings()'),'');assert.ok(run('WATCH.roots[0].moveTo=WATCH.roots[0].path+"/処理済";watchValidateSettings()'));run('WATCH.roots[0].moveTo="D:/archive";WATCH.departments[1].folder=WATCH.departments[0].folder');assert.match(run('watchValidateSettings()'),/重複/);});
-
-test('automatic upload scene choices inherit organization data permissions',()=>{const run=app();run('BIZ_SCENES.forEach(sc=>sc.departmentIds=[]);BIZ_SCENES[0].departmentIds=["g1"]');assert.equal(run('watchDeptScenes("g2").some(sc=>sc.id===BIZ_SCENES[0].id)'),true);assert.equal(run('watchDeptScenes("g4").length'),0);run('WATCH.departments=[{id:"isolated",groupId:"g4",folder:"税務課",sceneIds:[BIZ_SCENES[0].id],mappings:[],on:true}];ensureWatchDepartments()');assert.equal(run('WATCH.departments[0].sceneIds.length'),0);});
+test('watch configuration validates archive separation and organization folder uniqueness',()=>{const run=watchApp();assert.equal(run('ensureWatchDepartments();watchValidateSettings()'),'');assert.ok(run('WATCH.roots[0].moveTo=WATCH.roots[0].path+"/処理済";watchValidateSettings()'));run('WATCH.roots[0].moveTo="D:/archive";WATCH.departments[1].sceneIds=WATCH.departments[0].sceneIds;watchDeptSync(WATCH.departments[1]);WATCH.departments[1].folder=WATCH.departments[0].folder');assert.match(run('watchValidateSettings()'),/重複/);});
 
 test('自動取込設定: タイトルの注釈アイコンと保存状態の表示を出さない', () => {
   const run = app();
@@ -1507,14 +1505,16 @@ test('自動取込設定: 同一ファイルを除外が OFF なら判定方法�
   assert.doesNotMatch(html, /class="wf is-off"/);
 });
 
-test('自動取込設定: フォルダーから組織・業務シーン・帳票类别を自動表示する', () => {
+test('自動取込設定: 業務シーンから対象部門と帳票类别を自動表示する', () => {
   const run = watchApp();
-  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-auto",folder:"税務窓口",sceneIds:[],on:true}]; watchDeptSync(WATCH.departments[0]);');
+  run('ensureWatchDepartments(); WATCH.departments=[{id:"wd-auto",sceneIds:["cls-zeimu"],folder:"税務窓口",on:true}]; watchDeptSync(WATCH.departments[0]);');
   const html = run('renderWatch()');
   const d = JSON.parse(run('JSON.stringify(WATCH.departments[0])'));
+  assert.deepEqual(d.sceneIds, ['cls-zeimu']);
   assert.equal(d.groupId, 'g4');
-  assert.ok(d.sceneIds.includes('cls-zeimu'));
+  assert.match(html, /data-wdept-scene="wd-auto"/);
   assert.match(html, /data-wdept-folder="wd-auto"/);
+  assert.match(html, /<span>対象部門（自動）<\/span>/);
   assert.match(html, /<span>帳票类别<\/span>/);
   assert.match(html, /class="pill"/);
   assert.doesNotMatch(html, /data-wdept-group-trigger=|data-gfopt="wdeptScene:/);
@@ -1735,7 +1735,7 @@ test('phase one: scene and type names are unique, used scenes cannot be deleted'
   assert.equal(run("typeNameExists('高齢者等実態調査票','T7')"), true);
   assert.equal(run("typeNameExists('高齢者等実態調査票','T8')"), false);
   assert.match(run("sceneDeleteBlockMessage('cls-zeimu')"), /自動取込設定/);
-  assert.match(run("sceneDeleteBlockMessage('cls-jyumin')"), /自動取込設定/);
+  assert.equal(run("sceneDeleteBlockMessage('cls-jyumin')"), '');
 });
 
 test('phase one: deleting an organization used by scenes or watch is blocked', () => {
