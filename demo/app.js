@@ -5846,10 +5846,6 @@ function watchSceneDeptRows(sc) {
 function watchDeptTypeNames(dept) {
   return (dept.sceneIds || []).flatMap(id => ((byId(BIZ_SCENES,id)||{}).formIds||[]).map(fid => (byId(CLASSIFY_FORMS,fid)||{}).name)).filter(Boolean);
 }
-function watchDeptTypes(dept) {
-  const names = watchDeptTypeNames(dept);
-  return TICKET_TYPES.filter((t) => names.includes(t.name));
-}
 function watchDeptCategories(dept) {
   const names = watchDeptTypeNames(dept);
   const ids = new Set(LAYOUT.filter(l=>names.includes(l.name)).map(l=>l.category));
@@ -5867,6 +5863,34 @@ function watchFolderTree() {
   });
   return roots.map(node);
 }
+/** 帳票別に整理された取込元フォルダーのサンプル。 */
+function watchBusinessFolderTree() {
+  return [
+    ...BUSINESS.map((b) => ({
+      name: b.name,
+      children: CATEGORY.filter((c) => c.business === b.id).map((c) => ({ name: c.name })),
+    })),
+    { name: 'タクシー利用助成券', children: [
+      { name: 'タクシー利用助成券交付申請書（新規用）' },
+      { name: 'タクシー利用助成券交付申請書（更新用）' },
+    ] },
+    { name: '工事入札参加資格申込書', children: [
+      { name: '工事入札参加資格申込書（新様式案）' },
+    ] },
+  ];
+}
+
+function watchFolderDepartment(dept, folder) {
+  const groupId = watchFolderGroupId(folder);
+  if (groupId) return groupId;
+  const root = watchFolderKey(folder).split('/')[0];
+  if (watchBusinessFolderTree().some((node) => watchFolderKey(node.name) === root)) {
+    const scene = byId(BIZ_SCENES, (dept.sceneIds || [])[0]);
+    return scene ? (watchSceneDepartments(scene).find((group) => !group.root) || {}).id : '';
+  }
+  return dept.groupId;
+}
+
 /** 監視ルート直下の実フォルダー（デモ用モック）。組織フォルダーで覆われていないものを検出する。 */
 /** どの組織フォルダーにも属さない「ファイルを持つフォルダー」を返す。
  *  組織が親フォルダーに一致していれば配下は対象内。
@@ -5996,15 +6020,20 @@ function watchDeptSync(dept) {
 }
 function ensureWatchDepartments() {
   if(WATCH.departments){WATCH.departments.forEach(watchDeptSync);return WATCH.departments;}
-  const available=GROUPS.filter(g=>!g.root);
-  const tax=byId(GROUPS,((byId(BIZ_SCENES,'cls-zeimu')||{}).departmentIds||[])[0])||byId(GROUPS,'g4')||available[0]||{};
-  const hoikuScene=byId(BIZ_SCENES,'cls-hoiku');
-  const hoikuRows=hoikuScene?watchSceneDeptRows(hoikuScene):[];
-  const hoikuDept=hoikuRows.find(r=>r.id==='g6'&&r.authorized)||hoikuRows.find(r=>r.authorized&&r.depth>0)||null;
-  const welfare=byId(GROUPS,hoikuDept?hoikuDept.id:null)||byId(GROUPS,'g6')||available[1]||available[0]||{};
-  const taxFolder=watchGroupPath(tax.id)||(byId(GROUPS,tax.id)||{}).name||'';
-  const welfareFolder=watchGroupPath(welfare.id)||(byId(GROUPS,welfare.id)||{}).name||'';
-  WATCH.departments=[{id:'wd-tax',groupId:tax.id||'',folder:taxFolder,folders:[taxFolder].filter(Boolean),sceneIds:['cls-zeimu'],on:true},{id:'wd-welfare',groupId:welfare.id||'',folder:welfareFolder,folders:[welfareFolder].filter(Boolean),sceneIds:['cls-hoiku'],on:true}];
+  const samples = [
+    ['wd-tax', 'cls-zeimu', 'b2'],
+    ['wd-welfare', 'cls-hoiku', 'b3'],
+    ['wd-jyumin', 'cls-jyumin', 'b1'],
+    ['wd-jido', 'cls-jido', 'b4'],
+    ['wd-kaigo', 'cls-kaigo', 'b5'],
+    ['wd-korei', 'cls-korei', 'b6'],
+  ];
+  WATCH.departments = samples.flatMap(([id, sceneId, businessId]) => {
+    const scene = byId(BIZ_SCENES, sceneId);
+    const folder = byId(BUSINESS, businessId)?.name;
+    if (!scene || !folder) return [];
+    return [{ id, sceneIds: [sceneId], folders: [folder], groupId: watchFolderDepartment({ sceneIds: [sceneId] }, folder), on: true }];
+  });
   WATCH.departments.forEach(watchDeptSync);
   const r=WATCH.roots[0];if(r&&!r.moveTo)r.moveTo='\\\\filesv01\\処理済';
   return WATCH.departments;
@@ -6029,7 +6058,7 @@ function watchValidateSettings() {
     for(let i=0;i<sceneFolders.length;i++){
       const raw=sceneFolders[i];
       if(!validPath(raw))return '組織フォルダーを確認してください';
-      const gid=watchFolderGroupId(raw)||d.groupId;
+      const gid=watchFolderDepartment(d,raw);
       if(!byId(GROUPS,gid))return 'フォルダーが組織配下にありません';
       const folder=watchFolderKey(raw);
       if(usedExact.has(folder))return '組織フォルダーが重複しています';
@@ -6052,26 +6081,25 @@ function watchResolveFile(relativePath, aiCategoryId) {
     });
   });
   if(!dept)return {error:'組織フォルダーが未設定のため未取込（スキャン範囲外）',skipped:true,source:relativePath};
-  const gid=watchFolderGroupId(matchedFolder)||dept.groupId;
+  const gid=watchFolderDepartment(dept,matchedFolder);
   if(!watchDeptCategories(dept).some(c=>c.id===aiCategoryId))return {error:'組織の業務シーン内で帳票タイプを判別できません',departmentId:gid,source:relativePath};
   return {departmentId:gid,categoryId:aiCategoryId,archiveRelativePath:segments.join('\\'),dedupScope:gid+'|'+aiCategoryId};
 }
 
 function renderWatchFolderTreeMulti(nodes, parent, selected, depth, deptId, sceneId, usedFolders) {
   const expanded = state.watchFolderExpanded || {};
-  const used = new Set(usedFolders || []);
   return (nodes || []).map((n) => {
     const path = parent ? parent + '/' + n.name : n.name;
     const hasKids = !!(n.children && n.children.length);
     const open = hasKids && expanded[path] !== false;
     const on = (selected || []).includes(path);
     const otherExact = (usedFolders || []).some((u) => watchFolderKey(u) === watchFolderKey(path));
-    const sameSceneOverlap = (selected || []).some((s) => watchFolderRelation(s, path));
-    const isUsed = !on && (otherExact || sameSceneOverlap);
+    const inherited = (selected || []).some((s) => watchFolderKey(path).startsWith(watchFolderKey(s) + '/'));
+    const isUsed = inherited || (!on && otherExact);
     const caret = hasKids
       ? `<button type="button" class="watch-folder-caret" data-wdept-folder-toggle="${esc(path)}" aria-label="${open ? '折りたたむ' : '展開'}">${open ? '▾' : '▸'}</button>`
       : '<span class="watch-folder-caret is-leaf" aria-hidden="true"></span>';
-    const row = `<div class="watch-folder-tree-row${isUsed ? ' is-disabled' : ''}" style="padding-left:${depth * 14}px">${caret}<label class="watch-folder-opt${isUsed ? ' is-disabled' : ''}"><input type="checkbox" data-wdept-folder-opt="${deptId}" data-scene-id="${sceneId}" value="${esc(path)}" ${on ? 'checked' : ''} ${isUsed ? 'disabled' : ''}/><span title="${esc(path)}">${esc(n.name)}</span></label></div>`;
+    const row = `<div class="watch-folder-tree-row${isUsed ? ' is-disabled' : ''}" style="padding-left:${depth * 14}px">${caret}<label class="watch-folder-opt${isUsed ? ' is-disabled' : ''}"><input type="checkbox" data-wdept-folder-opt="${deptId}" data-scene-id="${sceneId}" value="${esc(path)}" ${on || inherited ? 'checked' : ''} ${isUsed ? 'disabled' : ''}/><span title="${esc(inherited ? path + '（親フォルダの選択に含まれます）' : path)}">${esc(n.name)}</span></label></div>`;
     return row + (open ? renderWatchFolderTreeMulti(n.children, path, selected, depth + 1, deptId, sceneId, usedFolders) : '');
   }).join('');
 }
@@ -6080,21 +6108,24 @@ function renderWatch() {
   if (!state.watchSnapshot) state.watchSnapshot = JSON.stringify(WATCH);
   const x=WATCH,row=watchRow,root=x.roots[0],depts=ensureWatchDepartments();
   const configured=new Map(depts.map((d)=>[(d.sceneIds||[])[0],d]));
+  const folderTree=watchBusinessFolderTree();
   const departmentCards=BIZ_SCENES.map((sc)=>{
     const d=configured.get(sc.id)||{id:'wd-'+sc.id,sceneIds:[sc.id],folder:'',folders:[],groupId:'',on:true};
     const folders=watchDeptFolders(d);
-    const active=folders.length>0;
-    const sceneDeptRows=active?watchSceneDeptRows(sc):[];
-    const types=active?watchDeptTypes(d):[];
+    const sceneDeptRows=watchSceneDeptRows(sc).filter((r) => r.depth===0);
+    const types=watchDeptCategories(d);
     const usedFolders=depts.filter(o=>o.id!==d.id).flatMap(o=>watchDeptFolders(o));
-    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu watch-folder-multi-menu" role="listbox" aria-multiselectable="true">${renderWatchFolderTreeMulti(watchFolderTree(),'',folders,0,d.id,sc.id,usedFolders)}</div>`:'';
+    const folderMenu=state.watchFolderMenu===d.id?`<div class="watch-folder-menu watch-folder-multi-menu" role="listbox" aria-multiselectable="true">${renderWatchFolderTreeMulti(folderTree,'',folders,0,d.id,sc.id,usedFolders)}</div>`:'';
+    const typeTitle=esc(types.map((type) => type.name).join('\n'));
+    const orgTitle=esc(sceneDeptRows.map((row) => row.name).join('\n'));
+    const folderTitle=esc(folders.join('\n'));
     const chips=folders.map(f=>`<span class="watch-folder-chip"><span>${esc(f)}</span><button type="button" data-wdept-folder-del="${d.id}" data-folder="${esc(f)}" aria-label="削除">×</button></span>`).join('');
     return `<div class="watch-dept-card watch-dept-row${folders.length?'':' is-empty'}" data-watch-dept="${d.id}" data-scene-id="${sc.id}">
       <div class="watch-dept-fields">
         <div class="watch-scene-name" title="${esc(sc.name)}">${esc(sc.name)}</div>
-        <div class="watch-auto-cell">${types.length?types.map(c=>`<span class="pill">${esc(c.name)}</span>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
-        <div class="watch-dept-tree">${sceneDeptRows.length?sceneDeptRows.map(r=>`<div class="watch-dept-tree-row${r.authorized?'':' is-context'}" style="padding-left:${r.depth*12}px" title="${esc(r.name)}">${esc(r.name)}</div>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
-        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-ctl watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified&&!x.pathLoading?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}"><span class="watch-folder-value">${folders.length?folders.length+' 件選択':'フォルダを選択'}</span></button>${folderMenu}<div class="watch-folder-chips">${chips}</div></div>
+        <div class="watch-auto-cell" data-watch-lines="2" title="${typeTitle}">${types.length?types.map(c=>`<span class="pill">${esc(c.name)}</span>`).join('')+'<span class="watch-overflow" hidden></span>':'<span class="watch-scope-line">—</span>'}</div>
+        <div class="watch-dept-tree" title="${orgTitle}">${sceneDeptRows.length?sceneDeptRows.slice(0,3).map((r,index)=>`<div class="watch-dept-tree-row${r.authorized?'':' is-context'}"><span>${esc(r.name)}</span>${index===2&&sceneDeptRows.length>3?`<span class="watch-overflow">+${sceneDeptRows.length-3}</span>`:''}</div>`).join(''):'<span class="watch-scope-line">—</span>'}</div>
+        <div class="watch-folder-picker${state.watchFolderMenu===d.id?' is-open':''}"><button type="button" class="fld watch-ctl watch-folder-trigger" data-wdept-folder-trigger="${d.id}" ${x.pathVerified&&!x.pathLoading?'':'disabled'} aria-haspopup="listbox" aria-expanded="${state.watchFolderMenu===d.id}"><span class="watch-folder-value">${folders.length?folders.length+' 件選択':'フォルダを選択'}</span></button>${folderMenu}<div class="watch-folder-chips" data-watch-lines="1" title="${folderTitle}">${chips}${folders.length?'<span class="watch-overflow" hidden></span>':''}</div></div>
       </div>
     </div>`;
   }).join('');
@@ -6107,12 +6138,44 @@ function renderWatch() {
     </div></fieldset></section>
   <fieldset class="watch-body" ${x.on?'':'disabled'} aria-label="自動取込設定">
     <section class="watch-sec"><h3 class="watch-sec-head">業務シーン別取込設定</h3>
-    <p class="watch-sec-desc">業務シーンごとにデータ権限組織と帳票タイプを自動表示し、フォルダーは任意のサブフォルダーから選択できます。</p>
-    <div class="watch-dept-columns"><span>業務シーン</span><span>帳票タイプ</span><span>データ権限組織</span><span>フォルダ <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span></div><div class="watch-dept-scroll">${departmentCards}</div></section>
+    <p class="watch-sec-desc">業務シーンごとにデータ権限組織と帳票タイプを自動表示し、親フォルダを選択すると、配下のすべてのフォルダが対象になります。</p>
+    <div class="watch-dept-columns"><span>${canReachPage('bizScenes')?'<a class="watch-scene-link" href="#page=bizScenes" data-watch-scene-settings title="業務シーン設定を開く">業務シーン <span aria-hidden="true">↗</span></a>':'業務シーン'}</span><span>帳票タイプ</span><span>データ権限組織（下位組織含む）</span><span>フォルダ（子フォルダを含む） <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span></div><div class="watch-dept-scroll">${departmentCards}</div></section>
     <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法<span class="info-i watch-label-tip" data-tip="組織・帳票タイプごとに判定します。同じファイルでも組織が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
   </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div></div>`;
 }
+let watchLineObserver;
+function fitWatchLines(cell) {
+  const badge = cell.querySelector('.watch-overflow');
+  if (!badge || !cell.clientWidth) return;
+  const items = [...cell.children].filter((item) => item !== badge);
+  items.forEach((item) => { item.hidden = false; });
+  badge.hidden = true;
+  const maxLines = Number(cell.dataset.watchLines);
+  const lineCount = () => new Set([...cell.children].filter((item) => !item.hidden).map((item) => item.offsetTop)).size;
+  if (lineCount() <= maxLines) return;
+
+  badge.hidden = false;
+  for (let index = items.length - 1; index >= 0; index--) {
+    items[index].hidden = true;
+    badge.textContent = '+' + (items.length - index);
+    if (lineCount() <= maxLines) break;
+  }
+}
+
 function bindWatchDepartments() {
+  const cells = document.querySelectorAll('[data-watch-lines]');
+  cells.forEach(fitWatchLines);
+  if (typeof ResizeObserver !== 'undefined') {
+    watchLineObserver = new ResizeObserver((entries) => entries.forEach(({ target }) => fitWatchLines(target)));
+    cells.forEach((cell) => watchLineObserver.observe(cell));
+  }
+  const sceneSettings = document.querySelector('[data-watch-scene-settings]');
+  if (sceneSettings) sceneSettings.onclick = (event) => {
+    event.preventDefault();
+    if (!canReachPage('bizScenes')) return;
+    state.watchFolderMenu = null;
+    openBizScenes(state.sceneId);
+  };
   const depts=ensureWatchDepartments();const get=id=>depts.find(d=>d.id===id);
   document.querySelectorAll('[data-watch-category]').forEach(el=>el.ontoggle=()=>{if(!el.isConnected)return;state.watchMapExpanded=state.watchMapExpanded||{};state.watchMapExpanded[el.dataset.watchCategory]=el.open;});
   if(!document._watchSceneOutside){document._watchSceneOutside=true;document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.watch-scene-picker'))return;document.querySelectorAll('.watch-scene-picker[open]').forEach(el=>el.open=false);state.watchSceneOpen=null;});}
@@ -6180,7 +6243,10 @@ function bindWatchDepartments() {
     const set=new Set(watchDeptFolders(d));
     if(cb.checked){
       const others=WATCH.departments.filter((x)=>x.id!==id).flatMap((x)=>watchDeptFolders(x));
-      if(others.some((f)=>watchFolderKey(f)===watchFolderKey(cb.value)) || [...set].some((f)=>watchFolderRelation(f,cb.value))){ cb.checked=false; toast('同じフォルダーまたは同一シーン内の親子フォルダーは選択できません','error'); render(); return; }
+      if(others.some((f)=>watchFolderKey(f)===watchFolderKey(cb.value)) || [...set].some((f)=>watchFolderKey(cb.value).startsWith(watchFolderKey(f)+'/'))){ cb.checked=false; toast('同じフォルダーまたは同一シーン内の親子フォルダーは選択できません','error'); render(); return; }
+      for (const folder of set) {
+        if (watchFolderKey(folder).startsWith(watchFolderKey(cb.value)+'/')) set.delete(folder);
+      }
       set.add(cb.value);
     } else set.delete(cb.value);
     watchSetFolders(d, [...set]);
@@ -6486,7 +6552,7 @@ function watchDeptsUsingScene(sceneId) {
 }
 function watchDeptsUsingOrg(ids) {
   const set = new Set(ids);
-  return watchActiveDepts().filter((d) => watchDeptFolders(d).some((f) => set.has(watchFolderGroupId(f) || d.groupId)));
+  return watchActiveDepts().filter((d) => watchDeptFolders(d).some((f) => set.has(watchFolderDepartment(d, f))));
 }
 function watchUsesOrgScene(sceneId, orgIds) { return false; }
 function sceneDeleteBlockMessage(sceneId) { return ''; }
@@ -8291,6 +8357,7 @@ function bindAccount() {
 }
 
 function render() {
+  watchLineObserver?.disconnect();
   const app = $('#app');
   /* innerHTML を丸ごと差し替えるので、同じ画面を描き直すときはスクロール位置を戻す。
      これが無いとトグルを押すたびに一番上へ飛ぶ。 */
