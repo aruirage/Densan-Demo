@@ -485,6 +485,9 @@ test('業務シーン: 帳票タイプは1つの業務シーンだけに所属�
   assert.match(html, /他の業務シーンで使用中/);
   assert.doesNotMatch(html, /data-pickform="form-tax-shimin"[^>]*disabled/);
   assert.equal(run('sceneOwnerOfForm("form-jyumin-a").id'), 'cls-jyumin');
+  run('globalThis.msgs=[]; toast=(m)=>globalThis.msgs.push(m); const a=byId(BIZ_SCENES,"cls-zeimu"); a.departmentIds=["g1"]; const b=byId(BIZ_SCENES,"cls-hoiku"); b.formIds.push(a.formIds[0]); globalThis.a=a;');
+  assert.equal(run('validateSceneStep1(globalThis.a)'), false);
+  assert.match(run('globalThis.msgs.at(-1)'), /使用されています/);
 });
 
 

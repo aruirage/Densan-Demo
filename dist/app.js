@@ -7096,6 +7096,10 @@ function validateSceneStep1(sc) {
   if (!(sc.name || '').trim()) { toast('業務シーン名を入力してください'); return false; }
   if (sceneNameExists(sc.name, sc.id)) { toast('同じ名前の業務シーンが既に存在します','error'); return false; }
   if (!(sc.departmentIds||[]).length) { toast('データ権限組織を選択してください'); return false; }
+  for (const fid of (sc.formIds || [])) {
+    const owner = BIZ_SCENES.find((other) => other.id !== sc.id && (other.formIds || []).includes(fid));
+    if (owner) { toast(`この帳票タイプは「${owner.name}」で使用されています`, 'error'); return false; }
+  }
   syncSceneUsers(sc);
   return true;
 }
