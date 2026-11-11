@@ -1933,8 +1933,8 @@ test('automatic upload shows scene metadata and accepts business folder paths', 
   assert.equal(run('watchResolveFile("住民異動関係/20_B団体_住民異動届/申請.pdf", "c1b").departmentId'), 'g4');
 });
 
-test('automatic upload asks for a folder when no scene has one', () => {
+test('automatic upload allows saving without any folder selection', () => {
   const run = watchApp();
   run('ensureWatchDepartments(); WATCH.departments=[];');
-  assert.equal(run('watchValidateSettings()'), '取込対象のフォルダーを設定してください');
+  assert.equal(run('watchValidateSettings()'), '');
 });

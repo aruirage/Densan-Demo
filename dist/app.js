@@ -6613,9 +6613,7 @@ function watchValidateSettings() {
   if(!target)return '処理後フォルダーを入力してください';
   if(source===target||source.startsWith(target+'/')||target.startsWith(source+'/'))return '監視フォルダーと処理後フォルダーは別の階層に設定してください';
   const depts=ensureWatchDepartments().filter(d=>d.on&&watchDeptFolders(d).length),usedExact=new Set();
-  if(!depts.length)return '取込対象のフォルダーを設定してください';
-  const validName=n=>n&&n!=='.'&&n!=='..'&&!/[\\/¥￥:*?"<>|]/.test(n);
-  const validPath=p=>{const parts=String(p||'').split(/[\\/¥￥]+/).filter(Boolean);return parts.length>0&&parts.every(validName);};
+  if(!depts.length)return '';
   for(const d of depts){
     const sc=byId(BIZ_SCENES,(d.sceneIds||[])[0]);
     if(!sc)return '業務シーンを選択してください';
@@ -6623,7 +6621,6 @@ function watchValidateSettings() {
     const sceneFolders=watchDeptFolders(d);
     for(let i=0;i<sceneFolders.length;i++){
       const raw=sceneFolders[i];
-      if(!validPath(raw))return '組織フォルダーを確認してください';
       const gid=watchFolderDepartment(d,raw);
       if(!byId(GROUPS,gid))return 'フォルダーが組織配下にありません';
       const folder=watchFolderKey(raw);
