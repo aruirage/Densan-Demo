@@ -479,6 +479,79 @@
 <td>按当前状态和权限启用</td>
 </tr>
 </tbody></table>
+<h4>读取枚数（ページ数）的计算逻辑</h4>
+<p>读取枚数按<strong>页</strong>统计，不按文件数。Home 的「読取枚数合計」＝当前筛选结果中所有文件的ページ数之和。</p>
+<table>
+<thead>
+<tr>
+<th>文件类型</th>
+<th>计数规则</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PDF</td>
+<td>按 PDF 实际页数计数；加密、损坏、无法打开时为 0</td>
+</tr>
+<tr>
+<td>JPEG／PNG／HEIC</td>
+<td>每个文件计 1 页</td>
+</tr>
+<tr>
+<td>TIFF</td>
+<td>按帧数计数；多帧 TIFF 每帧 1 页</td>
+</tr>
+<tr>
+<td>ZIP</td>
+<td>按解压后支持格式的页数求和；ZIP 本身不计页；嵌套 ZIP 不支持，计 0</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>状态／场景</th>
+<th>计数规则</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>读取完成</td>
+<td>取最近一次成功 OCR 的页数</td>
+</tr>
+<tr>
+<td>读取中／要確認／未读取</td>
+<td>0</td>
+</tr>
+<tr>
+<td>读取失败（从未成功）</td>
+<td>0</td>
+</tr>
+<tr>
+<td>重读失败（此前成功过）</td>
+<td>保留上一次成功页数，不清零、不累加</td>
+</tr>
+<tr>
+<td>重读成功</td>
+<td>用新页数覆盖旧值，不累加</td>
+</tr>
+<tr>
+<td>重复跳过（防重复）</td>
+<td>不生成文件行，不计页</td>
+</tr>
+<tr>
+<td>已删除文件</td>
+<td>从合计中排除</td>
+</tr>
+<tr>
+<td>手动上传／自动取入</td>
+<td>同一口径，都计入</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>筛选</strong>：与列表使用同一筛选结果（期间、業務シーン、帳票タイプ、ユーザー、数据权限），不按当前页计算。</li>
+<li><strong>分页</strong>：切换页码、每页条数不影响合计；合计始终是全量筛选结果。</li>
+<li><strong>权限</strong>：只统计当前用户有权访问的场景／帳票タイプ文件。</li>
+<li><strong>格式</strong>：整数，千分位逗号显示，不做四舍五入。</li>
+</ul>
+<p>示例：PDF 10 页＋PNG 2 张＋多帧 TIFF 3 帧＋ZIP 内 PDF 5 页和 JPG 1 张 = <code>10＋2＋3＋5＋1＝21</code> 页。</p>
 <h4>文件树与名称、权限的联动</h4>
 <table>
 <thead>
@@ -1364,7 +1437,7 @@
 </tr>
 <tr>
 <td>読取枚数合計</td>
-<td>検索結果に含まれるページ数の合計を表示</td>
+<td>検索結果に含まれるページ数の合計を表示；口径见 4.01「读取枚数的计算逻辑」</td>
 </tr>
 <tr>
 <td>呼び出し方法</td>
