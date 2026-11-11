@@ -6613,7 +6613,7 @@ function watchValidateSettings() {
   if(!target)return '処理後フォルダーを入力してください';
   if(source===target||source.startsWith(target+'/')||target.startsWith(source+'/'))return '監視フォルダーと処理後フォルダーは別の階層に設定してください';
   const depts=ensureWatchDepartments().filter(d=>d.on&&watchDeptFolders(d).length),usedExact=new Set();
-  if(!depts.length)return '有効な業務シーンを設定してください';
+  if(!depts.length)return '取込対象のフォルダーを設定してください';
   const validName=n=>n&&n!=='.'&&n!=='..'&&!/[\\/¥￥:*?"<>|]/.test(n);
   const validPath=p=>{const parts=String(p||'').split(/[\\/¥￥]+/).filter(Boolean);return parts.length>0&&parts.every(validName);};
   for(const d of depts){
