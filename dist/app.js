@@ -1391,6 +1391,7 @@ function makeUpload(name, sizeBytes) {
     /* この関数は画面からの手動アップロード用。監視フォルダー取込のモックは
        initializeDemoData() で auto=true を明示する。 */
     auto: false,
+    createdBy: state.currentUser,
     error: '',
     biz: state.upBiz,
   };
@@ -5902,7 +5903,7 @@ function renderSecurity() {
         <h4>データ保存期限設定</h4>
         <select class="fld sec-ctl" data-sec="retention">${opts(['7日', '14日', '1ヶ月', '2ヶ月', '3ヶ月', '6ヶ月', '12ヶ月'], SECURITY.retention)}</select>
       </div>
-      <p class="cfg-note">読取データの自動削除サイクルを設定します。システムは設定に基づき、保持期間を超えた読取記録および関連ファイルを自動的に削除します。</p>
+      <p class="cfg-note">読取データの自動削除サイクルを設定します。保持期間を超えた関連ファイルとデータベース上の記録を物理削除し、復元できません。</p>
     </section>
     <section class="sec-card">
       <div class="sec-head">
@@ -6279,7 +6280,7 @@ function renderDictDialogs() {
  *     （tenant は取り込み先の紐付け属性で、行の単位ではない）
  *  ② パス直下の帳票タイプ別フォルダごとに、フォルダ名・ファイル名パターン・
  *     自動取込の ON/OFF を持つ
- *  ③ 二重取込防止・失敗時の再実行・エラー通知（Webhook）は全パス共通
+ *  ③ 二重取込防止は内容ハッシュ（SHA-256）で常時有効。失敗時の再実行は全パス共通
  *  業務シーンは選ばせない（帳票タイプ→業務シーンは従属なので導出できる）。 */
 let WATCH = {
   on: true,
@@ -6289,8 +6290,7 @@ let WATCH = {
   ],
   /* ② 帳票タイプ 1 行。フォルダ名はパス直下の名前（全パス共通） */
   rules: [],
-  /* ③ 共通設定。エラー通知は Webhook URL のみ（メール通知は廃止） */
-  dupGuard: true, dupMethod: 'meta',
+  /* ③ 共通設定 */
   retry: 3, retryGap: 5, retryUnit: '分',
   updatedAt: '2026-10-16 09:12:30',
 };
@@ -6348,8 +6348,8 @@ const WATCH_SUMMARY = { ok: 944, ng: 20 };
 
 /** 監視パスごとの処理後（del=削除 / keep=そのまま） */
 const WATCH_ROOT_AFTER = { del: '削除', keep: 'そのまま', move: '移動' };
-/** 二重取込の判定方法 */
-const WATCH_DUP = { meta: 'ファイル名＋サイズ＋日時', hash: '内容ハッシュ（SHA-256）' };
+/** 二重取込防止はバックエンド固定。画面設定には持たせない。 */
+const WATCH_DEDUP = Object.freeze({ enabled: true, method: 'sha256' });
 /** エラー通知の条件 */
 const WATCH_NOTIFY_ON = { fail: '失敗したときだけ', always: '毎回' };
 /** 対象ファイルは glob ではなく定型から選ぶ（現場が拡張子を書かないため） */
@@ -6363,7 +6363,7 @@ const WATCH_PATTERNS = [
 
 /* フォーム部品（この画面だけで使う） */
 const watchSelect = (key, opts, cur, disabled) => `<select class="fld" data-wf="${key}" ${disabled ? 'disabled' : ''}>${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
-const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-label="${key==='on'?'自動取込を有効にする':'同一ファイルを除外'}" aria-checked="${on}"><span class="tgl-knob"></span></button>`;
+const watchToggle = (key, on) => `<button type="button" class="tgl${on ? '' : ' off'}" data-wf-toggle="${key}" role="switch" aria-label="自動取込を有効にする" aria-checked="${on}"><span class="tgl-knob"></span></button>`;
 const watchRow = (label, inner, wide, off) => `<div class="wf${off ? ' is-off' : ''}"><span class="wf-label">${label}</span><div class="wf-ctl${wide ? ' wide' : ''}">${inner}</div></div>`;
 
 /** 自動取込設定。組織フォルダーで対象範囲を決め、選択した業務シーン内でAI分類する。 */
@@ -6414,16 +6414,36 @@ function watchBusinessFolderTree() {
   return [
     ...BUSINESS.map((b) => ({
       name: b.name,
-      children: CATEGORY.filter((c) => c.business === b.id).map((c) => ({ name: c.name })),
+      files: 0,
+      children: CATEGORY.filter((c) => c.business === b.id).map((c) => ({ name: c.name, files: 1 })),
     })),
-    { name: 'タクシー利用助成券', children: [
-      { name: 'タクシー利用助成券交付申請書（新規用）' },
-      { name: 'タクシー利用助成券交付申請書（更新用）' },
+    { name: 'タクシー利用助成券', files: 0, children: [
+      { name: 'タクシー利用助成券交付申請書（新規用）', files: 1 },
+      { name: 'タクシー利用助成券交付申請書（更新用）', files: 1 },
     ] },
-    { name: '工事入札参加資格申込書', children: [
-      { name: '工事入札参加資格申込書（新様式案）' },
+    { name: '工事入札参加資格申込書', files: 0, children: [
+      { name: '工事入札参加資格申込書（新様式案）', files: 1 },
     ] },
   ];
+}
+
+/** 他シーンの設定を除いたとき、このフォルダー配下に取込対象が残るか。 */
+function watchFolderHasAvailableFiles(node, path, usedFolders, rootPath) {
+  const key=watchFolderKey(path),root=watchFolderKey(rootPath||path);
+  const used=(usedFolders||[]).map(watchFolderKey).filter((u)=>u&&(u===root||u.startsWith(root+'/')));
+  if(used.some((u)=>key===u||key.startsWith(u+'/')))return false;
+  const children=node.children||[];
+  const hasOwnFiles=node.files==null?!children.length:Number(node.files)>0;
+  if(hasOwnFiles)return true;
+  return children.some((child)=>watchFolderHasAvailableFiles(child,path+'/'+child.name,usedFolders,root));
+}
+function watchFolderNodeByPath(nodes, target, parent) {
+  for(const node of nodes||[]){
+    const path=parent?parent+'/'+node.name:node.name;
+    if(watchFolderKey(path)===watchFolderKey(target))return {node,path};
+    const found=watchFolderNodeByPath(node.children,target,path);if(found)return found;
+  }
+  return null;
 }
 
 function watchFolderDepartment(dept, folder) {
@@ -6609,6 +6629,10 @@ function watchValidateSettings() {
       const folder=watchFolderKey(raw);
       if(usedExact.has(folder))return '組織フォルダーが重複しています';
       if(sceneFolders.some((other,j)=>j!==i&&watchFolderRelation(raw,other)))return '組織フォルダーが重複しています';
+      const found=watchFolderNodeByPath(watchBusinessFolderTree(),raw,'');
+      const otherFolders=depts.filter((other)=>other!==d).flatMap((other)=>watchDeptFolders(other));
+      if(otherFolders.some((other)=>watchFolderKey(other)===folder))return '組織フォルダーが重複しています';
+      if(found&&!watchFolderHasAvailableFiles(found.node,found.path,otherFolders))return '配下のフォルダーはすべて他の業務シーンに設定されています';
       usedExact.add(folder);
     }
   }
@@ -6641,11 +6665,13 @@ function renderWatchFolderTreeMulti(nodes, parent, selected, depth, deptId, scen
     const on = (selected || []).includes(path);
     const otherExact = (usedFolders || []).some((u) => watchFolderKey(u) === watchFolderKey(path));
     const inherited = (selected || []).some((s) => watchFolderKey(path).startsWith(watchFolderKey(s) + '/'));
-    const isUsed = inherited || (!on && otherExact);
+    const noAvailable = !watchFolderHasAvailableFiles(n,path,usedFolders);
+    const isUsed = inherited || (!on && otherExact) || noAvailable;
     const caret = hasKids
       ? `<button type="button" class="watch-folder-caret" data-wdept-folder-toggle="${esc(path)}" aria-label="${open ? '折りたたむ' : '展開'}">${open ? '▾' : '▸'}</button>`
       : '<span class="watch-folder-caret is-leaf" aria-hidden="true"></span>';
-    const row = `<div class="watch-folder-tree-row${isUsed ? ' is-disabled' : ''}" style="padding-left:${depth * 14}px">${caret}<label class="watch-folder-opt${isUsed ? ' is-disabled' : ''}"><input type="checkbox" data-wdept-folder-opt="${deptId}" data-scene-id="${sceneId}" value="${esc(path)}" ${on || inherited ? 'checked' : ''} ${isUsed ? 'disabled' : ''}/><span title="${esc(inherited ? path + '（親フォルダの選択に含まれます）' : path)}">${esc(n.name)}</span></label></div>`;
+    const title=noAvailable?'配下のフォルダーはすべて他の業務シーンに設定されています':(inherited?path+'（親フォルダの選択に含まれます）':path);
+    const row = `<div class="watch-folder-tree-row${isUsed ? ' is-disabled' : ''}" style="padding-left:${depth * 14}px">${caret}<label class="watch-folder-opt${isUsed ? ' is-disabled' : ''}"><input type="checkbox" data-wdept-folder-opt="${deptId}" data-scene-id="${sceneId}" value="${esc(path)}" ${on || inherited ? 'checked' : ''} ${isUsed ? 'disabled' : ''}/><span title="${esc(title)}">${esc(n.name)}</span>${noAvailable?'<span class="watch-folder-used">割当可能なファイルなし</span>':''}</label></div>`;
     return row + (open ? renderWatchFolderTreeMulti(n.children, path, selected, depth + 1, deptId, sceneId, usedFolders) : '');
   }).join('');
 }
@@ -6686,7 +6712,7 @@ function renderWatch() {
     <section class="watch-sec"><h3 class="watch-sec-head">業務シーン別取込設定</h3>
     <p class="watch-sec-desc">業務シーンごとにデータ権限組織と帳票タイプを自動表示し、親フォルダを選択すると、配下のすべてのフォルダが対象になります。</p>
     <div class="watch-dept-columns"><span>${canReachPage('bizScenes')?'<a class="watch-scene-link" href="#page=bizScenes" data-watch-scene-settings title="業務シーン設定を開く">業務シーン <span aria-hidden="true">↗</span></a>':'業務シーン'}</span><span>帳票タイプ</span><span>データ権限組織（下位組織含む）</span><span>フォルダ（子フォルダを含む） <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span></div><div class="watch-dept-scroll">${departmentCards}</div></section>
-    <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">重複取込の防止、実行間隔、再試行回数をまとめて設定します。</p><div class="watch-setting-rows">${row('同一ファイルを除外',watchToggle('dupGuard',x.dupGuard))}${row('判定方法<span class="info-i watch-label-tip" data-tip="組織・帳票タイプごとに判定します。同じファイルでも組織が異なる場合は個別に取り込みます。">i</span>',watchSelect('dupMethod',Object.keys(WATCH_DUP).map(k=>[k,WATCH_DUP[k]]),x.dupMethod,!x.dupGuard),true,!x.dupGuard)}${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
+    <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><div class="watch-setting-rows">${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('再実行回数',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
   </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div></div>`;
 }
 let watchLineObserver;
@@ -6789,6 +6815,8 @@ function bindWatchDepartments() {
     const set=new Set(watchDeptFolders(d));
     if(cb.checked){
       const others=WATCH.departments.filter((x)=>x.id!==id).flatMap((x)=>watchDeptFolders(x));
+      const found=watchFolderNodeByPath(watchBusinessFolderTree(),cb.value,'');
+      if(found&&!watchFolderHasAvailableFiles(found.node,found.path,others)){cb.checked=false;toast('配下のフォルダーはすべて他の業務シーンに設定されています','error');render();return;}
       if(others.some((f)=>watchFolderKey(f)===watchFolderKey(cb.value)) || [...set].some((f)=>watchFolderKey(cb.value).startsWith(watchFolderKey(f)+'/'))){ cb.checked=false; toast('同じフォルダーまたは同一シーン内の親子フォルダーは選択できません','error'); render(); return; }
       for (const folder of set) {
         if (watchFolderKey(folder).startsWith(watchFolderKey(cb.value)+'/')) set.delete(folder);
@@ -6947,11 +6975,16 @@ function sceneFormPicker(sc) {
     + (list.length
       ? list.map((f) => {
         const on = selected.has(f.id);
-        return `<button type="button" class="sc-pick-row${on ? ' is-selected' : ''}" data-pickform="${f.id}" aria-pressed="${on}"><span class="pf-name">${esc(f.name)}</span><span class="pick-check${on ? ' on' : ''}" aria-hidden="true"></span></button>`;
+        const owner = sceneOwnerOfForm(f.id, sc.id);
+        return `<button type="button" class="sc-pick-row${on ? ' is-selected' : ''}${owner ? ' is-used' : ''}" data-pickform="${f.id}" aria-pressed="${on}" ${owner ? `disabled title="他の業務シーンで使用中：${esc(owner.name)}"` : ''}><span class="pf-name">${esc(f.name)}</span>${owner ? '<span class="sc-pick-used">他の業務シーンで使用中</span>' : ''}<span class="pick-check${on ? ' on' : ''}" aria-hidden="true"></span></button>`;
       }).join('')
       : '<p class="muted center">該当する帳票がありません</p>')
     + '</div>'
     + '</div></div>';
+}
+
+function sceneOwnerOfForm(formId, excludeSceneId) {
+  return BIZ_SCENES.find((scene) => scene.id !== excludeSceneId && (scene.formIds || []).includes(formId)) || null;
 }
 
 /** 業務シーンの名称変更ダイアログ */
@@ -7260,6 +7293,8 @@ function bindBizScenes() {
       const ids = sc.formIds || (sc.formIds = []);
       const id = b.dataset.pickform;
       if (ids.includes(id)) { sc.formIds = ids.filter((x) => x !== id); render(); return; }
+      const owner = sceneOwnerOfForm(id, sc.id);
+      if (owner) { toast(`この帳票タイプは「${owner.name}」で使用されています`, 'error'); return; }
       if (ids.length >= MAX_CLASSIFY_FORMS) { toast(`1業務シーンあたり最大${MAX_CLASSIFY_FORMS}種類までです`); return; }
       ids.push(id);
       render();
@@ -8505,6 +8540,7 @@ function renderHome() {
 
   const F = state.hFilters;
   const rows = historyRows();
+  const totalReadPages = rows.reduce((sum, row) => sum + (Number(row.pages) || 0), 0);
   const pages = Math.max(1, Math.ceil(rows.length / state.hPerPage));
   if (state.hPage > pages) state.hPage = pages;
   const view = rows.slice((state.hPage - 1) * state.hPerPage, state.hPage * state.hPerPage);
@@ -8567,6 +8603,12 @@ function renderHome() {
       </div>
     </div>
   </div>
+
+  <section class="home-read-total" aria-label="読取枚数合計">
+    <h2>読取枚数合計</h2>
+    <div class="home-read-total-value"><strong>${totalReadPages.toLocaleString('ja-JP')}</strong><span>読取枚数</span></div>
+    <p>検索結果の合計</p>
+  </section>
 
   <div class="upload-actions" style="margin-top:14px">
     <button class="btn dl-btn" id="hDownload"><span class="ico i-export"></span>ダウンロード</button>
@@ -8752,7 +8794,12 @@ function renderSidebarPane() {
 }
 
 function renderUpload() {
-  const uploadsForBiz = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && ['classifying', 'needs_confirm', 'waiting', 'error'].includes(u.status));
+  const manualStatuses=['classifying','needs_confirm','waiting'];
+  const uploadsForBiz = state.uploads.filter((u) => {
+    if(u.auto)return u.status==='needs_confirm'&&sceneCanAccessFile(u,state.currentUser);
+    const own=u.createdBy?u.createdBy===state.currentUser:u.user===currentUploadUserLabel();
+    return own&&manualStatuses.includes(u.status);
+  });
   const selectableUp = uploadsForBiz.filter((u) => u.status === 'waiting' || u.status === 'needs_confirm');
   const upAllChecked = selectableUp.length > 0 && selectableUp.every((u) => state.upPicked[u.id]);
   const picked = uploadsForBiz.filter((u) => state.upPicked[u.id]).length;
@@ -8762,10 +8809,7 @@ function renderUpload() {
     waiting: ['読取待ち', 'ok'],
     reading: ['読取中', 'mid'],
     done: ['読取完了', 'ok'],
-    error: ['失敗', 'ng'],
-    failed: ['読取失敗', 'ng'],
   };
-  const typeCandidates = layoutsForBiz(state.upBiz);
   const upPages = Math.max(1, Math.ceil(uploadsForBiz.length / state.upPerPage));
   if (state.upPage > upPages) state.upPage = upPages;
   const view = uploadsForBiz.slice((state.upPage - 1) * state.upPerPage, state.upPage * state.upPerPage);
@@ -8774,7 +8818,8 @@ function renderUpload() {
     ? ''
     : view.map((u) => {
       const [label, cls] = stMap[u.status] || ['失敗', 'ng'];
-      const opts = typeCandidates.length ? typeCandidates : savedTemplates();
+      const rowCandidates=layoutsForBiz(u.biz||state.upBiz);
+      const opts = rowCandidates.length ? rowCandidates : savedTemplates();
       const typeDisabled = u.status === 'classifying' || u.status === 'reading';
       const hasLayout = opts.some((l) => l.id === u.layout);
       const typeOptions = [
@@ -8783,7 +8828,7 @@ function renderUpload() {
       ].join('');
       const typeCell = `<select class="type-select${typeDisabled ? ' is-pending' : ''}" data-uptype="${u.id}" title="${typeDisabled ? '自動判別が完了するまで変更できません' : '分類結果を確認し、必要なら帳票タイプを選び直してください'}" ${typeDisabled ? 'disabled' : ''}>${typeOptions}</select>`;
       const canPick = u.status === 'waiting' || u.status === 'needs_confirm';
-      const upUser = u.user || currentUploadUserLabel();
+      const upUser = u.auto ? 'バッチ処理' : (u.user || currentUploadUserLabel());
       const delBtn = userHasOp('delete')
         ? `<button type="button" class="act danger" data-upact="del" data-id="${u.id}" data-tip="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>`
         : '';
@@ -8823,9 +8868,9 @@ function renderUpload() {
       <path d="M24 33V19m0 0-5 5m5-5 5 5"/>
     </svg>
     <div class="dz-title">ここにファイルをドラッグ・ドロップ</div>
-        <div class="dz-note">単一または複数のファイル、および ZIP 圧縮パッケージをアップロードできます。最大50MB、各ファイルは最大50ページです。ファイル形式はJPG、JPEG、PNG、HEIC、PDF、ZIPです。ZIP内の有効ファイルは展開後に一覧へ追加され、ZIP自体は表示されません。</div>
+        <div class="dz-note">単一または複数のファイル、およびZIP圧縮パッケージをアップロードできます。最大50MB、各ファイルは最大50ページです。ファイル形式はJPG、JPEG、PNG、HEIC、TIF、TIFF、PDF、ZIPです。</div>
     <button class="btn primary" id="pickBtn"><span class="ico i-upload"></span>ファイル選択</button>
-        <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.heic,.zip" hidden />
+        <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.heic,.tif,.tiff,.zip" hidden />
   </div>` : `<div class="dropzone nl-dropzone up-no-perm" aria-disabled="true">
     <div class="dz-title">アップロード権限がありません</div>
     <div class="dz-note">現在のユーザーに割り当てられたアップロード権限のある業務シーンがありません。帳票権限管理でアップロード担当を設定してください。</div>
@@ -8833,7 +8878,7 @@ function renderUpload() {
     </section>
 
     <section class="upload-card upload-list-card">
-  <h2 class="sec-title">アップロード済ファイル</h2>
+  <h2 class="sec-title">アップロード済・確認待ちファイル</h2>
   <div class="upload-actions">
         ${canShowRead ? `<button type="button" class="btn primary" id="upRead" title="読取待ちのファイルを読取り、読取結果一覧へ移動します">選択帳票読取</button>` : ''}
         ${userHasOp('delete') ? `<button type="button" class="btn danger-ghost" id="upDel" ${picked ? '' : 'disabled'}><span class="ico i-delete"></span>一括削除</button>` : ''}
@@ -11437,6 +11482,18 @@ function seedAdditionalDemoData() {
         error:status==='failed'?'画像が不鮮明なため読み取れませんでした':status==='error'?'処理中にエラーが発生しました。再度アップロードしてください。':'',});
     });
   });
+  const manualLayout = layoutsForBiz('b1')[0] || LAYOUT[0];
+  const manualSamples = [
+    ['classifying', '手動アップロード_判別中.pdf', '帳票タイプを自動分類しています'],
+    ['needs_confirm', '手動アップロード_要確認.pdf', '帳票タイプを確認してください'],
+    ['waiting', '手動アップロード_読取待ち.pdf', '読取開始を待っています'],
+  ].map(([status, name, history], i) => ({
+    id: `demo-manual-u1-${i}`, biz: 'b1', layout: manualLayout.id, name,
+    size: 245000 + i * 73000, pages: i + 1,
+    uploadedAt: `2026-10-28 11:${String(12-i).padStart(2,'0')}:00`,
+    user: 'miko.sato', createdBy: 'u1', status, auto: false, history, error: '',
+  }));
+  state.uploads.unshift(...manualSamples);
 }
 
 function initializePhaseOneAccess() {

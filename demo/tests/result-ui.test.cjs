@@ -403,6 +403,32 @@ test('upload screen business division is available to upload-menu roles', () => 
   /* 業務シーン管理者はアップロードメニューを持たない */
   assert.equal(run('canUploadBiz("b1", "u2")'), false);
 });
+
+test('upload list shows own manual files and authorized automatic files waiting for confirmation', () => {
+  const run = app();
+  run(`state.currentUser='u7';
+    byId(GROUPS,'g6').userIds.push('u7');
+    const allowedScene=byId(BIZ_SCENES,'cls-hoiku');
+    allowedScene.departmentIds=['g6'];
+    syncSceneUsers(allowedScene);
+    const deniedScene=byId(BIZ_SCENES,'cls-zeimu');
+    deniedScene.departmentIds=['g4'];
+    syncSceneUsers(deniedScene);
+    const allowed=LAYOUT.find(l=>sceneForLayout(l.id)?.id===allowedScene.id);
+    const denied=LAYOUT.find(l=>sceneForLayout(l.id)?.id===deniedScene.id);
+    state.uploads=[
+      {id:'own-manual',name:'own-manual.pdf',biz:'b1',layout:allowed.id,status:'waiting',auto:false,createdBy:'u7',size:1000,uploadedAt:'2026-11-11 10:00:00'},
+      {id:'other-manual',name:'other-manual.pdf',biz:'b1',layout:allowed.id,status:'waiting',auto:false,createdBy:'u1',size:1000,uploadedAt:'2026-11-11 10:01:00'},
+      {id:'allowed-auto',name:'allowed-auto.pdf',biz:'b2',layout:allowed.id,status:'needs_confirm',auto:true,size:1000,uploadedAt:'2026-11-11 10:02:00'},
+      {id:'done-auto',name:'done-auto.pdf',biz:'b2',layout:allowed.id,status:'waiting',auto:true,size:1000,uploadedAt:'2026-11-11 10:03:00'},
+      {id:'denied-auto',name:'denied-auto.pdf',biz:'b3',layout:denied.id,status:'needs_confirm',auto:true,size:1000,uploadedAt:'2026-11-11 10:04:00'}
+    ];`);
+  const html = run('renderUpload()');
+  assert.match(html, /own-manual\.pdf/);
+  assert.match(html, /allowed-auto\.pdf/);
+  assert.match(html, /バッチ処理/);
+  assert.doesNotMatch(html, /other-manual\.pdf|done-auto\.pdf|denied-auto\.pdf/);
+});
 test('classification list is the six sample business folders with a per-row menu and empty right pane', () => {
   const run = app();
   run('state.page = "bizScenes"; state.sceneId = null; state.sceneMenu = null');
@@ -450,6 +476,15 @@ test('classification forms and business divisions are named after the sample fil
   // 効果テストで使う代表例
   assert.equal(run('byId(CLASSIFY_FORMS, "form-jyumin-a").name'), '10_A団体_住民異動届');
   assert.equal(run('byId(CLASSIFY_FORMS, "form-hoiku-doctor").name'), '03_医師の診断書');
+});
+
+test('業務シーン: 帳票タイプは1つの業務シーンだけに所属する', () => {
+  const run = app();
+  const html = run('sceneFormPicker(byId(BIZ_SCENES,"cls-zeimu"))');
+  assert.match(html, /data-pickform="form-jyumin-a"[^>]*disabled/);
+  assert.match(html, /他の業務シーンで使用中/);
+  assert.doesNotMatch(html, /data-pickform="form-tax-shimin"[^>]*disabled/);
+  assert.equal(run('sceneOwnerOfForm("form-jyumin-a").id'), 'cls-jyumin');
 });
 
 
@@ -1005,6 +1040,7 @@ test('security settings keep only the three modules from the design', () => {
   assert.match(html, /data-sec="retention"[\s\S]*?7日[\s\S]*?14日[\s\S]*?1ヶ月[\s\S]*?2ヶ月[\s\S]*?3ヶ月[\s\S]*?6ヶ月[\s\S]*?12ヶ月/);
   assert.match(html, /data-sec="ipEnabled"[\s\S]*?無効[\s\S]*?有効/);
   assert.match(html, /data-sec="idle"[\s\S]*?15分[\s\S]*?30分[\s\S]*?60分[\s\S]*?2時間[\s\S]*?制限なし/);
+  assert.match(html, /関連ファイルとデータベース上の記録を物理削除し、復元できません/);
   /* 既定値 */
   assert.equal(run('SECURITY.retention'), '6ヶ月');
   assert.equal(run('SECURITY.ipEnabled'), '無効');
@@ -1225,6 +1261,19 @@ test('ホーム: ご利用履歴と自動アップロードのダッシュボー
   assert.doesNotMatch(html, /既読|未読|対応済み/);
 });
 
+test('ホーム: 検索結果の読取枚数合計を計費用に表示する', () => {
+  const run = app();
+  const expected = run('historyRows().reduce((sum,row)=>sum+row.pages,0)');
+  let html = run('renderHome()');
+  assert.match(html, /読取枚数合計/);
+  assert.match(html, new RegExp(`>${expected.toLocaleString('ja-JP')}<`));
+  assert.match(html, /検索結果の合計/);
+  run("state.hFilters.user='バッチ処理'");
+  const filtered = run('historyRows().reduce((sum,row)=>sum+row.pages,0)');
+  html = run('renderHome()');
+  assert.match(html, new RegExp(`>${filtered.toLocaleString('ja-JP')}<`));
+});
+
 test('システム通知: 入力エラー・権限エラーは赤、完了・案内は緑', () => {
   const run = app();
   for (const msg of [
@@ -1350,7 +1399,8 @@ test('additional demo samples cover statuses and provide upload pagination witho
   const before = run('FILES_DATA.length');
   run('seedAdditionalDemoData()');
   assert.equal(run('FILES_DATA.length'),before+24);
-  assert.equal(run("state.uploads.filter(u=>u.biz==='b1').length"),12);
+  assert.equal(run("state.uploads.filter(u=>u.biz==='b1').length"),15);
+  assert.equal(run("state.uploads.filter(u=>u.createdBy==='u1'&&!u.auto).length"),3);
   for (const status of ['waiting','needs_confirm','error','failed','classifying','done','reading']) assert.equal(run(`state.uploads.some(u=>u.status==='${status}')`),true);
   const count = run('state.uploads.length');
   run('seedAdditionalDemoData()');
@@ -1492,17 +1542,21 @@ test('自動取込設定は他のメニューと同じようにタブで開く',
   assert.match(html, /data-closetab="watch"/);
 });
 
-test('自動取込設定: 同一ファイルを除外が OFF なら判定方法を選べない', () => {
+test('自動取込設定: 重複防止は内容ハッシュ固定で画面から変更できない', () => {
   const run = app();
-  run('WATCH.dupGuard = false;');
-  let html = run('renderWatch()');
+  const html = run('renderWatch()');
   assert.match(html, /取込・再試行設定/);
-  assert.match(html, /data-wf="dupMethod"[^>]*disabled/);
-  assert.match(html, /class="wf is-off"/);
-  run('WATCH.dupGuard = true;');
-  html = run('renderWatch()');
-  assert.doesNotMatch(html, /data-wf="dupMethod"[^>]*disabled/);
-  assert.doesNotMatch(html, /class="wf is-off"/);
+  assert.equal(run('WATCH_DEDUP.enabled'), true);
+  assert.equal(run('WATCH_DEDUP.method'), 'sha256');
+  assert.doesNotMatch(html, /同一ファイルを除外|判定方法|dupGuard|dupMethod/);
+});
+
+test('新規アップロード: TIF・TIFF・ZIPを選択でき、案内にも表示する', () => {
+  const run = app();
+  const html = run('renderUpload()');
+  assert.match(html, /TIF、TIFF/);
+  assert.match(html, /ZIP/);
+  assert.match(html, /accept="[^"]*\.tif,[^"]*\.tiff,[^"]*\.zip/);
 });
 
 test('自動取込設定: 業務シーンから対象部門と帳票タイプを自動表示する', () => {
@@ -1676,21 +1730,25 @@ test('自動取込の失敗区分はお知らせに表示する', () => {
   assert.equal(run('WATCH_ERRORS.find((e) => e.id === "we4").stage'), '分類');
 });
 
-test('新規アップロード: 分類失敗ステータスを持たず、読取失敗も表示しない', () => {
+test('新規アップロード: 失敗ステータスを表示しない', () => {
   const run = app();
-  run('seedAdditionalDemoData(); state.upBiz="b1";');
+  run(`state.currentUser='u7'; state.uploads=[
+    {id:'m1',name:'classifying.pdf',biz:'b1',layout:'l1',status:'classifying',auto:false,createdBy:'u7',size:1000,uploadedAt:'2026-11-11 10:00:00'},
+    {id:'m2',name:'waiting.pdf',biz:'b1',layout:'l1',status:'waiting',auto:false,createdBy:'u7',size:1000,uploadedAt:'2026-11-11 10:01:00'},
+    {id:'m3',name:'error.pdf',biz:'b1',layout:'l1',status:'error',auto:false,createdBy:'u7',size:1000,uploadedAt:'2026-11-11 10:02:00'},
+    {id:'hidden-failed',name:'failed.pdf',biz:'b1',layout:'l1',status:'failed',auto:false,createdBy:'u7',size:1000,uploadedAt:'2026-11-11 10:03:00'}
+  ];`);
   const html = run('renderUpload()');
-  assert.match(html, /要確認/);
   assert.match(html, /判別中/);
   assert.match(html, /読取待ち/);
-  assert.match(html, /失敗/);
+  assert.doesNotMatch(html, /失敗/);
   assert.doesNotMatch(html, /分類失敗/);
   assert.doesNotMatch(html, /読取失敗/);
   assert.doesNotMatch(html, /upload-source/);
   assert.doesNotMatch(html, /<th>取込<\/th>/);
   assert.doesNotMatch(html, /data-upconfirm/);
   assert.equal(run('state.uploads.some((u) => u.status === "classify_failed")'), false);
-  assert.equal(run('state.uploads.some((u) => u.status === "failed")'), true);
+  assert.doesNotMatch(html, /failed\.pdf/);
 });
 
 test('操作ログ: 備考列を持たず、成功した操作だけを表示する', () => {

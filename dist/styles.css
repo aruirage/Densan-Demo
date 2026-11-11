@@ -372,6 +372,12 @@ input:focus,select:focus,button:focus-visible{
 .home-date-range .range-sep{padding:0 2px;color:var(--text-3)}
 .home-filter-actions{display:flex;align-items:center;gap:8px;padding-bottom:1px;margin-left:auto}
 .home-filter-actions .btn{height:32px}
+.home-read-total{width:360px;max-width:100%;margin-top:16px;padding:18px 28px 20px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-sizing:border-box}
+.home-read-total h2{margin:0 0 12px;font-size:16px;color:var(--text)}
+.home-read-total-value{display:flex;align-items:baseline;gap:10px}
+.home-read-total-value strong{font-size:30px;line-height:1;color:var(--accent-2);font-weight:500}
+.home-read-total-value span{font-size:13px;color:var(--text-2)}
+.home-read-total p{margin:14px 0 0;font-size:12px;color:var(--text-3)}
 .hintline{color:var(--text-3);font-size:11.5px;padding:0 0 12px}
 .dl-btn{border-color:#9fc4d8;color:#1f6f9c;background:#fff;height:34px;padding:0 18px}
 .dl-btn:hover{border-color:var(--accent-2);color:#175a80;background:#f2f8fc}
@@ -1615,6 +1621,9 @@ th .ico{font-size:11px;color:var(--accent)}
 .sc-pick-row:hover{background:#f5f8ff}
 .sc-pick-row .pf-name{flex:1;font-size:12.5px;color:var(--text)}
 .sc-pick-row.is-selected{background:#f0f6ff}
+.sc-pick-row.is-used{cursor:not-allowed;opacity:.58;background:#fafafa}
+.sc-pick-row.is-used:hover{background:#fafafa}
+.sc-pick-used{font-size:11px;color:var(--text-3);white-space:nowrap}
 .sc-pick-row .pick-check{width:16px;height:16px;border:1px solid var(--line-d);border-radius:50%;flex:0 0 auto;position:relative;background:#fff}
 .sc-pick-row .pick-check.on{border-color:var(--accent);background:var(--accent)}
 .sc-pick-row .pick-check.on::after{content:"";position:absolute;left:5px;top:2px;width:4px;height:8px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
