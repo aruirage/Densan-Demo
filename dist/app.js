@@ -6598,7 +6598,6 @@ function watchValidateSettings() {
   for(const d of depts){
     const sc=byId(BIZ_SCENES,(d.sceneIds||[])[0]);
     if(!sc)return '業務シーンを選択してください';
-    if(!watchDeptCategories(d).length)return 'この業務シーンの帳票タイプがありません';
     const sceneFolders=watchDeptFolders(d);
     for(let i=0;i<sceneFolders.length;i++){
       const raw=sceneFolders[i];
