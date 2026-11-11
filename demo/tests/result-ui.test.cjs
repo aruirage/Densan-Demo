@@ -1827,6 +1827,20 @@ test('automatic upload allows parent folder in another scene when a child is alr
   assert.match(html, /value="税務関係\/個人住民税申告"[^>]*checked[^>]*disabled/);
 });
 
+test('automatic upload disables an empty parent when every child folder is assigned elsewhere', () => {
+  const run = watchApp();
+  const html = run(`renderWatchFolderTreeMulti(
+    [{name:"親",files:0,children:[{name:"子A",files:1},{name:"子B",files:1}]}],
+    "", [], 0, "wd-parent", "cls-zeimu", ["親/子A","親/子B"]
+  )`);
+  assert.match(html, /value="親"[^>]*disabled/);
+  assert.match(html, /割当可能なファイルなし/);
+  assert.equal(run(`watchFolderHasAvailableFiles(
+    {name:"親",files:0,children:[{name:"子A",files:1},{name:"子B",files:1}]},
+    "親", ["親/子A","親/子B"]
+  )`), false);
+});
+
 test('parent and child folders in different scenes use the most specific folder', () => {
   const run = watchApp();
   run('WATCH.departments=[{id:"a",sceneIds:["cls-zeimu"],folders:["税務窓口"],on:true},{id:"b",sceneIds:["cls-hoiku"],folders:["税務窓口/住民税"],on:true}]');
