@@ -206,7 +206,7 @@ const STATUS = {
   classifying: { key: 'classifying', label: '分類中', phase: 'upload', actor: 'システム（AI分類）', actions: ['view'], unused: false, done: false },
   reading: { key: 'reading', label: '読取中', phase: 'ocr', actor: 'システム（OCR／AI）', actions: ['view'], unused: false, done: false },
   failed: { key: 'failed', label: '読取失敗', phase: 'ocr', actor: 'システム（OCR／AI）', actions: ['view', 'fix'], unused: false, done: false },
-  waiting: { key: 'waiting', label: '読取待ち', phase: 'upload', actor: 'アップロード実行者（窓口・職員）', actions: ['view'], unused: false, done: false },
+  waiting: { key: 'waiting', label: '読取待ち', phase: 'ocr', actor: 'システム（OCR／AI）', actions: ['view'], unused: false, done: false },
   done: { key: 'done', label: '読取完了', phase: 'ocr', actor: 'システム（OCR／AI）', actions: ['view', 'fix', 'confirm'], unused: false, done: true },
   checking: { key: 'checking', label: '確認中', phase: 'confirm', actor: '確認権限を持つユーザ', actions: ['view', 'fix', 'confirm'], unused: false, done: false },
   confirmed: { key: 'confirmed', label: '確認済み', phase: 'confirm', actor: '確認権限を持つユーザ', actions: ['view', 'export'], unused: false, done: true },
@@ -214,13 +214,10 @@ const STATUS = {
   returned: { key: 'returned', label: '読取完了', phase: 'ocr', actor: 'システム（OCR／AI）', actions: ['view', 'fix', 'confirm'], unused: true, done: true },
   exported: { key: 'exported', label: '出力済み', phase: 'export', actor: '出力権限を持つユーザ', actions: ['view', 'export'], unused: false, done: true },
 };
-/** 読取結果一覧のステータス。分類中・読取待ちはアップロード画面だけ */
-const STATUS_ORDER = ['reading', 'done', 'failed', 'confirmed', 'exported'];
-/**
- * タブに出すステータス。
- * 「読取待ち」は新規アップロード画面のみの状態（選択帳票読取で即「読取中」になり一覧へ遷移するため、結果一覧のタブには出さない）。
- */
-const TAB_STATUS = ['reading', 'done', 'failed', 'confirmed', 'exported'];
+/** 読取結果一覧のステータス。分類確認が必要なファイルだけ新規アップロード画面に残す。 */
+const STATUS_ORDER = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];
+/** 読取結果一覧に表示する6ステータス。 */
+const TAB_STATUS = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];
 /** ステータスタブ（上記＋すべて） */
 const TABS = [{ id: 'all', label: 'すべて' }].concat(TAB_STATUS.map((k) => ({ id: k, label: STATUS[k].label })));
 function phaseOf(statusKey) { return STATUS_PHASES.find((p) => p.id === STATUS[statusKey].phase); }
@@ -1915,46 +1912,51 @@ function layoutsForBiz(bizId) {
   });
 }
 
-/** アップロード後の自動分類（モック）：要確認 → 読取待ち。判別後もタイプは確認・変更できる */
+/** アップロード後の自動分類（モック）：分類確定は読取結果一覧、要確認だけアップロード画面に残す。 */
 function startClassifying(created) {
   const ids = created.map((u) => u.id);
   setTimeout(() => {
-    let n = 0;
+    let n = 0; let waiting = 0;
     state.uploads.forEach((u) => {
       if (ids.includes(u.id) && u.status === 'classifying') {
         const candidates = layoutsForBiz(state.upBiz);
         if (candidates.length && !candidates.some((l) => l.id === u.layout)) {
           u.layout = candidates[0].id;                 // 業務シーン外の推定は候補先頭へ寄せる
         }
-        u.status = 'needs_confirm';
-        u.history = `帳票タイプ「${dispLayout(u.layout)}」として判別（自動）。内容を確認してください`;
+        const needsConfirm = ids.indexOf(u.id) % 3 === 0;
+        u.status = needsConfirm ? 'needs_confirm' : 'waiting';
+        u.history = needsConfirm
+          ? `帳票タイプ「${dispLayout(u.layout)}」として判別（自動）。内容を確認してください`
+          : `帳票タイプ「${dispLayout(u.layout)}」として分類完了。読取開始待ち`;
+        if (!needsConfirm) { promoteUploadToResult(u, 'waiting'); waiting++; }
         n++;
       }
     });
+    if (waiting) state.uploads = state.uploads.filter((u) => !(ids.includes(u.id) && u.status === 'waiting'));
     if (n) {
       render();
-      toast(`${n} 件の自動分類が完了しました。帳票タイプを確認し、「選択帳票読取」で読取を開始できます`);
+      toast(`${n} 件の自動分類が完了しました。分類済みファイルは読取結果一覧の「読取待ち」に移動しました`);
     }
   }, 2600);
 }
 
-/** アップロード行を読取結果一覧へ載せる（読取中のまま一覧へ遷移するため） */
-function promoteUploadToResult(u) {
+/** 分類済みのアップロード行を読取結果一覧へ移す。 */
+function promoteUploadToResult(u, status = 'waiting') {
   const stamp = nowStamp();
   const row = {
     id: u.id,
     name: u.name,
     layout: u.layout,
     size: u.size,
-    status: 'reading',
-    history: u.history || '読取処理中（0秒経過）',
+    status,
+    history: u.history || (status === 'waiting' ? '分類完了。読取開始待ち' : '読取処理中（0秒経過）'),
     createdAt: u.uploadedAt,
     updatedAt: stamp,
-    readAt: stamp,
+    readAt: status === 'reading' ? stamp : null,
     confirmedAt: null,
     approvedAt: null,
-    createdBy: 'u2',
-    updatedBy: 'u2',
+    createdBy: u.createdBy || 'u2',
+    updatedBy: u.createdBy || 'u2',
     confirmedBy: null,
     approvedBy: null,
     readDoneAt: null,
@@ -1964,8 +1966,9 @@ function promoteUploadToResult(u) {
     returnTo: null,
     tenant: state.tenant,
     pages: u.pages,
+    intake: u.auto ? 'auto' : 'manual',
     error: u.error || '',
-    _proc: true,
+    _proc: status === 'reading',
   };
   const i = FILES_DATA.findIndex((f) => f.id === row.id);
   if (i >= 0) FILES_DATA[i] = Object.assign(FILES_DATA[i], row);
@@ -2065,8 +2068,7 @@ function toast(msg, type) {
 /* QA 用：ステータス別の代表ファイルを既定テナント（青葉市）に固定する。
    これで既定表示のままでも 10 ステータスすべてが一覧に現れる。 */
 const TENANT_PIN = {
-  /* 既定テナント（緑ヶ丘町）に足りないステータスを補う
-     ※ 分類中／読取待ちは結果一覧に出ないためピン不要（アップロード画面のみの状態） */
+  /* 既定テナント（緑ヶ丘町）に足りないステータスを補う。 */
   f13: 'tenant2',   // 読取中
   f36: 'tenant2',   // 確認中
   f41: 'tenant2',   // 確認済み
@@ -2288,8 +2290,7 @@ function reorderTreeSibling(type, draggedId, targetId) {
 }
 
 /** ステータスタブの判定（'all' は全件、それ以外はステータスキー一致） */
-/* 「すべて」タブは結果一覧に出るステータスだけ（分類中・読取待ちは一覧に出さない）。
-   分類中＝アップロード画面のみの一時状態、読取待ち＝新規アップロード画面のみ。 */
+/* 「すべて」タブは読取待ちを含む結果一覧の6ステータスを表示する。 */
 const TAB_MATCH = { all: (f) => TAB_STATUS.includes(f.status) };
 STATUS_ORDER.forEach((k) => { TAB_MATCH[k] = (f) => f.status === k; });
 
@@ -3278,7 +3279,7 @@ function renderFilters() {
       return biz && selectedBiz.includes(biz.id);
     })
     .map((l) => [l.id, dispLayout(l.id)]);
-  /* 読取待ちは新規アップロード画面のみ。ファイル一覧のステータス絞り込みには出さない */
+  /* 読取結果一覧の6ステータスを絞り込み候補に表示する。 */
   const statusOpts = STATUS_ORDER.map((k) => [k, STATUS[k].label, STATUS[k].unused]);
   const range = (label, from, to) => `<div class="field"><span class="lbl">${label}</span><div class="result-date-range"><span class="ico i-calendar" aria-hidden="true"></span><input type="date" id="${from}" aria-label="${label} 開始" value="${esc(F[from])}" /><span class="range-sep">-</span><input type="date" id="${to}" aria-label="${label} 終了" value="${esc(F[to])}" /></div></div>`;
   const open = state.filterOpen;
@@ -3317,12 +3318,12 @@ function renderFilters() {
 function resultActionsCell(f) {
   /* 再読取・確認＝読取完了／読取失敗のみ（確認済み以降は触らせない）、
      ダウンロード＝読取中のものは出さない。 */
-  const canRedo = ['done', 'failed'].includes(f.status);
+  const canRedo = ['waiting', 'done', 'failed'].includes(f.status);
   const canMutate = ['done', 'failed'].includes(f.status);
   const canDownload = f.status !== 'reading';
   const btn = (act, tip, ico) => `<button class="act" data-act="${act}" data-file="${f.id}" data-tip="${tip}" aria-label="${tip}"><span class="ico ${ico}" aria-hidden="true"></span></button>`;
   const parts = [];
-  if (userHasOp('redo') && canRedo) parts.push(btn('redo', '再読取', 'i-scan'));
+  if (userHasOp('redo') && canRedo) parts.push(btn('redo', f.status === 'waiting' ? '読取' : '再読取', 'i-scan'));
   if (userHasOp('confirm') && canMutate) parts.push(btn('confirm', '確認', 'i-check'));
   if (userHasOp('export') && canDownload) {
     parts.push(`<button class="act" data-dlmenu="${f.id}" aria-haspopup="menu" aria-label="ダウンロード"><span class="ico i-download" aria-hidden="true"></span></button>`);
@@ -3630,6 +3631,7 @@ function openPreview(id, page = 1) {
 function startReRead(fileId) {
   const f = byId(FILES_DATA, fileId);
   if (!f || f._proc) return;
+  const firstRead = f.status === 'waiting';
   const startedAt = Date.now();
   f._proc = true;
   f.status = 'reading';
@@ -3653,10 +3655,10 @@ function startReRead(fileId) {
     /* 再読取の結果も対応するタブへ移して見えるようにする */
     if (state.page === 'result' && state.tab !== 'all') state.tab = f.status === 'failed' ? 'failed' : 'done';
     render();
-    toast(fail ? '再読取に失敗しました' : '再読取が完了しました');
+    toast(fail ? `${firstRead ? '読取' : '再読取'}に失敗しました` : `${firstRead ? '読取' : '再読取'}が完了しました`);
   }, 4200);
   render();
-  toast('再読取を開始しました（読取処理中）');
+  toast(`${firstRead ? '読取' : '再読取'}を開始しました（読取処理中）`);
 }
 
 /**
@@ -5724,8 +5726,8 @@ function renderDictDialogs() {
 /* ══════════════════════════════════════════════════════════════════════════
    11. 自動取込
    設定画面のみ（監視コンソール・API 連動は持たない）。
-   監視で取り込んだファイルは、手動アップロードと同じく「新規アップロード」の
-   未処理テーブルに溜まり、「選択帳票読取」で初めて読取結果一覧へ入る。
+   監視で取り込んだファイルは、判別中／要確認だけ新規アップロードに表示し、
+   分類完了後は読取結果一覧の「読取待ち」へ移る。
    ══════════════════════════════════════════════════════════════════════════ */
 
 /** 自動取込の設定。
@@ -8222,40 +8224,36 @@ function renderSidebarPane() {
 }
 
 function renderUpload() {
-  const manualStatuses=['classifying','needs_confirm','waiting'];
+  const manualStatuses=['classifying','needs_confirm'];
   const uploadsForBiz = state.uploads.filter((u) => {
-    if(u.auto)return u.status==='needs_confirm'&&sceneCanAccessFile(u,state.currentUser);
+    if(u.auto)return ['classifying','needs_confirm'].includes(u.status)&&sceneCanAccessFile(u,state.currentUser);
     const own=u.createdBy?u.createdBy===state.currentUser:u.user===currentUploadUserLabel();
     return own&&manualStatuses.includes(u.status);
   });
-  const selectableUp = uploadsForBiz.filter((u) => u.status === 'waiting' || u.status === 'needs_confirm');
+  const selectableUp = uploadsForBiz.filter((u) => u.status === 'needs_confirm');
   const upAllChecked = selectableUp.length > 0 && selectableUp.every((u) => state.upPicked[u.id]);
   const picked = uploadsForBiz.filter((u) => state.upPicked[u.id]).length;
   const stMap = {
     classifying: ['判別中', 'mid'],
     needs_confirm: ['要確認', 'mid'],
-    waiting: ['読取待ち', 'ok'],
-    reading: ['読取中', 'mid'],
-    done: ['読取完了', 'ok'],
   };
   const upPages = Math.max(1, Math.ceil(uploadsForBiz.length / state.upPerPage));
   if (state.upPage > upPages) state.upPage = upPages;
   const view = uploadsForBiz.slice((state.upPage - 1) * state.upPerPage, state.upPage * state.upPerPage);
-  const canShowRead = userHasOp('upload') || userHasOp('read');
   const rows = view.length === 0
     ? ''
     : view.map((u) => {
       const [label, cls] = stMap[u.status] || ['失敗', 'ng'];
       const rowCandidates=layoutsForBiz(u.biz||state.upBiz);
       const opts = rowCandidates.length ? rowCandidates : savedTemplates();
-      const typeDisabled = u.status === 'classifying' || u.status === 'reading';
+      const typeDisabled = u.status === 'classifying';
       const hasLayout = opts.some((l) => l.id === u.layout);
       const typeOptions = [
         `<option value="" disabled ${!hasLayout || typeDisabled ? 'selected' : ''}>テンプレートを選択…</option>`,
         ...opts.map((l) => `<option value="${l.id}" ${!typeDisabled && l.id === u.layout ? 'selected' : ''}>${esc(dispLayout(l.id))}</option>`),
       ].join('');
       const typeCell = `<select class="type-select${typeDisabled ? ' is-pending' : ''}" data-uptype="${u.id}" title="${typeDisabled ? '自動判別が完了するまで変更できません' : '分類結果を確認し、必要なら帳票タイプを選び直してください'}" ${typeDisabled ? 'disabled' : ''}>${typeOptions}</select>`;
-      const canPick = u.status === 'waiting' || u.status === 'needs_confirm';
+      const canPick = u.status === 'needs_confirm';
       const upUser = u.auto ? 'バッチ処理' : (u.user || currentUploadUserLabel());
       const delBtn = userHasOp('delete')
         ? `<button type="button" class="act danger" data-upact="del" data-id="${u.id}" data-tip="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>`
@@ -8306,17 +8304,16 @@ function renderUpload() {
     </section>
 
     <section class="upload-card upload-list-card">
-  <h2 class="sec-title">アップロード済・確認待ちファイル</h2>
+  <h2 class="sec-title">分類中・確認待ちファイル</h2>
   <div class="upload-actions">
-        ${canShowRead ? `<button type="button" class="btn primary" id="upRead" title="読取待ちのファイルを読取り、読取結果一覧へ移動します">選択帳票読取</button>` : ''}
         ${userHasOp('delete') ? `<button type="button" class="btn danger-ghost" id="upDel" ${picked ? '' : 'disabled'}><span class="ico i-delete"></span>一括削除</button>` : ''}
     <span class="up-count">合計 <b>${uploadsForBiz.length}</b> 件のファイル</span>
-        <span class="up-note"><span class="info-i">i</span>${upHasProgress() ? '読取処理中のファイルがあります（結果一覧でも進捗を確認できます）' : 'ファイルリストは7日後に自動的にクリアされます'}</span>
+        <span class="up-note"><span class="info-i">i</span>判別中または帳票タイプの確認が必要なファイルを表示します</span>
   </div>
   <div class="tablewrap up-table">
     <table>
       <thead><tr>
-        <th style="width:36px"><input type="checkbox" class="cb" data-upall="1" aria-label="読取待ちを全選択" ${upAllChecked ? 'checked' : ''} /></th>
+        <th style="width:36px"><input type="checkbox" class="cb" data-upall="1" aria-label="要確認を全選択" ${upAllChecked ? 'checked' : ''} /></th>
             <th>ファイル名</th><th>ファイルサイズ</th><th>アップロード日時</th><th>ユーザー</th><th>ステータス</th><th>帳票タイプ</th><th>エラー理由</th><th class="up-ops-cell" style="width:88px">操作・処理</th>
       </tr></thead>
       <tbody>${rows || '<tr><td colspan="9" class="empty-cell">データなし</td></tr>'}</tbody>
@@ -8842,7 +8839,7 @@ function bindResultPanel() {
   document.querySelectorAll('[data-result-preview]').forEach((b) => {
     b.onclick = () => {
       const file = byId(FILES_DATA, b.dataset.resultPreview);
-      if (file && file.status === 'reading') openPreview(file.id);
+      if (file && (file.status === 'waiting' || file.status === 'reading')) openPreview(file.id);
       else openReview(b.dataset.resultPreview, { viewOnly: !userHasOp('fix'), returnPage: 'result' });
     };
   });
@@ -8859,7 +8856,7 @@ function bindResultPanel() {
   });
   const batchRead = $('#batchRead');
   if (batchRead) batchRead.onclick = () => {
-    const targets = visibleFiles().filter((f) => state.picked[f.id] && !f._proc);
+    const targets = visibleFiles().filter((f) => state.picked[f.id] && !f._proc && ['waiting', 'done', 'failed'].includes(f.status));
     if (!targets.length) { toast('読取できる帳票が選択されていません'); return; }
     state.picked = {};
     targets.forEach((f) => startReRead(f.id));
@@ -10629,7 +10626,7 @@ function bindUploadPanel() {
   const upAll = $('[data-upall]');
   if (upAll) upAll.onchange = (e) => {
     e.stopPropagation();
-    const selectable = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && u.status === 'waiting');
+    const selectable = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && u.status === 'needs_confirm');
     const allOn = !!e.target.checked;
     selectable.forEach((u) => { state.upPicked[u.id] = allOn; });
     render();
@@ -10639,45 +10636,18 @@ function bindUploadPanel() {
     state.uploads = state.uploads.filter((u) => !state.upPicked[u.id]); state.upPicked = {};
     render(); toast(n + ' 件を削除しました');
   };
-  const upRead = $('#upRead');
-  if (upRead) upRead.onclick = () => {
-    /* 分類完了（読取待ち／失敗の再実行）のみ。分類中は対象外 */
-    const targets = state.uploads.filter((u) => state.upPicked[u.id] && (u.status === 'waiting' || u.status === 'needs_confirm'));
-    if (!targets.length) {
-      toast('読取待ち・要確認の帳票を選択してください');
-      return;
-    }
-    targets.forEach((u) => {
-      u.status = 'reading';
-      u.error = '';
-      u._proc = true;
-      u.history = '読取処理中（0秒経過）';
-      promoteUploadToResult(u);
-    });
-    state.upPicked = {};
-    startReading(targets);
-    /* 読取中でも即座に読取結果一覧へ遷移する（進行中のまま一覧で進捗確認） */
-    if (!isTabOpen('result')) state.tabs.push('result');
-    state.page = 'result';
-    state.tab = 'reading';
-    /* 新規行が絞り込み・ツリー検索・ツリー選択で隠れないよう、表示条件を既定に戻してから一覧へ移る */
-    state.filters = { ...defaultFilters(), createdFrom: HOME_FROM, createdTo: HOME_TO };
-    state.q = '';
-    state.filterOpen = false;
-    state.resultPage = 1;
-    state.activeNode = { type: 'all', id: 'all' };
-    render();
-    toast(`選択した ${targets.length} 件の読取を開始しました（読取結果一覧へ移動）`);
-  };
   document.querySelectorAll('[data-uptype]').forEach((sel) => {
     sel.onchange = () => {
       const u = state.uploads.find((x) => x.id === sel.dataset.uptype);
       if (!u) return;
       u.layout = sel.value; u.auto = false;
-      if (u.status === 'needs_confirm') u.status = 'waiting';
-      u.history = `帳票タイプ「${dispLayout(u.layout)}」に手動で分類`;
+      u.status = 'waiting';
+      u.history = `帳票タイプ「${dispLayout(u.layout)}」に分類確定。読取開始待ち`;
+      promoteUploadToResult(u, 'waiting');
+      state.uploads = state.uploads.filter((x) => x.id !== u.id);
+      delete state.upPicked[u.id];
       render();
-      toast(`帳票タイプを「${dispLayout(u.layout)}」に変更しました`);
+      toast(`帳票タイプを「${dispLayout(u.layout)}」に確定し、読取結果一覧の「読取待ち」に移動しました`);
     };
   });
   document.querySelectorAll('[data-upact]').forEach((b) => {
@@ -10878,7 +10848,7 @@ function syncHashFromState() {
 function seedAdditionalDemoData() {
   if (state.additionalDemoSeeded) return;
   state.additionalDemoSeeded = true;
-  const statuses = ['done','done','failed','confirmed','exported','reading'];
+  const statuses = ['waiting','reading','done','failed','confirmed','exported'];
   const bases = FILES_DATA.slice();
   for (let i=0; i<24; i++) {
     const base = bases[i % bases.length];
@@ -10888,28 +10858,27 @@ function seedAdditionalDemoData() {
       name:`追加サンプル_${String(i+1).padStart(2,'0')}_${base.name}`, status,
       createdAt:at, updatedAt:at, readAt:status==='reading'?null:at,
       confirmedAt:['confirmed','exported'].includes(status)?at:null,
-      history:status==='failed'?'読取失敗：画像が不鮮明です':status==='confirmed'?'確認済み':status==='exported'?'出力済み（CSV）':status==='reading'?'読取処理中':'読取完了',
+      history:status==='waiting'?'分類完了。読取開始待ち':status==='failed'?'読取失敗：画像が不鮮明です':status==='confirmed'?'確認済み':status==='exported'?'出力済み（CSV）':status==='reading'?'読取処理中':'読取完了',
       exportSnapshot:null, saveHistory:null, flow:[], picked:false});
   }
   BUSINESS.forEach((biz, bi) => {
     const layouts = layoutsForBiz(biz.id);
     if (!layouts.length) return;
-    const states = ['waiting','needs_confirm','classifying','waiting','error','done','reading','needs_confirm','waiting','failed','waiting','done'];
+    const states = ['needs_confirm','classifying','needs_confirm','classifying'];
     states.forEach((status,i) => {
       const layout = layouts[i % layouts.length];
       state.uploads.push({id:`demo-upload-${bi}-${i}`, biz:biz.id, layout:layout.id,
         name:`${String(i+1).padStart(2,'0')}_${layout.name}_サンプル.pdf`, size:180000+i*87000,
         pages:1+i%5, uploadedAt:`2026-10-28 10:${String(59-i).padStart(2,'0')}:00`,
         user:['佐藤 一郎','鈴木 花子','山本 彩'][i%3], status, auto:true,
-        history:status==='failed'?'読取失敗':status==='error'?'処理エラー':status==='needs_confirm'?'AI分類完了。帳票タイプを確認してください':status==='classifying'?'自動判別中':'分類完了',
-        error:status==='failed'?'画像が不鮮明なため読み取れませんでした':status==='error'?'処理中にエラーが発生しました。再度アップロードしてください。':'',});
+        history:status==='needs_confirm'?'AI分類完了。帳票タイプを確認してください':'自動判別中',
+        error:'',});
     });
   });
   const manualLayout = layoutsForBiz('b1')[0] || LAYOUT[0];
   const manualSamples = [
     ['classifying', '手動アップロード_判別中.pdf', '帳票タイプを自動分類しています'],
     ['needs_confirm', '手動アップロード_要確認.pdf', '帳票タイプを確認してください'],
-    ['waiting', '手動アップロード_読取待ち.pdf', '読取開始を待っています'],
   ].map(([status, name, history], i) => ({
     id: `demo-manual-u1-${i}`, biz: 'b1', layout: manualLayout.id, name,
     size: 245000 + i * 73000, pages: i + 1,
