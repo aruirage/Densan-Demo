@@ -4319,7 +4319,7 @@ function seedExportSnapshots() {
       const text = all.map((r) => r.map((cell) => csvEscape(cell, delim)).join(delim)).join(newline);
       return { text, enc, delim };
     }
-    /* 横向出力（既定）：1 帳票 1 行。一般項目の後ろにテーブル列を上限まで横展開する。 */
+    /* 横向出力（既定）：1 帳票 1 行。一般項目の後ろにテーブル行を設定行数まで横展開する。 */
     const expanded = [];
     const seenTables = new Set();
     let generalIndex = 0;
@@ -6999,9 +6999,9 @@ function renderTypeTablePane() {
         <input class="tb-title" data-tb-name="${esc(tb.id)}" value="${esc(tb.name)}" aria-label="テーブル名" />
         <span class="spacer"></span>
         <label class="tb-limit">
-          <span>最大列数</span>
-          <span class="info-i" data-tip="このテーブルの各列を設定数まで横に展開します（1〜20）。不足分は空欄、超過分は先頭から設定数まで出力します" aria-label="最大列数の説明">i</span>
-          <input class="fld" type="number" min="1" max="20" step="1" data-tb-limit="${esc(tb.id)}" value="${tb.exportMax || 3}" aria-label="最大列数" />
+          <span>行数</span>
+          <span class="info-i" data-tip="このテーブルから横に展開する行数を設定します（1〜20）。不足分は空欄、超過分は先頭から設定行数まで出力します" aria-label="行数の説明">i</span>
+          <input class="fld" type="number" min="1" max="20" step="1" data-tb-limit="${esc(tb.id)}" value="${tb.exportMax || 3}" aria-label="行数" />
         </label>
         <button type="button" class="tb-icon" data-tb-del="${esc(tb.id)}" title="削除" aria-label="テーブルを削除"><span class="ico i-delete" aria-hidden="true"></span></button>
         <button type="button" class="tb-icon" data-tb-toggle="${esc(tb.id)}" title="${tb.open ? '折りたたむ' : '展開'}" aria-label="${tb.open ? '折りたたむ' : '展開'}"><span class="ico ${tb.open ? 'i-caret-up' : 'i-caret-down'}"></span></button>
