@@ -8240,6 +8240,7 @@ function renderUpload() {
   const upPages = Math.max(1, Math.ceil(uploadsForBiz.length / state.upPerPage));
   if (state.upPage > upPages) state.upPage = upPages;
   const view = uploadsForBiz.slice((state.upPage - 1) * state.upPerPage, state.upPage * state.upPerPage);
+  const canShowRead = userHasOp('upload') || userHasOp('read');
   const rows = view.length === 0
     ? ''
     : view.map((u) => {
@@ -8304,8 +8305,9 @@ function renderUpload() {
     </section>
 
     <section class="upload-card upload-list-card">
-  <h2 class="sec-title">分類中・確認待ちファイル</h2>
+  <h2 class="sec-title">アップロード済ファイル</h2>
   <div class="upload-actions">
+        ${canShowRead ? `<button type="button" class="btn primary" id="upRead" title="選択した要確認ファイルの読取を開始します">選択帳票読取</button>` : ''}
         ${userHasOp('delete') ? `<button type="button" class="btn danger-ghost" id="upDel" ${picked ? '' : 'disabled'}><span class="ico i-delete"></span>一括削除</button>` : ''}
     <span class="up-count">合計 <b>${uploadsForBiz.length}</b> 件のファイル</span>
         <span class="up-note"><span class="info-i">i</span>判別中または帳票タイプの確認が必要なファイルを表示します</span>
@@ -10636,18 +10638,41 @@ function bindUploadPanel() {
     state.uploads = state.uploads.filter((u) => !state.upPicked[u.id]); state.upPicked = {};
     render(); toast(n + ' 件を削除しました');
   };
+  const upRead = $('#upRead');
+  if (upRead) upRead.onclick = () => {
+    const targets = state.uploads.filter((u) => state.upPicked[u.id] && u.status === 'needs_confirm');
+    if (!targets.length) {
+      toast('要確認の帳票を選択してください');
+      return;
+    }
+    targets.forEach((u) => {
+      u.status = 'reading';
+      u.error = '';
+      u._proc = true;
+      u.history = '読取処理中（0秒経過）';
+      promoteUploadToResult(u, 'reading');
+    });
+    state.upPicked = {};
+    startReading(targets);
+    if (!isTabOpen('result')) state.tabs.push('result');
+    state.page = 'result';
+    state.tab = 'reading';
+    state.filters = { ...defaultFilters(), createdFrom: HOME_FROM, createdTo: HOME_TO };
+    state.q = '';
+    state.filterOpen = false;
+    state.resultPage = 1;
+    state.activeNode = { type: 'all', id: 'all' };
+    render();
+    toast(`選択した ${targets.length} 件の読取を開始しました`);
+  };
   document.querySelectorAll('[data-uptype]').forEach((sel) => {
     sel.onchange = () => {
       const u = state.uploads.find((x) => x.id === sel.dataset.uptype);
       if (!u) return;
       u.layout = sel.value; u.auto = false;
-      u.status = 'waiting';
-      u.history = `帳票タイプ「${dispLayout(u.layout)}」に分類確定。読取開始待ち`;
-      promoteUploadToResult(u, 'waiting');
-      state.uploads = state.uploads.filter((x) => x.id !== u.id);
-      delete state.upPicked[u.id];
+      u.history = `帳票タイプ「${dispLayout(u.layout)}」を選択。読取開始待ち`;
       render();
-      toast(`帳票タイプを「${dispLayout(u.layout)}」に確定し、読取結果一覧の「読取待ち」に移動しました`);
+      toast(`帳票タイプを「${dispLayout(u.layout)}」に変更しました`);
     };
   });
   document.querySelectorAll('[data-upact]').forEach((b) => {
