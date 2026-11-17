@@ -1952,12 +1952,14 @@ test('automatic upload allows saving without any folder selection', () => {
   assert.equal(run('watchValidateSettings()'), '');
 });
 
-test('confirmed and exported rows keep re-read and confirm actions', () => {
+test('result row actions do not depend on status; tabs only filter', () => {
   const run = app();
-  for (const status of ['confirmed', 'exported']) {
+  for (const status of ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported']) {
     run(`byId(FILES_DATA, "f11").status = "${status}";`);
     const html = run('resultActionsCell(byId(FILES_DATA, "f11"))');
-    assert.match(html, /data-act="redo"/);
-    assert.match(html, /data-act="confirm"/);
+    assert.match(html, /data-act="redo"/, status);
+    assert.match(html, /data-act="confirm"/, status);
+    assert.match(html, /data-dlmenu=/, status);
+    assert.match(html, /data-act="delete"/, status);
   }
 });
