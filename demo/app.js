@@ -2316,7 +2316,7 @@ function passesFilters(f) {
   if (!one(F.status, f.status)) return false;
   if (!one(F.biz, (bizOfLayout(f.layout) || {}).id)) return false;
   if (!one(F.layout, f.layout)) return false;
-  if (!one(F.createdBy, f.createdBy)) return false;
+  if (F.createdBy && !one(F.createdBy, f.intake === 'auto' ? 'auto' : f.createdBy)) return false;
   if (!one(F.processedBy, resultWorkflowAnchor(f).uid)) return false;
   const inRange = (v, from, to) => {
     if (!from && !to) return true;
@@ -2413,7 +2413,7 @@ function activeFilterChips() {
   if (F.status) push('status', 'ステータス', STATUS[F.status] ? STATUS[F.status].label : F.status);
   if (F.biz) push('biz', '業務シーン', dispBiz(F.biz));
   if (F.layout) push('layout', '帳票タイプ', dispLayout(F.layout));
-  if (F.createdBy) push('createdBy', '作成者', userName(F.createdBy));
+  if (F.createdBy) push('createdBy', '作成者', F.createdBy === 'auto' ? '自動' : userName(F.createdBy));
   if (F.processedBy) push('processedBy', '処理者', userName(F.processedBy));
   if (F.confirmedBy) push('confirmedBy', '確認者', userName(F.confirmedBy));
   if (F.approvedBy) push('approvedBy', '承認者', userName(F.approvedBy));
@@ -3269,6 +3269,7 @@ function renderFilters() {
   const F = state.filters;
   const chips = activeFilterChips().filter((c) => c.k !== 'createdAt' || F.createdFrom !== HOME_FROM || F.createdTo !== HOME_TO);
   const users = USERS.map((u) => [u.id, u.name]);
+  const creators = [['auto', '自動'], ...users];
   const processors = users.filter((u) => FILES_DATA.some((f) => f.updatedBy === u[0]));
   const bizOpts = BUSINESS.slice().sort((a, b) => a.order - b.order).map((b) => [b.id, dispBiz(b.id)]);
   /* 業務シーンが選ばれているときは、その配下のタイプだけを候補に出す */
@@ -3296,7 +3297,7 @@ function renderFilters() {
         ${open ? `<div class="result-filter-row result-advanced-row" id="resultAdvanced">
           <div class="field"><span class="lbl">業務シーン</span>${fselect('biz', '選択してください', bizOpts, F.biz)}</div>
           <div class="field"><span class="lbl">取込</span>${fselect('intake', '選択してください', [['manual','手動'],['auto','自動']], F.intake)}</div>
-          <div class="field"><span class="lbl">作成者</span>${fselect('createdBy', '選択してください', users, F.createdBy)}</div>
+          <div class="field"><span class="lbl">作成者</span>${fselect('createdBy', '選択してください', creators, F.createdBy)}</div>
           <div class="field"><span class="lbl">処理者</span>${fselect('processedBy', '選択してください', processors, F.processedBy)}</div>
         </div>
         <div class="result-filter-row result-date-row">
@@ -3366,7 +3367,7 @@ function renderTable() {
         <td class="col-status"><span class="st ${stCls(f.status)}"${cellTip((STATUS[f.status] || {}).label || f.status)}>${esc((STATUS[f.status] || {}).label || f.status)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span>${exportDiffBadge(f)}</td>
         <td class="col-intake">${esc(f.intake === 'auto' ? '自動' : '手動')}</td>
         <td class="col-hist hist ${histCls(f.status)}"${cellTip(hist.title)}>${hist.html}</td>
-        <td class="col-user"${cellTip((byId(USERS, f.createdBy) || {}).name || '—')}>${esc((byId(USERS, f.createdBy) || {}).name || '—')}</td>
+        <td class="col-user"${cellTip(f.intake === 'auto' ? '自動' : ((byId(USERS, f.createdBy) || {}).name || '—'))}>${esc(f.intake === 'auto' ? '自動' : ((byId(USERS, f.createdBy) || {}).name || '—'))}</td>
         <td class="col-user"${cellTip(processor)}>${esc(processor)}</td>
         <td class="col-dt col-created" style="white-space:nowrap;color:var(--text-2)"${cellTip(f.createdAt)}>${esc(f.createdAt)}</td>
         <td class="col-dt" style="white-space:nowrap;color:var(--text-2)"${cellTip(f.updatedAt)}>${esc(f.updatedAt)}</td>

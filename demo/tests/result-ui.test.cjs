@@ -49,6 +49,7 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   assert.match(html, /業務シーン/);
   assert.match(html, /data-fs="intake"/);
   assert.match(html, /data-fs="createdBy"/);
+  assert.match(html, /<option value="auto"\s*>自動<\/option>/);
   assert.match(html, /data-fs="processedBy"/);
   assert.ok(html.indexOf('data-fs="biz"') < html.indexOf('data-fs="intake"'));
   assert.ok(html.indexOf('data-fs="intake"') < html.indexOf('data-fs="createdBy"'));
@@ -537,6 +538,14 @@ test('classification step 1 blocks advancing until name is set', () => {
   assert.equal(run('validateSceneStep1(globalThis.bad)'), true);
   assert.equal(run('validateSceneStep1(byId(BIZ_SCENES, "cls-jyumin"))'), true);
   assert.equal(run('validateSceneStep1(byId(BIZ_SCENES, "cls-korei"))'), true);
+});
+
+test('creator filter includes 自動 and matches automatic intake files', () => {
+  const run = app();
+  run('state.filters.createdBy = "auto";');
+  const rows = JSON.parse(run('JSON.stringify(filteredByConditionsOnly().map((f) => ({ id: f.id, intake: f.intake, createdBy: f.createdBy })))'));
+  assert.ok(rows.length > 0);
+  assert.ok(rows.every((f) => f.intake === 'auto' && f.createdBy == null));
 });
 
 test('result filter actions show icon search/reset matching mytasks and toggle expand', () => {
