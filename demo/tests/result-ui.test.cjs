@@ -1566,7 +1566,7 @@ test('自動取込設定: 重複防止は内容ハッシュ固定で画面から
   const run = app();
   const html = run('renderWatch()');
   assert.match(html, /取込・再試行設定/);
-  assert.match(html, /アップロード失敗時の再試行回数/);
+  assert.match(html, /アップロード再試行/);
   assert.match(html, /アップロード失敗時の再試行回数/);
   assert.equal(run('WATCH_DEDUP.enabled'), true);
   assert.equal(run('WATCH_DEDUP.method'), 'sha256');
