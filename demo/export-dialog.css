@@ -326,9 +326,12 @@ thead th{ background:#eef5fd !important; }
 }
 
 /* ══ 絞り込み欄のレイアウト：1 行 3 項目（既定行は ファイル名／ステータス／帳票タイプ） ══ */
-.result-filter-row.result-search-row,
-.result-filter-row#resultAdvanced{
+.result-filter-row.result-search-row{
   display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:10px 18px !important; align-items:center !important;
+}
+.result-filter-row#resultAdvanced{
+  display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important;
   gap:10px 18px !important; align-items:center !important;
 }
 .result-filter-row.result-date-row{

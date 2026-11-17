@@ -30,6 +30,7 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   assert.ok(html.indexOf('id="filtName"') < html.indexOf('data-fs="status"'));
   assert.ok(html.indexOf('data-fs="status"') < html.indexOf('data-fs="layout"'));
   assert.doesNotMatch(html, /data-fs="biz"/);
+  assert.doesNotMatch(html, /data-fs="intake"/);
   assert.doesNotMatch(html, /data-fs="category"|data-fs="dept"/);
   assert.doesNotMatch(html, /業務シーン/);
   assert.match(html, /もっと見る/);
@@ -43,11 +44,17 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   assert.match(html, /result-filters is-open/);
   assert.equal((html.match(/class="result-filter-row/g) || []).length, 3);
   assert.doesNotMatch(html, /data-fs="dept"|部署/);
+  assert.match(html, /class="result-filter-row result-advanced-row"/);
   assert.match(html, /data-fs="biz"/);
   assert.match(html, /業務シーン/);
-  assert.match(html, /data-fs="layout"/);
-  assert.match(html, /帳票タイプ/);
+  assert.match(html, /data-fs="intake"/);
   assert.match(html, /data-fs="createdBy"/);
+  assert.match(html, /data-fs="processedBy"/);
+  assert.ok(html.indexOf('data-fs="biz"') < html.indexOf('data-fs="intake"'));
+  assert.ok(html.indexOf('data-fs="intake"') < html.indexOf('data-fs="createdBy"'));
+  assert.ok(html.indexOf('data-fs="createdBy"') < html.indexOf('data-fs="processedBy"'));
+  assert.ok(html.indexOf('id="createdFrom"') < html.indexOf('id="updatedFrom"'));
+  assert.ok(html.indexOf('id="updatedFrom"') < html.indexOf('id="filtRvq"'));
   assert.match(html, /data-fs="processedBy"/);
   /* ステータス・詳細条件とも「未出力／出力未済」は持たない */
   assert.doesNotMatch(html, /data-fs="exportPending"|未出力|出力未済/);

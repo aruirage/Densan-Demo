@@ -3293,15 +3293,16 @@ function renderFilters() {
           <div class="field"><span class="lbl">ステータス</span>${fselect('status', '選択してください', statusOpts, F.status)}</div>
           <div class="field"><span class="lbl">帳票タイプ</span>${fselect('layout', '選択してください', layouts, F.layout)}</div>
         </div>
-        ${open ? `<div class="result-filter-row" id="resultAdvanced">
+        ${open ? `<div class="result-filter-row result-advanced-row" id="resultAdvanced">
           <div class="field"><span class="lbl">業務シーン</span>${fselect('biz', '選択してください', bizOpts, F.biz)}</div>
+          <div class="field"><span class="lbl">取込</span>${fselect('intake', '選択してください', [['manual','手動'],['auto','自動']], F.intake)}</div>
           <div class="field"><span class="lbl">作成者</span>${fselect('createdBy', '選択してください', users, F.createdBy)}</div>
           <div class="field"><span class="lbl">処理者</span>${fselect('processedBy', '選択してください', processors, F.processedBy)}</div>
         </div>
         <div class="result-filter-row result-date-row">
-          <div class="field field-rvq"><span class="lbl">読取内容</span><input class="fld" type="text" id="filtRvq" placeholder="読取内容を検索" value="${esc(F.rvq || '')}" aria-label="読取内容" /></div>
-      ${range('作成日時', 'createdFrom', 'createdTo')}
+          ${range('作成日時', 'createdFrom', 'createdTo')}
           ${range('処理日時', 'updatedFrom', 'updatedTo')}
+          <div class="field field-rvq"><span class="lbl">読取内容</span><input class="fld" type="text" id="filtRvq" placeholder="読取内容を検索" value="${esc(F.rvq || '')}" aria-label="読取内容" /></div>
         </div>` : ''}
       </div>
       <div class="result-search-actions filter-acts">
