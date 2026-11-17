@@ -55,8 +55,8 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   assert.ok(html.indexOf('data-fs="biz"') < html.indexOf('data-fs="intake"'));
   assert.ok(html.indexOf('data-fs="intake"') < html.indexOf('data-fs="createdBy"'));
   assert.ok(html.indexOf('data-fs="createdBy"') < html.indexOf('data-fs="processedBy"'));
+  assert.ok(html.indexOf('id="filtRvq"') < html.indexOf('id="createdFrom"'));
   assert.ok(html.indexOf('id="createdFrom"') < html.indexOf('id="updatedFrom"'));
-  assert.ok(html.indexOf('id="updatedFrom"') < html.indexOf('id="filtRvq"'));
   assert.match(html, /data-fs="processedBy"/);
   /* ステータス・詳細条件とも「未出力／出力未済」は持たない */
   assert.doesNotMatch(html, /data-fs="exportPending"|未出力|出力未済/);
@@ -541,7 +541,7 @@ test('classification step 1 blocks advancing until name is set', () => {
   assert.equal(run('validateSceneStep1(byId(BIZ_SCENES, "cls-korei"))'), true);
 });
 
-test('creator filter includes — and matches automatic intake files', () => {
+test('creator filter includes 自動 and matches automatic intake files', () => {
   const run = app();
   run('state.filters.createdBy = "auto";');
   const rows = JSON.parse(run('JSON.stringify(filteredByConditionsOnly().map((f) => ({ id: f.id, intake: f.intake, createdBy: f.createdBy })))'));
@@ -1980,4 +1980,5 @@ test('row actions never switch the selected status tab', () => {
   const run = app();
   run('state.page = "result"; state.tab = "exported"; const f = byId(FILES_DATA, "f11"); f.status = "exported"; f._proc = true; startReRead("f11");');
   assert.equal(run('state.tab'), 'exported');
+
 });

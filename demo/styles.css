@@ -1055,6 +1055,7 @@ th .ico{font-size:11px;color:var(--accent)}
 .result-filters-fields{display:flex;flex-direction:column;gap:8px;min-width:0}
 /* 絞り込み行は列を均等に伸ばし、右側の空きを埋める */
 .result-filter-row,.result-search-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 16px;align-items:center;width:100%;min-height:32px}
+.result-search-row{grid-template-columns:repeat(3,minmax(0,1fr))}
 .result-advanced-row{grid-template-columns:repeat(4,minmax(0,1fr))}
 .result-date-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 12px}
 .result-filters .field{display:flex;align-items:center;gap:8px;min-width:0;width:100%}

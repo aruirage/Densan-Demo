@@ -1351,11 +1351,14 @@ function makeUpload(name, sizeBytes) {
   };
 }
 
+const AUTO_INTAKE_MOCK_IDS = new Set(['f13','f15','f19','f20','f25','f35','f41','f45']);
+
 function buildFiles() {
   return FILES.map((r) => ({
     id: r[0], name: r[1], layout: r[2], size: r[3], status: ({ approved: 'confirmed', returned: 'done', checking: 'done' }[r[4]] || r[4]), history: r[5],
     createdAt: r[6], updatedAt: r[7], readAt: r[8], confirmedAt: r[9], approvedAt: r[10],
-    createdBy: r[11], updatedBy: r[12], approvedBy: r[13],
+    createdBy: AUTO_INTAKE_MOCK_IDS.has(r[0]) ? null : r[11], updatedBy: r[12], approvedBy: r[13],
+    intake: AUTO_INTAKE_MOCK_IDS.has(r[0]) ? 'auto' : 'manual',
     /* 確認者：確認日がある場合。デモでは更新者を確認担当として扱う（実データは確認実行ユーザ） */
     confirmedBy: r[9] ? r[12] : null,
     /* 読取完了以降は読取日が入る。確認・承認以降は確認日も入る */
@@ -1957,7 +1960,7 @@ function promoteUploadToResult(u, status = 'waiting') {
     readAt: status === 'reading' ? stamp : null,
     confirmedAt: null,
     approvedAt: null,
-    createdBy: u.createdBy || 'u2',
+    createdBy: u.auto ? null : (u.createdBy || 'u2'),
     updatedBy: u.createdBy || 'u2',
     confirmedBy: null,
     approvedBy: null,
@@ -2317,6 +2320,7 @@ function passesFilters(f) {
   if (!one(F.status, f.status)) return false;
   if (!one(F.biz, (bizOfLayout(f.layout) || {}).id)) return false;
   if (!one(F.layout, f.layout)) return false;
+  if (!one(F.intake, f.intake || 'manual')) return false;
   if (F.createdBy && !one(F.createdBy, f.intake === 'auto' ? 'auto' : f.createdBy)) return false;
   if (!one(F.processedBy, resultWorkflowAnchor(f).uid)) return false;
   const inRange = (v, from, to) => {
@@ -2414,6 +2418,7 @@ function activeFilterChips() {
   if (F.status) push('status', 'ステータス', STATUS[F.status] ? STATUS[F.status].label : F.status);
   if (F.biz) push('biz', '業務シーン', dispBiz(F.biz));
   if (F.layout) push('layout', '帳票タイプ', dispLayout(F.layout));
+  if (F.intake) push('intake', '取込', F.intake === 'auto' ? '自動' : '手動');
   if (F.createdBy) push('createdBy', '作成者', F.createdBy === 'auto' ? '—' : userName(F.createdBy));
   if (F.processedBy) push('processedBy', '処理者', userName(F.processedBy));
   if (F.confirmedBy) push('confirmedBy', '確認者', userName(F.confirmedBy));
@@ -3260,7 +3265,7 @@ function runFlowAction(fileId, action, comment) {
 
 /** 絞り込み条件の既定値（リセットもこれを使う）。state 初期化より前に置くこと（関数宣言なので巻き上げられる） */
 function defaultFilters() { return {
-  status: '', biz: '', layout: '', createdBy: '', processedBy: '',
+  status: '', biz: '', layout: '', intake: '', createdBy: '', processedBy: '',
   createdFrom: '', createdTo: '', updatedFrom: '', updatedTo: '',
   name: '', rvq: '',
   };
@@ -3301,9 +3306,9 @@ function renderFilters() {
           <div class="field"><span class="lbl">処理者</span>${fselect('processedBy', '選択してください', processors, F.processedBy)}</div>
         </div>
         <div class="result-filter-row result-date-row">
+          <div class="field field-rvq"><span class="lbl">読取内容</span><input class="fld" type="text" id="filtRvq" placeholder="読取内容を検索" value="${esc(F.rvq || '')}" aria-label="読取内容" /></div>
           ${range('作成日時', 'createdFrom', 'createdTo')}
           ${range('処理日時', 'updatedFrom', 'updatedTo')}
-          <div class="field field-rvq"><span class="lbl">読取内容</span><input class="fld" type="text" id="filtRvq" placeholder="読取内容を検索" value="${esc(F.rvq || '')}" aria-label="読取内容" /></div>
         </div>` : ''}
       </div>
       <div class="result-search-actions filter-acts">
@@ -3366,7 +3371,7 @@ function renderTable() {
         <td class="col-status"><span class="st ${stCls(f.status)}"${cellTip((STATUS[f.status] || {}).label || f.status)}>${esc((STATUS[f.status] || {}).label || f.status)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span>${exportDiffBadge(f)}</td>
         <td class="col-intake">${esc(f.intake === 'auto' ? '自動' : '手動')}</td>
         <td class="col-hist hist ${histCls(f.status)}"${cellTip(hist.title)}>${hist.html}</td>
-        <td class="col-user"${cellTip(f.intake === 'auto' ? '自動' : ((byId(USERS, f.createdBy) || {}).name || '—'))}>${esc(f.intake === 'auto' ? '自動' : ((byId(USERS, f.createdBy) || {}).name || '—'))}</td>
+        <td class="col-user"${cellTip(f.intake === 'auto' ? '—' : userName(f.createdBy) || '—')}>${esc(f.intake === 'auto' ? '—' : userName(f.createdBy) || '—')}</td>
         <td class="col-user"${cellTip(processor)}>${esc(processor)}</td>
         <td class="col-dt col-created" style="white-space:nowrap;color:var(--text-2)"${cellTip(f.createdAt)}>${esc(f.createdAt)}</td>
         <td class="col-dt" style="white-space:nowrap;color:var(--text-2)"${cellTip(f.updatedAt)}>${esc(f.updatedAt)}</td>
