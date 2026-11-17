@@ -21,6 +21,7 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   let html = run('state.filterOpen = false; renderFilters()');
   assert.match(html, /class="result-filters-body"/);
   assert.match(html, /class="result-filter-row result-search-row"/);
+  assert.doesNotMatch(html, /class="chips"/);
   assert.equal((html.match(/class="result-filter-row/g) || []).length, 1);
   for (const id of ['searchBtn', 'resetBtn']) assert.ok(html.includes(`id="${id}"`), id);
   /* 既定行は「ファイル名・ステータス・帳票タイプ」の 3 つ */

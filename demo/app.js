@@ -1854,6 +1854,7 @@ const state = {
   permCell: null,                 // 権限セル編集 { kind:'ticket'|'upload', layoutId?, act?, bizId?, mode? }
   asgMode: {},                    // フロー担当の药丸モード { confirm|approve|reapprove: 'role'|'user' }
   filters: { ...defaultFilters(), createdFrom: HOME_FROM, createdTo: HOME_TO },
+  filterDraft: { ...defaultFilters(), createdFrom: HOME_FROM, createdTo: HOME_TO },
 };
 
 let FILES_DATA = buildFiles();
@@ -3266,8 +3267,7 @@ function defaultFilters() { return {
 }
 
 function renderFilters() {
-  const F = state.filters;
-  const chips = activeFilterChips().filter((c) => c.k !== 'createdAt' || F.createdFrom !== HOME_FROM || F.createdTo !== HOME_TO);
+  const F = state.filterDraft || state.filters;
   const users = USERS.map((u) => [u.id, u.name]);
   const creators = [['auto', '—'], ...users];
   const processors = users.filter((u) => FILES_DATA.some((f) => f.updatedBy === u[0]));
@@ -3312,7 +3312,6 @@ function renderFilters() {
         <button class="link result-more" data-exp="filter" aria-expanded="${open}" aria-controls="resultAdvanced"><span class="ico ${open ? 'i-caret-up' : 'i-caret-down'}" aria-hidden="true"></span>${open ? '閉じる' : 'もっと見る'}</button>
     </div>
       </div>
-    ${chips.length ? `<div class="chips">${chips.map((c) => `<span class="chip"><b>${esc(c.label)}</b>${esc(c.val)}<button data-chip="${c.k}" title="この条件を解除"><span class="ico i-close" aria-hidden="true"></span></button></span>`).join('')}</div>` : ''}
   </section>`;
 }
 
@@ -8886,7 +8885,7 @@ function bindResultPanel() {
   document.querySelectorAll('[data-tab]').forEach((el) => { el.onclick = () => { state.tab = el.dataset.tab; state.resultPage = 1; render(); }; });
 
   // 絞り込み
-  const bindVal = (id, key) => { const el = $('#' + id); if (el) el.onchange = () => { state.filters[key] = el.value; state.resultPage = 1; render(); }; };
+  const bindVal = (id, key) => { const el = $('#' + id); if (el) el.onchange = () => { state.filterDraft[key] = el.value; }; };
   bindVal('createdFrom', 'createdFrom'); bindVal('createdTo', 'createdTo');
   bindVal('updatedFrom', 'updatedFrom'); bindVal('updatedTo', 'updatedTo');
   bindVal('readFrom', 'readFrom'); bindVal('readTo', 'readTo');
@@ -8897,26 +8896,22 @@ function bindResultPanel() {
   if (filtName) {
     filtName.oninput = (e) => {
       const v = e.target.value;
-      state.filters.name = v;
-      state.resultPage = 1;
-      render();
+      state.filterDraft.name = v;
       const el = $('#filtName');
       if (el) { el.focus(); try { el.setSelectionRange(v.length, v.length); } catch (_) { /* 未対応要素は無視 */ } }
     };
-    filtName.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch('result'); } };
+    filtName.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); state.filters = { ...state.filterDraft }; runSearch('result'); } };
   }
   /* 読取内容検索：OCR 項目値（修正後があればその値）を対象にする */
   const filtRvq = $('#filtRvq');
   if (filtRvq) {
     filtRvq.oninput = (e) => {
       const v = e.target.value;
-      state.filters.rvq = v;
-      state.resultPage = 1;
-      render();
+      state.filterDraft.rvq = v;
       const el = $('#filtRvq');
       if (el) { el.focus(); try { el.setSelectionRange(v.length, v.length); } catch (_) { /* 未対応要素は無視 */ } }
     };
-    filtRvq.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch('result'); } };
+    filtRvq.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); state.filters = { ...state.filterDraft }; runSearch('result'); } };
   }
 
   // 複数選択ドロップダウン（1条件内 OR）
@@ -8924,7 +8919,7 @@ function bindResultPanel() {
     b.onclick = (e) => { e.stopPropagation(); const id = b.dataset.msbtn; state.dd = state.dd === id ? null : id; render(); };
   });
   document.querySelectorAll('[data-fs]').forEach((el) => {
-    el.onchange = () => { state.filters[el.dataset.fs] = el.value; state.resultPage = 1; render(); };
+    el.onchange = () => { state.filterDraft[el.dataset.fs] = el.value; render(); };
   });
   document.querySelectorAll('[data-msclear]').forEach((b) => {
     b.onclick = (e) => {
@@ -10677,6 +10672,7 @@ function bindUploadPanel() {
     state.page = 'result';
     state.tab = 'reading';
     state.filters = { ...defaultFilters(), createdFrom: HOME_FROM, createdTo: HOME_TO };
+    state.filterDraft = { ...state.filters };
     state.q = '';
     state.filterOpen = false;
     state.resultPage = 1;
@@ -10746,26 +10742,14 @@ function bindUploadPanel() {
       render();
     };
   });
-  const sb = $('#searchBtn'); if (sb) sb.onclick = () => runSearch('result');
+  const sb = $('#searchBtn'); if (sb) sb.onclick = () => { state.filters = { ...state.filterDraft }; runSearch('result'); };
   const rb = $('#resetBtn');
   if (rb) rb.onclick = () => {
     state.filters = defaultFilters();
+    state.filterDraft = { ...state.filters };
     state.resultPage = 1; render(); toast('絞り込み条件をリセットしました');
   };
 
-  document.querySelectorAll('[data-chip]').forEach((b) => {
-    b.onclick = () => {
-      const k = b.dataset.chip;
-      if (k === 'createdAt') { state.filters.createdFrom = ''; state.filters.createdTo = ''; }
-      else if (k === 'updatedAt') { state.filters.updatedFrom = ''; state.filters.updatedTo = ''; }
-      else if (k === 'readAt') { state.filters.readFrom = ''; state.filters.readTo = ''; }
-      else if (k === 'checkedAt') { state.filters.checkedFrom = ''; state.filters.checkedTo = ''; }
-      else if (k === 'approvedAt') { state.filters.approvedFrom = ''; state.filters.approvedTo = ''; }
-      else if (k === 'name') state.filters.name = '';
-      else state.filters[k] = '';
-      render();
-    };
-  });
 
   document.querySelectorAll('[data-pick]').forEach((cb) => {
     cb.onchange = (e) => { e.stopPropagation(); state.picked[cb.dataset.pick] = cb.checked; render(); };
