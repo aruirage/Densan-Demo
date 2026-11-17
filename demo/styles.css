@@ -492,6 +492,11 @@ input:focus,select:focus,button:focus-visible{
 .info-i.warn{background:var(--warn)}
 .up-pager{justify-content:flex-end;gap:10px;padding:14px 4px 0}
 .up-pager .pages{gap:4px}
+.upload-source-tabs{display:flex;align-items:flex-end;gap:28px;border-bottom:1px solid var(--line);margin:0 0 14px;padding:0 4px}
+.upload-source-tab{border:0;border-bottom:3px solid transparent;background:transparent;color:var(--text-2);padding:10px 2px 9px;font:inherit;font-weight:600;cursor:pointer}
+.upload-source-tab span{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;margin-left:6px;padding:0 6px;border-radius:10px;background:#eef1f5;color:var(--text-2);font-size:12px}
+.upload-source-tab.on{border-bottom-color:var(--accent);color:var(--accent)}
+.upload-source-tab.on span{background:var(--accent-bg);color:var(--accent)}
 
 /* ══════════ 帳票ページのモック（プレビュー用の様式） ══════════ */
 .sheet{background:#fff;border:1px solid #d7d7d7;padding:10px 12px;font-size:8px;color:#444;width:100%;box-sizing:border-box}

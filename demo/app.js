@@ -1769,6 +1769,7 @@ const state = {
   groupMenu: null,                // グループ行の ⋯ メニュー
   upBiz: 'b1',                    // アップロード画面：帳票業務シーン（既定ユーザー u2 がアップロード可）
   uploads: [],                    // アップロード済ファイル（モック。7日で自動クリア想定）
+  upSourceTab: 'manual',          // 手動アップロード／自動取込
   upPicked: {},
   upPage: 1,
   upPerPage: 10,
@@ -6449,6 +6450,9 @@ function syncSceneUsers(sc) {
  sc.userIds = users;
  return users;
 }
+function syncAllSceneUsers() {
+ BIZ_SCENES.forEach(syncSceneUsers);
+}
 function renderSceneAccess(sc) {
  syncSceneUsers(sc);
  return `<div class="wiz-field"><span class="wl req">データ権限組織</span>${wizMulti('sceneDepartments','組織を選択してください',groupOptsWithDepth(),sc.departmentIds || [])}</div>`;
@@ -6999,9 +7003,9 @@ function renderTypeTablePane() {
         <input class="tb-title" data-tb-name="${esc(tb.id)}" value="${esc(tb.name)}" aria-label="テーブル名" />
         <span class="spacer"></span>
         <label class="tb-limit">
-          <span>行数</span>
-          <span class="info-i" data-tip="このテーブルから横に展開する行数を設定します（1〜20）。不足分は空欄、超過分は先頭から設定行数まで出力します" aria-label="行数の説明">i</span>
-          <input class="fld" type="number" min="1" max="20" step="1" data-tb-limit="${esc(tb.id)}" value="${tb.exportMax || 3}" aria-label="行数" />
+          <span>最大行数</span>
+          <span class="info-i" data-tip="このテーブルで読み取り・出力する最大行数を設定します（1〜20）。読み取りと出力には同じ行数を使用します" aria-label="最大行数の説明">i</span>
+          <input class="fld" type="number" min="1" max="20" step="1" data-tb-limit="${esc(tb.id)}" value="${tb.exportMax || 3}" aria-label="最大行数" />
         </label>
         <button type="button" class="tb-icon" data-tb-del="${esc(tb.id)}" title="削除" aria-label="テーブルを削除"><span class="ico i-delete" aria-hidden="true"></span></button>
         <button type="button" class="tb-icon" data-tb-toggle="${esc(tb.id)}" title="${tb.open ? '折りたたむ' : '展開'}" aria-label="${tb.open ? '折りたたむ' : '展開'}"><span class="ico ${tb.open ? 'i-caret-up' : 'i-caret-down'}"></span></button>
@@ -8225,11 +8229,13 @@ function renderSidebarPane() {
 
 function renderUpload() {
   const manualStatuses=['classifying','needs_confirm'];
-  const uploadsForBiz = state.uploads.filter((u) => {
-    if(u.auto)return ['classifying','needs_confirm'].includes(u.status)&&sceneCanAccessFile(u,state.currentUser);
+  const visibleUploads = state.uploads.filter((u) => {
+    if(u.auto)return manualStatuses.includes(u.status)&&sceneCanAccessFile(u,state.currentUser);
     const own=u.createdBy?u.createdBy===state.currentUser:u.user===currentUploadUserLabel();
     return own&&manualStatuses.includes(u.status);
   });
+  const sourceCounts={manual:visibleUploads.filter((u)=>!u.auto).length,auto:visibleUploads.filter((u)=>u.auto).length};
+  const uploadsForBiz=visibleUploads.filter((u)=>state.upSourceTab==='auto'?u.auto:!u.auto);
   const selectableUp = uploadsForBiz.filter((u) => u.status === 'needs_confirm');
   const upAllChecked = selectableUp.length > 0 && selectableUp.every((u) => state.upPicked[u.id]);
   const picked = uploadsForBiz.filter((u) => state.upPicked[u.id]).length;
@@ -8267,7 +8273,6 @@ function renderUpload() {
         <td class="nowrap">${esc(upUser)}</td>
         <td><span class="st ${cls}"><span class="dot"></span>${label}${u.status === 'classifying' || u.status === 'reading' ? '<span class="spin"></span>' : ''}</span></td>
         <td class="up-type">${typeCell}</td>
-        <td class="hist ${u.error ? 'cur' : 'done'}">${esc(u.error || '—')}</td>
         <td class="up-ops-cell"><div class="acts act-icons">
           <button type="button" class="act act-preview" data-preview="${u.id}" data-page="1" data-tip="プレビュー" aria-label="プレビュー">${RV_ICON.zoomIn}</button>
           ${delBtn}
@@ -8306,6 +8311,10 @@ function renderUpload() {
 
     <section class="upload-card upload-list-card">
   <h2 class="sec-title">アップロード済ファイル</h2>
+  <div class="upload-source-tabs" role="tablist" aria-label="取込方法">
+    <button type="button" class="upload-source-tab${state.upSourceTab==='manual'?' on':''}" data-upsource="manual" role="tab" aria-selected="${state.upSourceTab==='manual'}">手動アップロード <span>${sourceCounts.manual}</span></button>
+    <button type="button" class="upload-source-tab${state.upSourceTab==='auto'?' on':''}" data-upsource="auto" role="tab" aria-selected="${state.upSourceTab==='auto'}">自動取込 <span>${sourceCounts.auto}</span></button>
+  </div>
   <div class="upload-actions">
         ${canShowRead ? `<button type="button" class="btn primary" id="upRead" title="選択した要確認ファイルの読取を開始します">選択帳票読取</button>` : ''}
         ${userHasOp('delete') ? `<button type="button" class="btn danger-ghost" id="upDel" ${picked ? '' : 'disabled'}><span class="ico i-delete"></span>一括削除</button>` : ''}
@@ -8316,9 +8325,9 @@ function renderUpload() {
     <table>
       <thead><tr>
         <th style="width:36px"><input type="checkbox" class="cb" data-upall="1" aria-label="要確認を全選択" ${upAllChecked ? 'checked' : ''} /></th>
-            <th>ファイル名</th><th>ファイルサイズ</th><th>アップロード日時</th><th>ユーザー</th><th>ステータス</th><th>帳票タイプ</th><th>エラー理由</th><th class="up-ops-cell" style="width:88px">操作・処理</th>
+            <th>ファイル名</th><th>ファイルサイズ</th><th>アップロード日時</th><th>ユーザー</th><th>ステータス</th><th>帳票タイプ</th><th class="up-ops-cell" style="width:88px">操作・処理</th>
       </tr></thead>
-      <tbody>${rows || '<tr><td colspan="9" class="empty-cell">データなし</td></tr>'}</tbody>
+      <tbody>${rows || '<tr><td colspan="8" class="empty-cell">データなし</td></tr>'}</tbody>
     </table>
   </div>
   <div class="pager up-pager">
@@ -9750,6 +9759,7 @@ function bindCfgPages() {
           g.userIds = (g.userIds || []).filter((id) => id !== uid);
           if (ids.includes(g.id)) g.userIds.push(uid);
         });
+        syncAllSceneUsers();
       };
       const role = ROLES.find((r) => r.id === d.roleId) || ROLES[0];
       if (d.mode === 'edit') {
@@ -9902,6 +9912,7 @@ function bindCfgPages() {
       if (u) {
         /* 所属グループからも外す */
         GROUPS.forEach((g) => { g.userIds = (g.userIds || []).filter((uid) => uid !== u.uid); });
+        syncAllSceneUsers();
         const i = ENT_USERS.indexOf(u);
         if (i >= 0) ENT_USERS.splice(i, 1);
         toast('ユーザーを削除しました');
@@ -10622,13 +10633,19 @@ function bindUploadPanel() {
   if (fi) fi.onchange = () => { addUploadedFiles([...fi.files].map((f) => [f.name, f.size])); fi.value = ''; };
   const pick = $('#pickBtn'); if (pick) pick.onclick = (e) => { e.stopPropagation(); const f = $('#fileInput'); if (f) f.click(); };
   document.querySelectorAll('[data-uppick]').forEach((cb) => { cb.onchange = (e) => { e.stopPropagation(); state.upPicked[cb.dataset.uppick] = cb.checked; render(); }; });
+  document.querySelectorAll('[data-upsource]').forEach((b) => { b.onclick = () => { state.upSourceTab = b.dataset.upsource; state.upPicked = {}; state.upPage = 1; render(); }; });
   document.querySelectorAll('[data-uppage]').forEach((b) => { b.onclick = () => { state.upPage = Number(b.dataset.uppage); render(); }; });
   const uPer = document.querySelector('[data-upperpage]'); if (uPer) uPer.onchange = () => { state.upPerPage = Number(uPer.value.replace(/\D/g, '')); state.upPage = 1; render(); };
   const uGo = document.querySelector('[data-upgoto]'); if (uGo) uGo.onchange = () => { state.upPage = Math.max(1, Number(uGo.value) || 1); render(); };
   const upAll = $('[data-upall]');
   if (upAll) upAll.onchange = (e) => {
     e.stopPropagation();
-    const selectable = state.uploads.filter((u) => (!u.biz || u.biz === state.upBiz) && u.status === 'needs_confirm');
+    const selectable = state.uploads.filter((u) => {
+      if (u.status !== 'needs_confirm') return false;
+      if (state.upSourceTab === 'auto') return u.auto && sceneCanAccessFile(u,state.currentUser);
+      const own=u.createdBy?u.createdBy===state.currentUser:u.user===currentUploadUserLabel();
+      return !u.auto&&own;
+    });
     const allOn = !!e.target.checked;
     selectable.forEach((u) => { state.upPicked[u.id] = allOn; });
     render();
