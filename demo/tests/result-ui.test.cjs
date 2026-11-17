@@ -1952,16 +1952,20 @@ test('automatic upload allows saving without any folder selection', () => {
   assert.equal(run('watchValidateSettings()'), '');
 });
 
-test('result row actions do not depend on status; tabs only filter', () => {
+test('confirmed and exported rows disable re-read and confirm but keep the icons', () => {
   const run = app();
-  for (const status of ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported']) {
+  for (const status of ['confirmed', 'exported']) {
     run(`byId(FILES_DATA, "f11").status = "${status}";`);
     const html = run('resultActionsCell(byId(FILES_DATA, "f11"))');
-    assert.match(html, /data-act="redo"/, status);
-    assert.match(html, /data-act="confirm"/, status);
-    assert.match(html, /data-dlmenu=/, status);
-    assert.match(html, /data-act="delete"/, status);
+    assert.match(html, /data-act="redo"[^>]*disabled/, status);
+    assert.match(html, /data-act="confirm"[^>]*disabled/, status);
+    assert.doesNotMatch(html, /data-dlmenu="f11"[^>]*disabled/, status);
+    assert.doesNotMatch(html, /data-act="delete"[^>]*disabled/, status);
   }
+  run('byId(FILES_DATA, "f11").status = "done";');
+  const done = run('resultActionsCell(byId(FILES_DATA, "f11"))');
+  assert.doesNotMatch(done, /data-act="redo"[^>]*disabled/);
+  assert.doesNotMatch(done, /data-act="confirm"[^>]*disabled/);
 });
 
 test('row actions never switch the selected status tab', () => {
