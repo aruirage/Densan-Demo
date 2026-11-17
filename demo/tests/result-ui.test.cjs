@@ -435,7 +435,7 @@ test('upload list shows own manual files and authorized automatic files waiting 
   const html = run('renderUpload()');
   assert.match(html, /own-manual\.pdf/);
   assert.match(html, /allowed-auto\.pdf/);
-  assert.match(html, /バッチ処理/);
+  assert.match(html, /システム/);
   assert.doesNotMatch(html, /other-manual\.pdf|done-auto\.pdf|denied-auto\.pdf/);
 });
 test('classification list is the six sample business folders with a per-row menu and empty right pane', () => {
@@ -1288,7 +1288,7 @@ test('ホーム: 検索結果の読取枚数合計を計費用に表示する', 
   assert.match(html, /読取枚数合計/);
   assert.match(html, new RegExp(`>${expected.toLocaleString('ja-JP')}<`));
   assert.match(html, /検索結果の合計/);
-  run("state.hFilters.user='バッチ処理'");
+  run("state.hFilters.user='システム'");
   const filtered = run('historyRows().reduce((sum,row)=>sum+row.pages,0)');
   html = run('renderHome()');
   assert.match(html, new RegExp(`>${filtered.toLocaleString('ja-JP')}<`));

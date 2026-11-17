@@ -1267,7 +1267,7 @@ const HISTORY_USERS = [
   { id: 'hu3', name: '鈴木 花子' },
   { id: 'hu4', name: '高橋 健' },
   { id: 'hu5', name: '伊藤 由美' },
-  { id: 'hu6', name: 'バッチ処理' },
+  { id: 'hu6', name: 'システム' },
 ];
 
 function buildHistory() {
@@ -8261,7 +8261,7 @@ function renderUpload() {
       ].join('');
       const typeCell = `<select class="type-select${typeDisabled ? ' is-pending' : ''}" data-uptype="${u.id}" title="${typeDisabled ? '自動判別が完了するまで変更できません' : '分類結果を確認し、必要なら帳票タイプを選び直してください'}" ${typeDisabled ? 'disabled' : ''}>${typeOptions}</select>`;
       const canPick = u.status === 'needs_confirm';
-      const upUser = u.auto ? 'バッチ処理' : (u.user || currentUploadUserLabel());
+      const upUser = u.auto ? 'システム' : (u.user || currentUploadUserLabel());
       const delBtn = userHasOp('delete')
         ? `<button type="button" class="act danger" data-upact="del" data-id="${u.id}" data-tip="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>`
         : '';
