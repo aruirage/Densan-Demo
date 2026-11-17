@@ -1951,3 +1951,13 @@ test('automatic upload allows saving without any folder selection', () => {
   run('ensureWatchDepartments(); WATCH.departments=[];');
   assert.equal(run('watchValidateSettings()'), '');
 });
+
+test('confirmed and exported rows keep re-read and confirm actions', () => {
+  const run = app();
+  for (const status of ['confirmed', 'exported']) {
+    run(`byId(FILES_DATA, "f11").status = "${status}";`);
+    const html = run('resultActionsCell(byId(FILES_DATA, "f11"))');
+    assert.match(html, /data-act="redo"/);
+    assert.match(html, /data-act="confirm"/);
+  }
+});

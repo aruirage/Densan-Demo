@@ -3318,10 +3318,10 @@ function renderFilters() {
 /** 行の操作セル（再読取 → 確認 → ダウンロード → 削除）
  *  権限が無い、または状態上不可のボタンは描かない。 */
 function resultActionsCell(f) {
-  /* 再読取・確認＝読取完了／読取失敗のみ（確認済み以降は触らせない）、
+  /* 再読取・確認＝読取中以外（確認済み・出力済みも再読取／確認可）、
      ダウンロード＝読取中のものは出さない。 */
-  const canRedo = ['waiting', 'done', 'failed'].includes(f.status);
-  const canMutate = ['done', 'failed'].includes(f.status);
+  const canRedo = ['waiting', 'done', 'failed', 'confirmed', 'exported'].includes(f.status);
+  const canMutate = ['done', 'failed', 'confirmed', 'exported'].includes(f.status);
   const canDownload = f.status !== 'reading';
   const btn = (act, tip, ico) => `<button class="act" data-act="${act}" data-file="${f.id}" data-tip="${tip}" aria-label="${tip}"><span class="ico ${ico}" aria-hidden="true"></span></button>`;
   const parts = [];
