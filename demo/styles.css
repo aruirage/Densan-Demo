@@ -2059,3 +2059,5 @@ th .ico{font-size:11px;color:var(--accent)}
 .account-password-input button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .account-password-fields .req{color:#f56c6c;font-style:normal;margin-right:4px}
 .user-add-readonly { display: flex; align-items: center; min-height: 32px; background: #f5f7f9; color: var(--text-2); cursor: default; }
+
+.act-na{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--text-3);font-size:13px;line-height:1}

@@ -3318,16 +3318,17 @@ function renderFilters() {
 /** 行の操作セル（再読取 → 確認 → ダウンロード → 削除）
  *  権限が無い、または状態上不可のボタンは描かない。 */
 function resultActionsCell(f) {
-  /* 状態タブは表示の絞り込みだけ。ただし確認済み／出力済みは再読取・確認を無効表示にする。 */
-  const canRedo = ['waiting', 'done', 'failed'].includes(f.status);
-  const canMutate = ['done', 'failed'].includes(f.status);
-  const canDownload = f.status !== 'reading';
-  const btn = (act, tip, ico, disabled) => `<button class="act" data-act="${act}" data-file="${f.id}" data-tip="${tip}" aria-label="${tip}" ${disabled ? 'disabled' : ''}><span class="ico ${ico}" aria-hidden="true"></span></button>`;
+  /* 状態タブは表示の絞り込みだけ。使えない操作は「—」で表示し、押せない。 */
+  const canRedo = ['waiting', 'done'].includes(f.status);
+  const canMutate = f.status === 'done';
+  const canDownload = ['done', 'confirmed', 'exported'].includes(f.status);
+  const btn = (act, tip, ico) => `<button class="act" data-act="${act}" data-file="${f.id}" data-tip="${tip}" aria-label="${tip}"><span class="ico ${ico}" aria-hidden="true"></span></button>`;
+  const na = '<span class="act-na" aria-hidden="true">—</span>';
   const parts = [];
-  if (userHasOp('redo')) parts.push(btn('redo', f.status === 'waiting' ? '読取' : '再読取', 'i-scan', !canRedo));
-  if (userHasOp('confirm')) parts.push(btn('confirm', '確認', 'i-check', !canMutate));
-  if (userHasOp('export')) {
-    parts.push(`<button class="act" data-dlmenu="${f.id}" aria-haspopup="menu" aria-label="ダウンロード" ${canDownload ? '' : 'disabled'}><span class="ico i-download" aria-hidden="true"></span></button>`);
+  if (userHasOp('redo')) parts.push(canRedo ? btn('redo', f.status === 'waiting' ? '読取' : '再読取', 'i-scan') : na);
+  if (userHasOp('confirm')) parts.push(canMutate ? btn('confirm', '確認', 'i-check') : na);
+  if (userHasOp('export') && canDownload) {
+    parts.push(`<button class="act" data-dlmenu="${f.id}" aria-haspopup="menu" aria-label="ダウンロード"><span class="ico i-download" aria-hidden="true"></span></button>`);
   }
   if (userHasOp('delete')) parts.push(`<button class="act danger" data-act="delete" data-file="${f.id}" data-tip="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>`);
   return `<td class="result-actions-cell col-actions"><div class="acts act-icons">${parts.join('')}</div></td>`;
