@@ -2413,7 +2413,7 @@ function activeFilterChips() {
   if (F.status) push('status', 'ステータス', STATUS[F.status] ? STATUS[F.status].label : F.status);
   if (F.biz) push('biz', '業務シーン', dispBiz(F.biz));
   if (F.layout) push('layout', '帳票タイプ', dispLayout(F.layout));
-  if (F.createdBy) push('createdBy', '作成者', F.createdBy === 'auto' ? '自動' : userName(F.createdBy));
+  if (F.createdBy) push('createdBy', '作成者', F.createdBy === 'auto' ? '—' : userName(F.createdBy));
   if (F.processedBy) push('processedBy', '処理者', userName(F.processedBy));
   if (F.confirmedBy) push('confirmedBy', '確認者', userName(F.confirmedBy));
   if (F.approvedBy) push('approvedBy', '承認者', userName(F.approvedBy));
@@ -3269,7 +3269,7 @@ function renderFilters() {
   const F = state.filters;
   const chips = activeFilterChips().filter((c) => c.k !== 'createdAt' || F.createdFrom !== HOME_FROM || F.createdTo !== HOME_TO);
   const users = USERS.map((u) => [u.id, u.name]);
-  const creators = [['auto', '自動'], ...users];
+  const creators = [['auto', '—'], ...users];
   const processors = users.filter((u) => FILES_DATA.some((f) => f.updatedBy === u[0]));
   const bizOpts = BUSINESS.slice().sort((a, b) => a.order - b.order).map((b) => [b.id, dispBiz(b.id)]);
   /* 業務シーンが選ばれているときは、その配下のタイプだけを候補に出す */
