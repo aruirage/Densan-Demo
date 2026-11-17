@@ -547,39 +547,92 @@
 <td>改名按设定画面的菜单权限判定；改名后沿用场景／类别ID、已有权限和自动取入配置</td>
 </tr>
 </tbody></table>
-<h4>状态规则</h4>
+<h4>状态与操作后的 Tab 行为</h4>
+<p>状态 Tab 只切换显示范围。再读取、确认、下载、删除都不会自动切换当前 Tab；即使操作后当前行不再属于该 Tab，也停留在原 Tab。</p>
+<table>
+<thead>
+<tr>
+<th>当前状态</th>
+<th>再读取</th>
+<th>确认</th>
+<th>下载／删除</th>
+<th>Tab</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>読取待ち</td>
+<td>→ 読取中</td>
+<td>打开确认画面</td>
+<td>可执行</td>
+<td>不变</td>
+</tr>
+<tr>
+<td>読取中</td>
+<td>处理中，不重复启动</td>
+<td>打开确认画面</td>
+<td>可执行</td>
+<td>不变</td>
+</tr>
+<tr>
+<td>読取完了</td>
+<td>→ 読取中</td>
+<td>确认完成后 → 確認済み</td>
+<td>可执行</td>
+<td>不变</td>
+</tr>
+<tr>
+<td>読取失敗</td>
+<td>→ 読取中</td>
+<td>打开确认画面，确认完成后 → 確認済み</td>
+<td>可执行</td>
+<td>不变</td>
+</tr>
+<tr>
+<td>確認済み</td>
+<td>→ 読取中，清除确认结果</td>
+<td>打开确认画面；确认完成后保持確認済み</td>
+<td>可执行</td>
+<td>不变</td>
+</tr>
+<tr>
+<td>出力済み</td>
+<td>→ 読取中，出力結果失效</td>
+<td>打开确认画面；确认完成后 → 確認済み，出力結果失效</td>
+<td>可执行</td>
+<td>不变</td>
+</tr>
+</tbody></table>
+<p>状态含义：</p>
 <table>
 <thead>
 <tr>
 <th>状态</th>
 <th>含义</th>
-<th>后续状态</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>读取中</td>
+<td>読取待ち</td>
+<td>分类完成，等待用户启动读取</td>
+</tr>
+<tr>
+<td>読取中</td>
 <td>系统正在执行 OCR</td>
-<td>读取完成／读取失败</td>
 </tr>
 <tr>
-<td>读取完成</td>
-<td>OCR 已完成，等待确认</td>
-<td>确认完成</td>
+<td>読取完了</td>
+<td>OCR 完成，等待确认</td>
 </tr>
 <tr>
-<td>读取失败</td>
+<td>読取失敗</td>
 <td>OCR 未完成</td>
-<td>读取中／保持失败</td>
 </tr>
 <tr>
-<td>确认完成</td>
+<td>確認済み</td>
 <td>用户已完成确认</td>
-<td>已输出</td>
 </tr>
 <tr>
-<td>已输出</td>
+<td>出力済み</td>
 <td>已生成输出文件</td>
-<td>保持已输出</td>
 </tr>
 </tbody></table>
 <h3 id="section-17">4.02 自动取入</h3>

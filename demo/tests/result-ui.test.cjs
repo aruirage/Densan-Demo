@@ -1963,3 +1963,9 @@ test('result row actions do not depend on status; tabs only filter', () => {
     assert.match(html, /data-act="delete"/, status);
   }
 });
+
+test('row actions never switch the selected status tab', () => {
+  const run = app();
+  run('state.page = "result"; state.tab = "exported"; const f = byId(FILES_DATA, "f11"); f.status = "exported"; f._proc = true; startReRead("f11");');
+  assert.equal(run('state.tab'), 'exported');
+});

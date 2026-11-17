@@ -3638,7 +3638,6 @@ function startReRead(fileId) {
   f.status = 'reading';
   f.error = '';
   /* 読取中の行は「すべて」以外のタブからは消える。再読取した行がその場で見えるよう読取中タブへ寄せる */
-  if (state.page === 'result' && state.tab !== 'all') state.tab = 'reading';
   const tick = setInterval(() => {
     if (!f._proc) { clearInterval(tick); return; }
     f.history = `読取処理中（${Math.floor((Date.now() - startedAt) / 1000)}秒経過）`;
