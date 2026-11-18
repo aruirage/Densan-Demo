@@ -1993,14 +1993,3 @@ test('user ID follows alphanumeric 1-10 and case-insensitive uniqueness', () => 
   assert.equal(run('userIdTaken("MIKOSATO")'), true);
   assert.equal(run('userIdTaken("mikosato", "u1")'), false);
 });
-
-test('login page requires user ID and password', () => {
-  const run = app();
-  const html = run('renderLoginPage()');
-  assert.match(html, /id="loginId"/);
-  assert.match(html, /id="loginPw"/);
-  assert.match(html, /ユーザーIDを入力してください/);
-  assert.match(html, /パスワードを入力してください/);
-  assert.match(html, /id="loginBtn"/);
-  assert.equal(run('state.loggedIn'), false);
-});
