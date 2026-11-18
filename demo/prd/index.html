@@ -5,7 +5,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 </style></head><body><a class="md-dl" href="PRD.zh-CN.md" download="电算Phase1产品需求文档V1.0.md">Markdown 下载</a><aside><strong>电算 LLMOCR</strong><small>产品需求文档 · 原型图文版</small><nav><a class="" href="#section-1">第 1 章｜文档基础与范围</a><a class="sub" href="#section-2">1.1 背景与目标</a><a class="sub" href="#section-3">1.2 本期交付范围</a><a class="" href="#section-4">第 2 章｜数据结构与状态</a><a class="sub" href="#section-5">2.1 实体与关系</a><a class="" href="#section-6">第 3 章｜用户交互流程</a><a class="sub" href="#section-7">3.1 入口与职责</a><a class="sub" href="#section-8">3.2 配置场景数据范围</a><a class="sub" href="#section-9">3.3 自动取入与后续处理</a><a class="sub" href="#section-10">3.4 文件查看与导出</a><a class="sub" href="#section-11">3.5 配置帳票タイプ导出</a><a class="sub" href="#section-12">3.6 用户管理</a><a class="" href="#section-13">第 4 章｜功能详细说明</a><a class="sub" href="#section-14">页面总览</a><a class="sub" href="#section-15">4.00 新规上传页面</a><a class="sub" href="#section-16">4.01 文件一览</a><a class="sub" href="#section-17">4.02 自动取入</a><a class="sub" href="#section-18">4.03 导出设置与下载</a><a class="sub" href="#section-19">4.04 登录与用户ID</a><a class="sub" href="#section-20">4.05 部门与用户</a><a class="sub" href="#section-21">4.06 业务场景数据授权</a><a class="sub" href="#section-22">4.07 Home</a><a class="sub" href="#section-23">4.08 部署与多租户</a></nav></aside><main><article><h1>电算Phase1产品需求文档V1.0</h1>
 <h2 id="section-1">第 1 章｜文档基础与范围</h2>
 <h3 id="section-2">1.1 背景与目标</h3>
-<p>本项目在客户环境内部署 LLMOCR，沿用农林水产产品的帳票配置、识别、组织、用户和权限功能。本期定制文件一览、自动取入和 CSV 导出，并将登录账号改为用户ID。每个租户独立部署应用环境，共用 GPU 识别服务。</p>
+<p>本项目在客户环境内部署 LLMOCR，沿用既有产品的帳票配置、识别、组织、用户和权限功能。本期定制文件一览、自动取入和 CSV 导出，并将登录账号改为用户ID。每个租户独立部署应用环境，共用 GPU 识别服务。</p>
 <h3 id="section-3">1.2 本期交付范围</h3>
 <table>
 <thead>
@@ -1107,7 +1107,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 <h4><mark>扫描批次与排队</mark></h4>
 <p><mark>执行间隔由数值与单位组成，单位可选分、小时、日、周、月。一次处理批次包含该执行间隔内扫描到的全部文件。到达下一次扫描时间时，上一批未完成的任务继续保留，新批次任务进入租户自己的 MQ 排队。文件任务支持并行执行；并行数量由工程师根据租户 VM 与 GPU 资源确定。批次不会因下次扫描开始而被取消或覆盖。</mark></p>
 <p><mark>已纳入上一批次且仍在排队或处理中的文件，后续扫描时跳过，不重复加入新批次、不重复创建任务。移动失败的已上传文件，后续批次仅重试移动，不重新上传或重复启动分类、读取。</mark></p>
-<p><mark>ZIP 的 50MB 判定口径沿用农林水产产品。</mark></p>
+<p><mark>ZIP 的 50MB 判定口径沿用既有产品。</mark></p>
 <h4>文件名与路径正规化</h4>
 <p>系统在判定扩展名、匹配取入文件夹和去重之前，先对扫描到的路径和文件名执行正规化。扩展名、大小写等正規処理項由后端固定实现。</p>
 <table>
@@ -1336,7 +1336,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 </ul>
 <p>同类别有多个输入文件时，每个文件各占 CSV 一行，使用相同表头。业务场景下有多个类别时，分别生成各类别的 CSV，再将多个输出文件打包为 ZIP。</p>
 <h4>JSON 与 PDF</h4>
-<p>JSON、PDF 的输出内容、数据结构及生成方式沿用农林水产产品。两种格式均按输入文件分别生成输出。本期定制的类别合并、横向展开和固定 N 行规则适用于 CSV。</p>
+<p>JSON、PDF 的输出内容、数据结构及生成方式沿用既有产品。两种格式均按输入文件分别生成输出。本期定制的类别合并、横向展开和固定 N 行规则适用于 CSV。</p>
 <h4>命名与编码</h4>
 <p>系统按导出对象自动确定文件名称：</p>
 <ul>
@@ -1346,7 +1346,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 </ul>
 <p>命名区域保留导出名称输入框，供客户配置该类别 CSV 合并导出的文件主名称。配置为空时，以帳票タイプ名称作为合并导出的文件主名称。ZIP 内存在同名文件时，在文件主名称后追加序号，保留扩展名，确保每个输出文件均被保留。</p>
 <p>CSV 编码候选为UTF-8（含 BOM）、UTF-8（省略 BOM）及 Shift_JIS。</p>
-<p>原型中的 PDF 为模拟输出；正式功能沿用农林水产产品。Shift_JIS 输出需验证实际编码与兼容性。</p>
+<p>原型中的 PDF 为模拟输出；正式功能沿用既有产品。Shift_JIS 输出需验证实际编码与兼容性。</p>
 <p><mark>选择 Shift_JIS 编码时，如读取结果包含该编码无法表示的字符，阻止本次导出并提示原因，不替换字符。</mark></p>
 <p><mark>批量读取、批量删除和批量导出的单次文件数上限待确认。</mark></p>
 <h3 id="section-19">4.04 登录与用户ID</h3>
@@ -1617,7 +1617,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 </tbody></table>
 <h4>数据保存与定期删除</h4>
 <ul>
-<li>数据保存期限沿用农林水产产品方案（7日／14日／1个月／2个月／3个月／6个月／12个月）。</li>
+<li>数据保存期限：7日／14日／1个月／2个月／3个月／6个月／12个月。</li>
 <li>超过保存期限后，只物理删除系统内部 MinIO 中的文件及 MySQL 中的相关记录，不做逻辑删除，删除后不可恢复。</li>
 <li><mark>文件处于分类、读取、确认或导出处理中时，本次不删除。任务结束后，如文件已超过保存期限，则在下一次定期删除时处理。</mark></li>
 <li><mark>MinIO 文件删除成功但 MySQL 记录删除失败，或 MySQL 记录删除成功但 MinIO 文件删除失败时，记录失败对象，后续仅重试未完成的删除步骤。</mark></li>
