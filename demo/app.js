@@ -1865,6 +1865,7 @@ const state = {
   asgMode: {},                    // フロー担当の药丸モード { confirm|approve|reapprove: 'role'|'user' }
   filters: { ...defaultFilters(), createdFrom: HOME_FROM, createdTo: HOME_TO },
   filterDraft: { ...defaultFilters(), createdFrom: HOME_FROM, createdTo: HOME_TO },
+  loggedIn: false,
 };
 
 let FILES_DATA = buildFiles();
@@ -8393,12 +8394,56 @@ function bindAccount() {
     SECURITY.logs.unshift({at:nowStamp(),user:String((entUserByUid(state.currentUser)||{}).email||state.currentUser).split('@')[0],type:'パスワード変更',result:'成功',ip:'—',note:''});
     close();toast('パスワードを変更しました（デモ）');
   };
-  const logout=$('#logoutOk');if(logout)logout.onclick=()=>{SECURITY.logs.unshift({at:nowStamp(),user:String((entUserByUid(state.currentUser)||{}).email||state.currentUser).split('@')[0],type:'ログアウト',result:'成功',ip:'—',note:''});close();toast('ログアウトしました（デモ）');};
+  const logout=$('#logoutOk');if(logout)logout.onclick=()=>{SECURITY.logs.unshift({at:nowStamp(),user:String((entUserByUid(state.currentUser)||{}).email||state.currentUser).split('@')[0],type:'ログアウト',result:'成功',ip:'—',note:''});state.loggedIn=false;state.logoutConfirm=false;state.page='home';render();toast('ログアウトしました');};
+}
+
+function renderLoginPage() {
+  return `<div class="login-page">
+    <div class="login-card">
+      <div class="login-brand" aria-label="LLM OCR"><span>LLM</span><em>OCR</em></div>
+      <h1 class="login-welcome">電算 AI-OCR へようこそ</h1>
+      <div class="login-sep"><span>ログイン</span></div>
+      <label class="login-field">
+        <span class="login-ico" aria-hidden="true">${'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>'}</span>
+        <input id="loginId" type="text" autocomplete="username" maxlength="10" placeholder="ユーザーIDを入力してください" aria-label="ユーザーID" />
+      </label>
+      <label class="login-field">
+        <span class="login-ico" aria-hidden="true">${'<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'}</span>
+        <input id="loginPw" type="password" autocomplete="current-password" placeholder="パスワードを入力してください" aria-label="パスワード" />
+      </label>
+      <p class="login-error" id="loginError" hidden></p>
+      <button type="button" class="login-btn" id="loginBtn" disabled>ログイン</button>
+      <p class="login-hint">デモ用：登録済みユーザーID ／ パスワード <b>demo</b></p>
+    </div>
+  </div>`;
+}
+function bindLogin() {
+  const id = $('#loginId'), pw = $('#loginPw'), btn = $('#loginBtn'), err = $('#loginError');
+  if (!id || !pw || !btn) return;
+  const sync = () => { btn.disabled = !id.value.trim() || !pw.value; };
+  id.oninput = sync; pw.oninput = sync;
+  const submit = () => {
+    const userId = id.value.trim();
+    const user = ENT_USERS.find((u) => String(u.email || '').toLowerCase() === userId.toLowerCase());
+    if (!userId || !pw.value || !user || pw.value !== 'demo') {
+      if (err) { err.textContent = 'ユーザーIDまたはパスワードが正しくありません'; err.hidden = false; }
+      return;
+    }
+    state.loggedIn = true;
+    state.currentUser = user.uid;
+    state.page = 'home';
+    state.logoutConfirm = false;
+    render();
+  };
+  btn.onclick = submit;
+  [id, pw].forEach((el) => { el.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }; });
+  setTimeout(() => id.focus(), 0);
 }
 
 function render() {
   watchLineObserver?.disconnect();
   const app = $('#app');
+  if (!state.loggedIn && typeof window !== 'undefined') { app.dataset.page = 'login'; app.innerHTML = renderLoginPage(); bindLogin(); return; }
   /* innerHTML を丸ごと差し替えるので、同じ画面を描き直すときはスクロール位置を戻す。
      これが無いとトグルを押すたびに一番上へ飛ぶ。 */
   const prevDomPage = app.dataset.page || '';
