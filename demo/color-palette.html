@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>电算 LLMOCR · Color Palette</title>
+<link rel="stylesheet" href="design-tokens.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ds-color-page-bg);color:var(--ds-color-text);font:14px/1.7 var(--ds-font-family)}
+  .page{max-width:1180px;margin:0 auto;padding:40px 28px 80px}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:28px}
+  h1{margin:0;font-size:28px;line-height:1.3}
+  .sub{margin:8px 0 0;color:var(--ds-color-text-tertiary)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;height:34px;padding:0 14px;border:1px solid var(--ds-color-border);border-radius:var(--ds-radius-sm);background:#fff;color:var(--ds-color-text-secondary);text-decoration:none;font-size:13px;cursor:pointer}
+  .btn.primary{background:var(--ds-color-primary);border-color:var(--ds-color-primary);color:#fff}
+  .btn:hover{border-color:var(--ds-color-border-strong)}
+  h2{margin:34px 0 14px;font-size:17px;color:var(--ds-primary-600);border-bottom:1px solid var(--ds-color-border);padding-bottom:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+  .swatch{background:#fff;border:1px solid var(--ds-color-border);border-radius:var(--ds-radius-md);overflow:hidden}
+  .chip{height:104px;display:flex;align-items:flex-end;justify-content:flex-end;padding:10px}
+  .chip span{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;background:#ffffffdd;color:#1f2f3d;border-radius:4px;padding:4px 6px}
+  .meta{padding:12px 14px 14px}
+  .token{font:600 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ds-color-text)}
+  .hex{color:var(--ds-color-text-tertiary);font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase}
+  .use{margin-top:6px;font-size:12px;color:var(--ds-color-text-tertiary);min-height:34px}
+  .copy{width:100%;margin-top:8px;height:28px;border:1px solid var(--ds-color-border);background:#fff;border-radius:4px;color:var(--ds-color-text-secondary);font-size:12px;cursor:pointer}
+  .copy:hover{border-color:var(--ds-color-primary);color:var(--ds-color-primary)}
+  .rows{display:grid;gap:8px;background:#fff;border:1px solid var(--ds-color-border);border-radius:var(--ds-radius-md);padding:8px 16px}
+  .row{display:grid;grid-template-columns:28px minmax(160px,1fr) 100px minmax(220px,2fr);align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #eef3f9}
+  .row:last-child{border-bottom:0}
+  .dot{width:28px;height:28px;border-radius:6px;border:1px solid #00000010}
+  .row code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ds-color-text)}
+  .row .usage{font-size:12px;color:var(--ds-color-text-tertiary)}
+  .examples{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:#fff;border:1px solid var(--ds-color-border);border-radius:var(--ds-radius-md);padding:20px}
+  .ex-btn{height:36px;padding:0 18px;border-radius:var(--ds-radius-sm);border:1px solid transparent;font-weight:600;font-size:13px}
+  .ex-primary{background:var(--ds-color-primary);color:#fff}
+  .ex-secondary{background:#fff;border-color:var(--ds-color-border-strong);color:var(--ds-primary-600)}
+  .ex-danger{background:#fff;border-color:#f0c9cf;color:var(--ds-danger)}
+  .pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;font-size:12px}
+  .pill.ok{background:var(--ds-success-bg);color:var(--ds-success-strong)}
+  .pill.warn{background:var(--ds-warning-bg);color:var(--ds-warning-strong)}
+  .pill.bad{background:var(--ds-danger-bg);color:var(--ds-danger)}
+  .pill.info{background:var(--ds-info-bg);color:var(--ds-info)}
+  .field{height:34px;min-width:220px;border:1px solid var(--ds-color-border);border-radius:var(--ds-radius-sm);padding:0 10px;font:inherit;color:var(--ds-color-text);background:#fff}
+  .field:focus{outline:0;border-color:var(--ds-color-primary);box-shadow:var(--ds-focus-ring)}
+  .note{margin:10px 0 0;font-size:12px;color:var(--ds-color-text-tertiary)}
+  .footer{margin-top:34px;font-size:12px;color:var(--ds-color-text-tertiary)}
+  .toast{position:fixed;right:24px;bottom:24px;background:var(--ds-text-900);color:#fff;padding:10px 16px;border-radius:6px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
+  .toast.on{opacity:1;transform:none}
+  @media(max-width:720px){.row{grid-template-columns:28px 1fr}.row .hex,.row .usage{grid-column:2}.page{padding:24px 16px 60px}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <h1>电算 LLMOCR · Color Palette</h1>
+      <p class="sub">原型实际生效配色，可直接落地到前端；语义色优先于原始色值。</p>
+    </div>
+    <div class="actions">
+      <a class="btn primary" href="design-tokens.css" download>下载 design-tokens.css</a>
+      <button class="btn" id="copyAll">复制全部 CSS 变量</button>
+    </div>
+  </header>
+
+  <h2>Brand / Primary</h2>
+  <div class="grid" id="primaryGrid"></div>
+
+  <h2>Neutral / Surface</h2>
+  <div class="grid" id="neutralGrid"></div>
+
+  <h2>Semantic</h2>
+  <div class="grid" id="semanticGrid"></div>
+
+  <p class="note">开发时优先使用语义 Token。文字链接请用 <code>--ds-link</code>（#2F66A0），不要直接用主色当小字号正文。</p>
+
+  <h2>组件示例</h2>
+  <div class="examples">
+    <button class="ex-btn ex-primary">主按钮</button>
+    <button class="ex-btn ex-secondary">次按钮</button>
+    <button class="ex-btn ex-danger">删除</button>
+    <span class="pill ok">● 読取完了</span>
+    <span class="pill warn">● 要確認</span>
+    <span class="pill bad">● 読取失敗</span>
+    <span class="pill info">● 自動取込</span>
+    <input class="field" placeholder="入力してください">
+  </div>
+
+  <h2>使用规则</h2>
+  <div class="rows">
+    <div class="row"><span class="dot" style="background:var(--ds-color-primary)"></span><code>--ds-color-primary</code><span class="hex">#3D7AB8</span><span class="usage">主按钮、选中态、进度、重点图标</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-color-primary-hover)"></span><code>--ds-color-primary-hover</code><span class="hex">#4A8CCB</span><span class="usage">主按钮 hover</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-color-primary-active)"></span><code>--ds-color-primary-active</code><span class="hex">#305A7E</span><span class="usage">按下 / 深色标题 / 高对比文字</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-color-page-bg)"></span><code>--ds-color-page-bg</code><span class="hex">#F7FAFD</span><span class="usage">页面背景</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-color-surface)"></span><code>--ds-color-surface</code><span class="hex">#FFFFFF</span><span class="usage">卡片、面板、弹窗</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-color-selected)"></span><code>--ds-color-selected</code><span class="hex">#E7F0FB</span><span class="usage">选中行 / 选中树节点 / 激活底</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-color-table-head)"></span><code>--ds-color-table-head</code><span class="hex">#EEF5FD</span><span class="usage">表头背景</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-color-border)"></span><code>--ds-color-border</code><span class="hex">#DBE7F5</span><span class="usage">常规边框 / 分割线</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-color-text)"></span><code>--ds-color-text</code><span class="hex">#1F2F3D</span><span class="usage">正文 / 表格主文字</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-color-text-tertiary)"></span><code>--ds-color-text-tertiary</code><span class="hex">#55708B</span><span class="usage">辅助说明 / 标签 / 占位</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-success)"></span><code>--ds-success</code><span class="hex">#3D9A6E</span><span class="usage">成功 / 完成 / 有効</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-warning)"></span><code>--ds-warning</code><span class="hex">#EF8B2C</span><span class="usage">注意 / 要確認 / 待处理</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-danger)"></span><code>--ds-danger</code><span class="hex">#E31B54</span><span class="usage">错误 / 删除 / 失败</span></div>
+    <div class="row"><span class="dot" style="background:var(--ds-info)"></span><code>--ds-info</code><span class="hex">#2189C4</span><span class="usage">信息 / 读取中 / 自动取入</span></div>
+  </div>
+
+  <p class="footer">电算 LLMOCR Phase 1 · Design Tokens · 原型实际取值</p>
+</div>
+<div class="toast" id="toast">已复制</div>
+<script>
+const groups = {
+  primaryGrid: [
+    ['primary-600','#305A7E','--ds-primary-600','按下 / 深色文字'],
+    ['primary-500','#3D7AB8','--ds-primary-500','主色 / 主按钮'],
+    ['primary-400','#4A8CCB','--ds-primary-400','hover'],
+    ['primary-300','#6AA6DC','--ds-primary-300','图形 / 次级强调'],
+    ['primary-200','#CFE0F5','--ds-primary-200','强调边框'],
+    ['primary-100','#E7F0FB','--ds-primary-100','选中底色'],
+    ['primary-50','#EEF5FD','--ds-primary-50','表头 / 极浅底'],
+    ['link','#2F66A0','--ds-link','白底链接文字']
+  ],
+  neutralGrid: [
+    ['text-900','#1F2F3D','--ds-text-900','主文字'],
+    ['text-700','#3D556B','--ds-text-700','次文字'],
+    ['text-500','#55708B','--ds-text-500','辅助文字'],
+    ['page-bg','#F7FAFD','--ds-bg','页面背景'],
+    ['surface','#FFFFFF','--ds-surface','卡片 / 面板'],
+    ['surface-2','#EEF4FB','--ds-surface-2','浅底 / 分组'],
+    ['border','#DBE7F5','--ds-border','常规边框'],
+    ['border-strong','#CFE0F5','--ds-border-strong','强调边框'],
+    ['disabled','#D5D7DA','--ds-disabled','禁用']
+  ],
+  semanticGrid: [
+    ['success','#3D9A6E','--ds-success','成功 / 完成'],
+    ['success-bg','#EAF7EF','--ds-success-bg','成功标签底'],
+    ['warning','#EF8B2C','--ds-warning','注意 / 要確認'],
+    ['warning-bg','#FFF4E5','--ds-warning-bg','注意标签底'],
+    ['danger','#E31B54','--ds-danger','错误 / 删除'],
+    ['danger-bg','#FFF1F3','--ds-danger-bg','错误标签底'],
+    ['info','#2189C4','--ds-info','信息 / 读取中'],
+    ['info-bg','#E7F0FB','--ds-info-bg','信息标签底']
+  ]
+};
+const dark = new Set(['#305A7E','#3D7AB8','#4A8CCB','#6AA6DC','#2F66A0','#1F2F3D','#3D556B','#55708B','#3D9A6E','#EF8B2C','#E31B54','#2189C4']);
+function card([name,hex,token,use]){
+  const fg = dark.has(hex) ? '#fff' : '#1F2F3D';
+  return `<article class="swatch"><div class="chip" style="background:${hex};color:${fg}"><span>${hex}</span></div><div class="meta"><div class="token">${token}</div><div class="hex">${hex}</div><div class="use">${use}</div><button class="copy" data-copy="${hex}">复制色值</button></div></article>`;
+}
+for (const [id,list] of Object.entries(groups)) document.getElementById(id).innerHTML=list.map(card).join('');
+const toast=document.getElementById('toast');
+function show(){toast.classList.add('on');clearTimeout(show.t);show.t=setTimeout(()=>toast.classList.remove('on'),1200)}
+async function copy(text){try{await navigator.clipboard.writeText(text)}catch(e){const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}show()}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-copy]');if(b)copy(b.dataset.copy)});
+document.getElementById('copyAll').onclick=()=>copy(`:root{\n  --ds-color-primary:#3D7AB8;\n  --ds-color-primary-hover:#4A8CCB;\n  --ds-color-primary-active:#305A7E;\n  --ds-color-primary-soft:#E7F0FB;\n  --ds-color-page-bg:#F7FAFD;\n  --ds-color-surface:#FFFFFF;\n  --ds-color-text:#1F2F3D;\n  --ds-color-text-secondary:#3D556B;\n  --ds-color-text-tertiary:#55708B;\n  --ds-color-border:#DBE7F5;\n  --ds-color-border-strong:#CFE0F5;\n  --ds-color-table-head:#EEF5FD;\n  --ds-color-selected:#E7F0FB;\n  --ds-success:#3D9A6E;\n  --ds-warning:#EF8B2C;\n  --ds-danger:#E31B54;\n  --ds-info:#2189C4;\n  --ds-link:#2F66A0;\n}`);
+</script>
+</body>
+</html>

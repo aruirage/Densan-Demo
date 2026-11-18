@@ -1,0 +1,76 @@
+/* ============================================================
+   电算 LLMOCR — Design Tokens
+   用途：原型与前端开发共用的颜色、圆角、阴影
+   取值来源：demo/styles.css + demo/brand-densan.css（最终生效值）
+   命名：--ds-*；业务组件请优先使用语义色，不要直接写 hex
+   ============================================================ */
+:root {
+  /* ── Brand / Primary ───────────────────────────────────── */
+  --ds-primary-600: #305a7e;   /* active / 深色文字 */
+  --ds-primary-500: #3d7ab8;   /* 主色：按钮、选中、重点 */
+  --ds-primary-400: #4a8ccb;   /* hover */
+  --ds-primary-300: #6aa6dc;   /* 次级强调、图形 */
+  --ds-primary-200: #cfe0f5;   /* 边框、分割 */
+  --ds-primary-100: #e7f0fb;   /* 选中底色 */
+  --ds-primary-50:  #eef5fd;   /* 表头、极浅底 */
+  --ds-link:        #2f66a0;   /* 白底链接/文件名，满足可读性 */
+
+  /* ── Neutral / Text ────────────────────────────────────── */
+  --ds-text-900: #1f2f3d;      /* 主文字 */
+  --ds-text-700: #3d556b;      /* 次文字 */
+  --ds-text-500: #55708b;      /* 辅助文字/标签 */
+  --ds-text-300: #8a969e;      /* placeholder */
+  --ds-text-disabled: #a4a7ae;
+
+  /* ── Surface / Border ──────────────────────────────────── */
+  --ds-bg:        #f7fafd;     /* 页面背景 */
+  --ds-surface:   #ffffff;     /* 卡片/面板 */
+  --ds-surface-2: #eef4fb;     /* 浅灰蓝底 */
+  --ds-border:    #dbe7f5;     /* 常规边框 */
+  --ds-border-strong: #cfe0f5; /* 选中/强调边框 */
+  --ds-disabled:  #d5d7da;
+
+  /* ── Semantic ──────────────────────────────────────────── */
+  --ds-success:    #3d9a6e;
+  --ds-success-strong: #2f7a55;
+  --ds-success-bg: #eaf7ef;
+  --ds-warning:    #ef8b2c;
+  --ds-warning-strong: #d9741a;
+  --ds-warning-bg: #fff4e5;
+  --ds-danger:     #e31b54;
+  --ds-danger-bg:  #fff1f3;
+  --ds-info:       #2189c4;
+  --ds-info-bg:    #e7f0fb;
+
+  /* ── Semantic aliases（组件优先用这些） ───────────────── */
+  --ds-color-primary:        var(--ds-primary-500);
+  --ds-color-primary-hover:  var(--ds-primary-400);
+  --ds-color-primary-active: var(--ds-primary-600);
+  --ds-color-primary-soft:   var(--ds-primary-100);
+  --ds-color-primary-faint:  var(--ds-primary-50);
+  --ds-color-page-bg:        var(--ds-bg);
+  --ds-color-surface:        var(--ds-surface);
+  --ds-color-text:           var(--ds-text-900);
+  --ds-color-text-secondary: var(--ds-text-700);
+  --ds-color-text-tertiary:  var(--ds-text-500);
+  --ds-color-border:         var(--ds-border);
+  --ds-color-border-strong:  var(--ds-border-strong);
+  --ds-color-table-head:     var(--ds-primary-50);
+  --ds-color-selected:       var(--ds-primary-100);
+
+  /* ── Shape / Elevation ─────────────────────────────────── */
+  --ds-radius-sm: 4px;         /* 输入框、按钮 */
+  --ds-radius-md: 6px;         /* 卡片、面板、弹窗 */
+  --ds-radius-pill: 999px;
+  --ds-shadow-modal: 0 8px 24px rgba(48, 90, 126, 0.12);
+  --ds-focus-ring: 0 0 0 3px rgba(61, 122, 184, 0.20);
+
+  /* ── Typography ────────────────────────────────────────── */
+  --ds-font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", "Yu Gothic", Meiryo, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ds-font-size-xs: 11px;
+  --ds-font-size-sm: 12px;
+  --ds-font-size-base: 13px;
+  --ds-font-size-md: 14px;
+  --ds-font-size-lg: 17px;
+  --ds-font-size-xl: 20px;
+}
