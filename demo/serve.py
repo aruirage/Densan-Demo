@@ -13,6 +13,7 @@
 import sys, functools, http.server, socketserver, os, re
 
 PORT = int(sys.argv[1]) if (len(sys.argv) > 1 and sys.argv[1].isdigit()) else 8787
+HOST = os.environ.get('HOST', '127.0.0.1')
 DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 注入しても安全な「値定義」と「関数定義」。app.js に存在しない名前だけを注入する。
@@ -2966,6 +2967,6 @@ if len(sys.argv) >= 3 and sys.argv[1] == '--build':
     build_static(sys.argv[2])
     sys.exit(0)
 
-with socketserver.ThreadingTCPServer(('127.0.0.1', PORT), handler) as httpd:
-    print(f'serving {DIR} at http://127.0.0.1:{PORT}/', flush=True)
+with socketserver.ThreadingTCPServer((HOST, PORT), handler) as httpd:
+    print(f'serving {DIR} at http://{HOST}:{PORT}/', flush=True)
     httpd.serve_forever()
