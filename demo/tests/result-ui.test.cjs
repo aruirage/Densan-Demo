@@ -1982,3 +1982,14 @@ test('row actions never switch the selected status tab', () => {
   assert.equal(run('state.tab'), 'exported');
 
 });
+
+test('user ID follows alphanumeric 1-10 and case-insensitive uniqueness', () => {
+  const run = app();
+  assert.equal(run('validUserId("abc123")'), true);
+  assert.equal(run('validUserId("abcdefghij")'), true);
+  assert.equal(run('validUserId("abcdefghijk")'), false);
+  assert.equal(run('validUserId("abc.123")'), false);
+  assert.equal(run('validUserId("")'), false);
+  assert.equal(run('userIdTaken("MIKOSATO")'), true);
+  assert.equal(run('userIdTaken("mikosato", "u1")'), false);
+});

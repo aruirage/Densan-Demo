@@ -90,15 +90,15 @@ const USERS = [
 /** デモ用：権限の違いを見せるための切替候補。
  *  9 ロール設計（R1/R2/R3/R5/R6/R7/R8/R10/R11）に 1 人ずつ対応させる。 */
 const DEMO_ACTORS = [
-  { id: 'u1', role: 'システム管理者', email: 'ichiro.sato', hint: '全メニュー・全帳票・全操作' },
-  { id: 'u3', role: '業務管理者', email: 'kenta.yamada', hint: 'すべてのメニューを閲覧可能。設定管理は可能、アップロード・読取・確認・ダウンロードは不可' },
-  { id: 'u8', role: 'OCR結果確認', email: 'ryo.nakamura', hint: '全メニュー閲覧・編集・確認・履歴閲覧（ダウンロード不可）' },
-  { id: 'u7', role: 'アップロード', email: 'aya.yamamoto', hint: '閲覧・アップロード・アップロードファイル削除（読取・分類変更・確認・ダウンロード不可）' },
-  { id: 'u6', role: '読取', email: 'osamu.watanabe', hint: '閲覧・読取（再読取／一括読取）・削除（確認と出力は不可）' },
-  { id: 'u5', role: 'OCR結果修正', email: 'yumi.ito', hint: '全メニュー閲覧・編集・履歴閲覧（確認・ダウンロード不可）' },
-  { id: 'u2', role: 'AI分類結果修正', email: 'hanako.suzuki', hint: '全メニュー閲覧・帳票タイプ変更' },
-  { id: 'u10', role: '出力', email: 'naoko.kobayashi', hint: '全メニュー閲覧・ダウンロード（CSV／JSON／PDF）' },
-  { id: 'u4', role: '閲覧', email: 'minoru.tanaka', hint: 'すべてのメニューを閲覧可能（編集・確認・ダウンロード不可）' },
+  { id: 'u1', role: 'システム管理者', email: 'mikosato', hint: '全メニュー・全帳票・全操作' },
+  { id: 'u3', role: '業務管理者', email: 'kentayama', hint: 'すべてのメニューを閲覧可能。設定管理は可能、アップロード・読取・確認・ダウンロードは不可' },
+  { id: 'u8', role: 'OCR結果確認', email: 'ryonakam', hint: '全メニュー閲覧・編集・確認・履歴閲覧（ダウンロード不可）' },
+  { id: 'u7', role: 'アップロード', email: 'ayamoto', hint: '閲覧・アップロード・アップロードファイル削除（読取・分類変更・確認・ダウンロード不可）' },
+  { id: 'u6', role: '読取', email: 'owatanabe', hint: '閲覧・読取（再読取／一括読取）・削除（確認と出力は不可）' },
+  { id: 'u5', role: 'OCR結果修正', email: 'yumiito', hint: '全メニュー閲覧・編集・履歴閲覧（確認・ダウンロード不可）' },
+  { id: 'u2', role: 'AI分類結果修正', email: 'hsuzuki', hint: '全メニュー閲覧・帳票タイプ変更' },
+  { id: 'u10', role: '出力', email: 'naoko', hint: '全メニュー閲覧・ダウンロード（CSV／JSON／PDF）' },
+  { id: 'u4', role: '閲覧', email: 'minoru', hint: 'すべてのメニューを閲覧可能（編集・確認・ダウンロード不可）' },
 ];
 
 /** 右上に表示するログイン中ユーザ（state.currentUser から導出） */
@@ -344,18 +344,25 @@ const OCR_ORIGINAL = {
 /* dataPerm：自身のみ＝自分に割当／自分が処理したタスクだけ。全件参照＝同権限プール内の他人の待办／已办も見える。
  * メニュー権限・所属はユーザーグループ側で付与（ユーザー個別では持たない）。システム管理者は全操作。 */
 const ENT_USERS = [
-  { id: 'U1', uid: 'u1', name: '佐藤 美子', email: 'miko.sato', role: 'システム管理者', dataPerm: '全件参照', created: '2026-09-30 10:12:00', status: '有効' },
-  { id: 'U2', uid: 'u2', name: '鈴木 太郎', email: 'taro.suzuki', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-01 09:02:11', status: '有効' },
-  { id: 'U3', uid: 'u3', name: '山田 健太', email: 'kenta.yamada', role: '部門管理者', dataPerm: '全件参照', created: '2026-10-02 14:20:31', status: '有効' },
+  { id: 'U1', uid: 'u1', name: '佐藤 美子', email: 'mikosato', role: 'システム管理者', dataPerm: '全件参照', created: '2026-09-30 10:12:00', status: '有効' },
+  { id: 'U2', uid: 'u2', name: '鈴木 太郎', email: 'tarosuzuki', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-01 09:02:11', status: '有効' },
+  { id: 'U3', uid: 'u3', name: '山田 健太', email: 'kentayama', role: '部門管理者', dataPerm: '全件参照', created: '2026-10-02 14:20:31', status: '有効' },
   /* uid は USERS と対応。u4＝田中（確認＋承認兼務）、u5＝承認専任 → 操作は所属グループの役割で決まる */
-  { id: 'U4', uid: 'u4', name: '田中 実', email: 'minoru.tanaka', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-03 11:45:02', status: '有効' },
-  { id: 'U5', uid: 'u5', name: '伊藤 由美', email: 'yumi.ito', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-05 08:31:10', status: '有効' },
-  { id: 'U6', uid: 'u6', name: '渡辺 修', email: 'osamu.watanabe', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-06 10:05:44', status: '有効' },
-  { id: 'U7', uid: 'u7', name: '山本 彩', email: 'aya.yamamoto', role: '一般ユーザー', dataPerm: '自身のみ', created: '2026-10-07 13:22:09', status: '有効', soloPermIds: ['R4'] },
-  { id: 'U8', uid: 'u8', name: '中村 亮', email: 'ryo.nakamura', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-08 09:41:30', status: '有効' },
+  { id: 'U4', uid: 'u4', name: '田中 実', email: 'minoru', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-03 11:45:02', status: '有効' },
+  { id: 'U5', uid: 'u5', name: '伊藤 由美', email: 'yumiito', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-05 08:31:10', status: '有効' },
+  { id: 'U6', uid: 'u6', name: '渡辺 修', email: 'owatanabe', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-06 10:05:44', status: '有効' },
+  { id: 'U7', uid: 'u7', name: '山本 彩', email: 'ayamoto', role: '一般ユーザー', dataPerm: '自身のみ', created: '2026-10-07 13:22:09', status: '有効', soloPermIds: ['R4'] },
+  { id: 'U8', uid: 'u8', name: '中村 亮', email: 'ryonakam', role: '業務シーン管理者', dataPerm: '自身のみ', created: '2026-10-08 09:41:30', status: '有効' },
   /* 出力専任。グループ未所属で、個人の権限（R10）だけを持つ */
-  { id: 'U10', uid: 'u10', name: '小林 直子', email: 'naoko.kobayashi', role: '一般ユーザー', dataPerm: '自身のみ', created: '2026-10-09 09:15:00', status: '有効', soloPermIds: ['R4'] },
+  { id: 'U10', uid: 'u10', name: '小林 直子', email: 'naoko', role: '一般ユーザー', dataPerm: '自身のみ', created: '2026-10-09 09:15:00', status: '有効', soloPermIds: ['R4'] },
 ];
+const USER_ID_RE = /^[A-Za-z0-9]{1,10}$/;
+function validUserId(v) { return USER_ID_RE.test(String(v || '').trim()); }
+function userIdTaken(v, exceptUid) {
+  const key = String(v || '').trim().toLowerCase();
+  return ENT_USERS.some((u) => u.uid !== exceptUid && String(u.email || '').toLowerCase() === key);
+}
+
 /** システム権限（メニュー到達）。業務のメニュー権限はユーザーグループの役割で付与する */
 let ROLES = [
   { id: 'R1', name: 'システム管理者', code: 'system_admin', desc: 'すべてのメニューとシステム設定を利用', created: '2025-10-01 00:00:00', status: '有効' },
@@ -517,17 +524,17 @@ const SECURITY = {
   ipEnabled: '無効',        // 無効 / 有効
   idle: '制限なし',         // 15分 / 30分 / 60分 / 2時間 / 制限なし
   logs: [
-    { at: '2026-10-14 20:51:32', user: 'miko.sato', type: '手動', feature: '新規アップロード', action: '手動', target: '—', ip: '172.16.51.8', result: '成功', note: '—' },
-    { at: '2026-10-14 20:35:14', user: 'miko.sato', type: '手動', feature: '新規アップロード', action: '手動', target: '07_test1.pdf', ip: '172.16.51.8', result: '成功', note: '' },
-    { at: '2026-10-14 20:19:45', user: 'miko.sato', type: '出力', ip: '172.16.51.8', result: '成功', note: 'CSV 12件' },
-    { at: '2026-10-14 19:02:48', user: 'taro.suzuki', type: '確認', ip: '172.16.51.20', result: '成功', note: '確認担当者: 山田 健太' },
+    { at: '2026-10-14 20:51:32', user: 'mikosato', type: '手動', feature: '新規アップロード', action: '手動', target: '—', ip: '172.16.51.8', result: '成功', note: '—' },
+    { at: '2026-10-14 20:35:14', user: 'mikosato', type: '手動', feature: '新規アップロード', action: '手動', target: '07_test1.pdf', ip: '172.16.51.8', result: '成功', note: '' },
+    { at: '2026-10-14 20:19:45', user: 'mikosato', type: '出力', ip: '172.16.51.8', result: '成功', note: 'CSV 12件' },
+    { at: '2026-10-14 19:02:48', user: 'tarosuzuki', type: '確認', ip: '172.16.51.20', result: '成功', note: '確認担当者: 山田 健太' },
     { at: '2026-10-14 17:44:02', user: 'misaki.nakamura', type: 'ログイン', ip: '172.16.51.33', result: '失敗', note: 'パスワード誤り' },
-    { at: '2026-10-14 15:10:40', user: 'minoru.tanaka', type: '設定変更', ip: '172.16.51.44', result: '成功', note: 'エクスポート設定' },
-    { at: '2026-10-13 10:15:00', user: 'miko.sato', type: '設定変更', feature: '帳票タイプ設定', action: '変更', target: '新規帳票タイプ', ip: '172.16.51.8', result: '成功', note: '帳票タイプを追加' },
-    { at: '2026-10-13 11:20:00', user: 'miko.sato', type: '設定変更', feature: '辞書登録', action: '変更', target: '用語「住民票」', ip: '172.16.51.8', result: '成功', note: '辞書から削除' },
+    { at: '2026-10-14 15:10:40', user: 'minoru', type: '設定変更', ip: '172.16.51.44', result: '成功', note: 'エクスポート設定' },
+    { at: '2026-10-13 10:15:00', user: 'mikosato', type: '設定変更', feature: '帳票タイプ設定', action: '変更', target: '新規帳票タイプ', ip: '172.16.51.8', result: '成功', note: '帳票タイプを追加' },
+    { at: '2026-10-13 11:20:00', user: 'mikosato', type: '設定変更', feature: '辞書登録', action: '変更', target: '用語「住民票」', ip: '172.16.51.8', result: '成功', note: '辞書から削除' },
     { at: '2026-10-12 16:05:00', user: 'admin', type: '設定変更', feature: 'ユーザー管理', action: '変更', target: '田中 一郎', ip: '172.16.51.9', result: '成功', note: 'ユーザーを追加' },
-    { at: '2026-10-14 18:00:00', user: 'miko.sato', type: '削除', feature: '読取結果一覧', action: '削除', target: '07_test1.pdf', ip: '172.16.51.8', result: '成功', note: '結果を削除' },
-    { at: '2026-10-15 09:10:00', user: 'miko.sato', type: '設定変更', feature: '自動取込設定', action: '変更', target: '自動取込設定', ip: '172.16.51.8', result: '成功', note: '実行間隔を変更' },
+    { at: '2026-10-14 18:00:00', user: 'mikosato', type: '削除', feature: '読取結果一覧', action: '削除', target: '07_test1.pdf', ip: '172.16.51.8', result: '成功', note: '結果を削除' },
+    { at: '2026-10-15 09:10:00', user: 'mikosato', type: '設定変更', feature: '自動取込設定', action: '変更', target: '自動取込設定', ip: '172.16.51.8', result: '成功', note: '実行間隔を変更' },
   ],
 };
 
@@ -4768,7 +4775,7 @@ function renderUserAddDialog() {
         </label>
         <label class="user-add-field">
           <span class="user-add-label"><i class="req">*</i>ユーザーID</span>
-          <input class="fld" id="userAddEmail" autocomplete="username" value="${esc(d.email)}" placeholder="ユーザーIDを入力してください" />
+          <input class="fld" id="userAddEmail" autocomplete="username" maxlength="10" value="${esc(d.email)}" placeholder="ユーザーIDを入力してください" />
         </label>
         <label class="user-add-field"><span class="user-add-label"><i class="req">*</i>所属組織</span><div class="fld user-add-readonly">${esc((d.groupIds || []).map((gid) => groupName(gid)).join('、') || '未所属')}</div></label>
         <div class="user-add-field is-top">
@@ -9752,7 +9759,10 @@ function bindCfgPages() {
     if (ok) ok.onclick = () => {
       const d = USER_ADD_DRAFT;
       if (!d.name.trim()) { toast('ユーザー名を入力してください'); return; }
-      if (!d.email.trim()) { toast('ユーザーIDを入力してください'); return; }
+      const userId = d.email.trim();
+      const editUser = d.mode === 'edit' ? ENT_USERS.find((x) => x.id === d.id) : null;
+      if (!validUserId(userId)) { toast('ユーザーIDは英数字1～10文字で入力してください'); return; }
+      if (userIdTaken(userId, editUser ? editUser.uid : null)) { toast('同じユーザーIDが既に存在します'); return; }
       const saveGroups = (uid) => {
         if (!d.groupIds) return;
         const ids = d.groupIds;
@@ -9767,7 +9777,7 @@ function bindCfgPages() {
         const u = ENT_USERS.find((x) => x.id === d.id);
         if (u) {
           u.name = d.name.trim();
-          u.email = d.email.trim();
+          u.email = userId;
           u.role = role ? role.name : u.role;
           /* 個人の権限はグループ所属に関係なく保存する（実効権限は和集合） */
           u.soloPermIds = (d.soloPermIds || []).slice();
@@ -9788,7 +9798,7 @@ function bindCfgPages() {
         id: 'U' + Date.now(),
         uid,
         name: d.name.trim(),
-        email: d.email.trim(),
+        email: userId,
         role: (d.soloPermIds || []).map((rid) => (byId(ROLES, rid) || {}).name).filter(Boolean).join('、'),
         soloPermIds: (d.soloPermIds || []).slice(),
         dataPerm: d.dataPerm,
@@ -10915,7 +10925,7 @@ function seedAdditionalDemoData() {
     id: `demo-manual-u1-${i}`, biz: 'b1', layout: manualLayout.id, name,
     size: 245000 + i * 73000, pages: i + 1,
     uploadedAt: `2026-10-28 11:${String(12-i).padStart(2,'0')}:00`,
-    user: 'miko.sato', createdBy: 'u1', status, auto: false, history, error: '',
+    user: 'mikosato', createdBy: 'u1', status, auto: false, history, error: '',
   }));
   state.uploads.unshift(...manualSamples);
 }
