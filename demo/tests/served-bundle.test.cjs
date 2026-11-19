@@ -188,9 +188,14 @@ test('served bundle: 絞り込みは既定 1 行（ファイル名・ステー�
   const open = run('state.filterOpen = true; renderFilters()');
   assert.equal((open.match(/data-fs="biz"/g) || []).length, 1);
   assert.equal((open.match(/data-fs="layout"/g) || []).length, 1);
+  assert.equal((open.match(/data-fs="organization"/g) || []).length, 1);
+  assert.match(open, /<span class="lbl">組織<\/span>/);
   assert.match(open, /id="filtRvq"/);
   assert.match(open, /読取内容/);
   assert.equal((open.match(/class="result-filter-row/g) || []).length, 3);
+  const table = run('renderTable()');
+  assert.match(table, /data-sort="organization"/);
+  assert.match(table, /<th data-sort="organization"[^>]*>組織/);
 
   /* 読取内容（OCR 項目値・修正値）で絞り込める */
   run('state.filters = defaultFilters(); state.q = ""; state.tab = "all"; state.activeNode = { type: "all", id: "all" };');

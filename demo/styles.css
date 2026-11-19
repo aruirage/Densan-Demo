@@ -1056,7 +1056,7 @@ th .ico{font-size:11px;color:var(--accent)}
 /* 絞り込み行は列を均等に伸ばし、右側の空きを埋める */
 .result-filter-row,.result-search-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 16px;align-items:center;width:100%;min-height:32px}
 .result-search-row{grid-template-columns:repeat(3,minmax(0,1fr))}
-.result-advanced-row{grid-template-columns:repeat(4,minmax(0,1fr))}
+.result-advanced-row{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 10px}
 .result-date-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 12px}
 .result-filters .field{display:flex;align-items:center;gap:8px;min-width:0;width:100%}
 .result-filters .field.grow{grid-column:1/-1}
@@ -1159,13 +1159,14 @@ th .ico{font-size:11px;color:var(--accent)}
 .result-tablewrap::-webkit-scrollbar-track{background:var(--bg)}
 .result-tablewrap::-webkit-scrollbar-thumb{background:#bfc3c9;border-radius:4px;border:1px solid var(--bg)}
 .result-tablewrap::-webkit-scrollbar-thumb:hover{background:#a8adb4}
-.result-tablewrap .result-table{min-width:1760px;width:100%;max-width:100%;table-layout:fixed;font-size:14px;border-collapse:collapse;border-spacing:0}
+.result-tablewrap .result-table{min-width:1890px;width:100%;max-width:100%;table-layout:fixed;font-size:14px;border-collapse:collapse;border-spacing:0}
 .result-table th{height:50px;padding:0 10px;background:var(--bg);font-size:14px;color:var(--text-2);border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;box-sizing:border-box;text-align:center}
 .result-table td{height:42px;padding:0 10px;white-space:nowrap;border-bottom:1px solid var(--line);font-size:14px;background:var(--panel);box-sizing:border-box;vertical-align:middle}
-/* 13 列：colgroup の class と一致させる（ヘッダーとセルがずれないよう固定幅） */
+/* 14 列：colgroup の class と一致させる（ヘッダーとセルがずれないよう固定幅） */
 .result-table col.col-pick{width:48px}
 .result-table col.col-name{width:280px}
 .result-table col.col-biz{width:120px}
+.result-table col.col-org{width:130px}
 .result-table col.col-type{width:220px}
 .result-table col.col-size{width:96px}
 .result-table col.col-status{width:132px}
@@ -1179,7 +1180,7 @@ th .ico{font-size:11px;color:var(--accent)}
 .result-table col.col-actions{width:156px}
 .result-table .col-pick{width:48px;min-width:48px;max-width:48px;text-align:center;padding:0 8px}
 .result-table .col-name{width:280px;max-width:280px;overflow:hidden;text-align:left}
-.result-table .col-biz,.result-table .col-type,.result-table .col-size,.result-table .col-status,.result-table .col-intake{text-align:center}
+.result-table .col-biz,.result-table .col-org,.result-table .col-type,.result-table .col-size,.result-table .col-status,.result-table .col-intake{text-align:center}
 .result-table .col-hist{max-width:212px;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .result-table .col-user,.result-table .col-dt{text-align:center;font-variant-numeric:tabular-nums}
 .result-table .col-created{display:table-cell!important}

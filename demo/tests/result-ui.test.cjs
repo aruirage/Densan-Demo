@@ -46,6 +46,10 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   assert.equal((html.match(/class="result-filter-row/g) || []).length, 3);
   assert.doesNotMatch(html, /data-fs="dept"|部署/);
   assert.match(html, /class="result-filter-row result-advanced-row"/);
+  assert.equal((html.match(/class="result-filter-row/g) || []).length, 3);
+  const advanced = html.slice(html.indexOf('result-advanced-row'), html.indexOf('result-date-row'));
+  assert.equal((advanced.match(/class="field"/g) || []).length, 5);
+  assert.match(styles, /\.result-advanced-row\{[^}]*repeat\(5,/);
   assert.match(html, /data-fs="biz"/);
   assert.match(html, /業務シーン/);
   assert.match(html, /data-fs="intake"/);
@@ -53,7 +57,8 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   assert.match(html, /<option value="auto"\s*>—<\/option>/);
   assert.match(html, /data-fs="processedBy"/);
   assert.ok(html.indexOf('data-fs="biz"') < html.indexOf('data-fs="intake"'));
-  assert.ok(html.indexOf('data-fs="intake"') < html.indexOf('data-fs="createdBy"'));
+  assert.ok(html.indexOf('data-fs="intake"') < html.indexOf('data-fs="organization"'));
+  assert.ok(html.indexOf('data-fs="organization"') < html.indexOf('data-fs="createdBy"'));
   assert.ok(html.indexOf('data-fs="createdBy"') < html.indexOf('data-fs="processedBy"'));
   assert.ok(html.indexOf('id="filtRvq"') < html.indexOf('id="createdFrom"'));
   assert.ok(html.indexOf('id="createdFrom"') < html.indexOf('id="updatedFrom"'));
@@ -62,7 +67,9 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   assert.doesNotMatch(html, /data-fs="exportPending"|未出力|出力未済/);
   /* 5 状態に絞ったので確認者／承認者の絞り込みは持たない */
   assert.doesNotMatch(html, /data-fs="confirmedBy"|data-fs="approvedBy"|data-fs="operator"/);
-  assert.doesNotMatch(html, /確認者|承認者|処理ユーザ|更新者/);
+  assert.doesNotMatch(html, /<span class="lbl">(?:確認者|承認者|処理ユーザ|更新者)<\/span>/);
+  assert.match(html, /data-fs="organization"/);
+  assert.match(html, /<span class="lbl">組織<\/span>/);
   assert.match(html, /作成者/);
   assert.match(html, /処理者/);
   assert.doesNotMatch(html, /id="resultQuery"|読取結果検索/);
@@ -81,21 +88,23 @@ test('collapsed result filters show one row (filename/status/type); expanded add
   assert.match(html, /id="filtRvq"/);
   assert.match(html, /読取内容/);
 });
-test('result table has thirteen columns, compact rows, four action slots and page jump', () => {
+test('result table has fourteen columns, compact rows, four action slots and page jump', () => {
   const run = app();
   const html = run('renderTable()');
   assert.match(html, /result-tablewrap/);
   assert.match(html, /class="result-table"/);
   assert.match(html, /<colgroup>/);
-  assert.equal((html.match(/<col /g) || []).length, 13);
+  assert.equal((html.match(/<col /g) || []).length, 14);
   assert.match(html, /<col class="col-actions">/);
   assert.match(styles, /\.result-tablewrap\{[^}]*overflow:\s*auto/);
   assert.match(styles, /\.result-tablewrap\.is-dragging/);
-  assert.match(styles, /\.result-tablewrap \.result-table\{[^}]*min-width:\s*1760px/);
+  assert.match(styles, /\.result-tablewrap \.result-table\{[^}]*min-width:\s*1890px/);
   assert.match(source, /function bindResultTableScroll\(/);
   assert.match(source, /resultScrollLeft/);
   assert.doesNotMatch(html, /class="meta"|type-pill|class="dot"|class="ctx"/);
   assert.match(html, />帳票タイプ</);
+  assert.match(html, />組織</);
+  assert.match(html, /class="col-org"/);
   assert.match(html, />操作・処理<\/th>/);
   assert.match(html, /data-resultgoto/);
   assert.match(html, /一括ダウンロード/);
@@ -131,6 +140,23 @@ test('file tree shows no counts and the table has no scope-count line', () => {
   const table = run('renderTable()');
   assert.doesNotMatch(table, /result-scope-head|直属 \d+ 件|配下含む \d+ 件/);
 });
+test('result list is limited to the current organization subtree and scene access', () => {
+  const run = app();
+  run('seedAdditionalDemoData(); initializePhaseOneAccess(); initializeFileOrganizations();');
+  run('state.currentUser="u4"; state.filters=defaultFilters(); state.filterDraft={...state.filters}; state.q=""; state.tab="all"; state.activeNode={type:"all",id:"all"};');
+  const rows = JSON.parse(run('JSON.stringify(visibleFiles().map((f) => ({ id:f.id, org:fileOrganizationId(f), scene:sceneCanAccessFile(f,"u4"), allowed:canAccessResultOrganization(f,"u4") })))'));
+  assert.ok(rows.length > 0);
+  assert.ok(rows.every((r) => r.scene && r.allowed));
+  assert.deepEqual([...new Set(rows.map((r) => r.org))], ['g2']);
+  const foreign = run('(FILES_DATA.find((f) => !canAccessResultOrganization(f,"u1") && !canAccessResultOrganization(f,"u4")) || {}).id');
+  assert.ok(foreign);
+  assert.equal(run(`canAccessResultOrganization(byId(FILES_DATA, ${JSON.stringify(foreign)}), "u4")`), false);
+  assert.equal(run(`canAccessResultOrganization(byId(FILES_DATA, ${JSON.stringify(foreign)}), "u1")`), false);
+  run('state.filters.organization="g2";');
+  assert.equal(run('visibleFiles().length'), rows.length);
+  run('state.filters.organization="g6";');
+  assert.equal(run('visibleFiles().length'), 0);
+});
 test('filename box filters by the displayed file name', () => {
   const run = app();
   const total = run('visibleFiles().length');
@@ -164,7 +190,7 @@ test('tree builds from masters; files stay in the right pane; view mode and reor
   /* 名称変更は帳票タイプ（ツリー第2階層）で行う。ファイルは右ペインの一覧側 */
   assert.match(html, /data-rename=/);
   assert.match(html, /data-type="cat" data-id="c1"/);
-  assert.equal(run('FILES_DATA.length'), 45);
+  assert.equal(run('FILES_DATA.length'), 46);
   assert.equal(run('state.fileFolder.f01'), 'c2');
   run('moveFileToFolder("f01", "c1")');
   assert.equal(run('state.fileFolder.f01'), 'c1');
@@ -1488,7 +1514,7 @@ test('operation log functions exclude home and allow OR matching of multiple fun
 
 test('tree folders and files share scene department-user data scope', () => {
  const run=app();run('initializePhaseOneAccess()');
- run("BIZ_SCENES.forEach(sc=>{sc.departmentIds=[];sc.userIds=[]});GROUPS.forEach(g=>g.userIds=(g.userIds||[]).filter(id=>id!=='u5'));GROUPS.push({id:'scene-dept',parentId:null,userIds:['u5']});BIZ_SCENES[0].departmentIds=['scene-dept'];BIZ_SCENES[0].userIds=['u5'];state.currentUser='u5';entUserByUid('u5').soloPermIds=['R6'];");
+ run("BIZ_SCENES.forEach(sc=>{sc.departmentIds=[];sc.userIds=[]});GROUPS.forEach(g=>g.userIds=(g.userIds||[]).filter(id=>id!=='u5'));GROUPS.push({id:'scene-dept',parentId:null,userIds:['u5']});BIZ_SCENES[0].departmentIds=['scene-dept'];BIZ_SCENES[0].userIds=['u5'];state.currentUser='u5';entUserByUid('u5').soloPermIds=['R6'];FILES_DATA.forEach(f=>f.organizationId='scene-dept');");
  assert.equal(run("canSeeCategory('c1','u5')"),true);
  assert.equal(run("canSeeCategory('c2','u5')"),false);
  assert.equal(run("sceneCanAccessFile({layout:'l1'},'u5')"),true);
@@ -1966,8 +1992,9 @@ test('completed and failed rows show dashes for unavailable actions', () => {
   }
   run('byId(FILES_DATA, "f11").status = "failed";');
   const failed = run('resultActionsCell(byId(FILES_DATA, "f11"))');
-  assert.doesNotMatch(failed, /data-act="redo"|data-act="confirm"|data-dlmenu=/);
-  assert.equal((failed.match(/class="act-na"/g) || []).length, 2);
+  assert.match(failed, /data-act="redo"[^>]*data-tip="再読取"/);
+  assert.doesNotMatch(failed, /data-act="confirm"|data-dlmenu=/);
+  assert.equal((failed.match(/class="act-na"/g) || []).length, 1);
   assert.match(failed, /data-act="delete"/);
   run('byId(FILES_DATA, "f11").status = "done";');
   const done = run('resultActionsCell(byId(FILES_DATA, "f11"))');

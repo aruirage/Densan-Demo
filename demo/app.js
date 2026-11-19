@@ -269,6 +269,7 @@ const FILES = [
   ['f43', '20_B団体_住民異動届_承認済み.pdf', 'l2', 329800, 'exported', '出力済み', '2026-10-12 13:31:10', '2026-10-14 11:20:31', '2026-10-12 13:32:44', '2026-10-13 09:10:12', '2026-10-14 11:20:05', 'u2', 'u4', 'u3'],
   ['f44', '01_令和8年度分市民税・県民税申告書_差戻中.pdf', 'l4', 648900, 'done', '読取完了', '2026-10-13 15:02:44', '2026-10-14 14:10:02', '2026-10-13 15:04:20', '2026-10-14 09:30:11', null, 'u2', 'u3', 'u3'],
   ['f45', '10_給与支払報告書（総括表・個人別明細書）_出力済み.pdf', 'l6', 702500, 'exported', '出力済み', '2026-10-11 11:12:02', '2026-10-14 16:02:11', '2026-10-11 11:13:40', '2026-10-12 09:20:30', '2026-10-13 10:05:00', 'u3', 'u3', 'u4'],
+  ['f50', '【読取失敗】20_B団体_住民異動届_再読取対象.pdf', 'l2', 318400, 'failed', '帳票の処理中にエラーが発生', '2026-10-15 10:30:00', '2026-10-15 10:31:20', '2026-10-15 10:30:20', null, null, 'u1', 'u1', null],
 ];
 
 /* ── 読取結果確認ページのモック（assets/review-sample.pdf＝住民異動届） ── */
@@ -1353,6 +1354,7 @@ function makeUpload(name, sizeBytes) {
        initializeDemoData() で auto=true を明示する。 */
     auto: false,
     createdBy: state.currentUser,
+    organizationId: directOrganizationIds(state.currentUser)[0] || '',
     error: '',
     biz: state.upBiz,
   };
@@ -1968,6 +1970,7 @@ function promoteUploadToResult(u, status = 'waiting') {
     confirmedAt: null,
     approvedAt: null,
     createdBy: u.auto ? null : (u.createdBy || 'u2'),
+    organizationId: u.organizationId || u.departmentId || u.groupId || directOrganizationIds(u.createdBy || state.currentUser)[0] || '',
     updatedBy: u.createdBy || 'u2',
     confirmedBy: null,
     approvedBy: null,
@@ -2175,7 +2178,14 @@ function buildTree() {
 }
 
 function canSeeCategory(catId, uid) {
-  if (state.phaseOneInitialized) return LAYOUT.filter(l=>l.category===catId).some(l=>sceneCanAccessFile({layout:l.id},uid));
+  if (state.phaseOneInitialized) {
+    const me = uid || state.currentUser;
+    return LAYOUT.filter((l) => l.category === catId).some((layout) => {
+      const files = FILES_DATA.filter((f) => f.layout === layout.id);
+      if (!files.length) return sceneCanAccessFile({ layout: layout.id }, me);
+      return files.some((f) => sceneCanAccessFile(f, me) && canAccessResultOrganization(f, me));
+    });
+  }
   const me = uid || (typeof state !== 'undefined' ? state.currentUser : null);
   if (typeof isTenantAdmin === 'function' && isTenantAdmin(me)) return true;
   const c = byId(CATEGORY, catId);
@@ -2327,6 +2337,7 @@ function passesFilters(f) {
   if (!one(F.status, f.status)) return false;
   if (!one(F.biz, (bizOfLayout(f.layout) || {}).id)) return false;
   if (!one(F.layout, f.layout)) return false;
+  if (!one(F.organization, fileOrganizationId(f))) return false;
   if (!one(F.intake, f.intake || 'manual')) return false;
   if (F.createdBy && !one(F.createdBy, f.intake === 'auto' ? 'auto' : f.createdBy)) return false;
   if (!one(F.processedBy, resultWorkflowAnchor(f).uid)) return false;
@@ -2364,7 +2375,10 @@ function canSeeFile(f) {
   const canView = (typeof window !== 'undefined' && window.__demoPerm && window.__demoPerm.canViewFile)
     ? window.__demoPerm.canViewFile
     : null;
-  return (!canView || canView(f)) && canSeeCategory((catOf(f.layout) || {}).id) && canSeeLayout(f.layout);
+  return (!canView || canView(f))
+    && canAccessResultOrganization(f)
+    && canSeeCategory((catOf(f.layout) || {}).id)
+    && canSeeLayout(f.layout);
 }
 
 const baseList = () => scoped().filter((f) => inTenant(f) && inNode(f, state.activeNode) && passesFilters(f) && matchesQuery(f) && canSeeFile(f));
@@ -2376,6 +2390,8 @@ function fileSortValue(f, k) {
       return dispFileName(f.id) || f.name || '';
     case 'biz':
       return dispBiz((bizOfLayout(f.layout) || {}).id) || '';
+    case 'organization':
+      return organizationNameOf(fileOrganizationId(f));
     case 'layout':
       return dispLayout(f.layout) || '';
     case 'size':
@@ -3272,7 +3288,7 @@ function runFlowAction(fileId, action, comment) {
 
 /** 絞り込み条件の既定値（リセットもこれを使う）。state 初期化より前に置くこと（関数宣言なので巻き上げられる） */
 function defaultFilters() { return {
-  status: '', biz: '', layout: '', intake: '', createdBy: '', processedBy: '',
+  status: '', biz: '', layout: '', organization: '', intake: '', createdBy: '', processedBy: '',
   createdFrom: '', createdTo: '', updatedFrom: '', updatedTo: '',
   name: '', rvq: '',
   };
@@ -3284,6 +3300,10 @@ function renderFilters() {
   const creators = [['auto', '—'], ...users];
   const processors = users.filter((u) => FILES_DATA.some((f) => f.updatedBy === u[0]));
   const bizOpts = BUSINESS.slice().sort((a, b) => a.order - b.order).map((b) => [b.id, dispBiz(b.id)]);
+  const orgScope = organizationScopeIds(state.currentUser);
+  const orgOpts = groupOptsWithDepth()
+    .filter(([gid]) => orgScope.has(gid))
+    .map(([gid, name, , depth]) => [gid, '　'.repeat(depth) + name]);
   /* 業務シーンが選ばれているときは、その配下のタイプだけを候補に出す */
   const selectedBiz = F.biz || [];
   const layouts = LAYOUT
@@ -3309,6 +3329,7 @@ function renderFilters() {
         ${open ? `<div class="result-filter-row result-advanced-row" id="resultAdvanced">
           <div class="field"><span class="lbl">業務シーン</span>${fselect('biz', '選択してください', bizOpts, F.biz)}</div>
           <div class="field"><span class="lbl">取込</span>${fselect('intake', '選択してください', [['manual','手動'],['auto','自動']], F.intake)}</div>
+          <div class="field"><span class="lbl">組織</span>${fselect('organization', '選択してください', orgOpts, F.organization)}</div>
           <div class="field"><span class="lbl">作成者</span>${fselect('createdBy', '選択してください', creators, F.createdBy)}</div>
           <div class="field"><span class="lbl">処理者</span>${fselect('processedBy', '選択してください', processors, F.processedBy)}</div>
         </div>
@@ -3331,7 +3352,7 @@ function renderFilters() {
  *  権限が無い、または状態上不可のボタンは描かない。 */
 function resultActionsCell(f) {
   /* 状態タブは表示の絞り込みだけ。使えない操作は「—」で表示し、押せない。 */
-  const canRedo = ['waiting', 'done'].includes(f.status);
+  const canRedo = ['waiting', 'done', 'failed'].includes(f.status);
   const canMutate = f.status === 'done';
   const canDownload = ['done', 'confirmed', 'exported'].includes(f.status);
   const btn = (act, tip, ico) => `<button class="act" data-act="${act}" data-file="${f.id}" data-tip="${tip}" aria-label="${tip}"><span class="ico ${ico}" aria-hidden="true"></span></button>`;
@@ -3362,7 +3383,7 @@ function renderTable() {
 
   const pageAllPicked = rows.length > 0 && rows.every((f) => state.picked[f.id]);
   const body = rows.length === 0
-    ? `<tr><td colspan="13" class="empty-cell">条件に一致する帳票がありません。条件を変更してください。</td></tr>`
+    ? `<tr><td colspan="14" class="empty-cell">条件に一致する帳票がありません。条件を変更してください。</td></tr>`
     : rows.map((f) => {
       const c = catOf(f.layout);
       const wf = resultWorkflowAnchor(f);
@@ -3373,6 +3394,7 @@ function renderTable() {
         <td class="col-pick"><input type="checkbox" class="cb" data-pick="${f.id}" ${state.picked[f.id] ? 'checked' : ''} aria-label="行を選択" /></td>
         <td class="name col-name"><button class="fn link" data-result-preview="${f.id}"${cellTip(dispFileName(f.id))}>${esc(dispFileName(f.id))}</button></td>
         <td class="col-biz result-biz"${cellTip((catOf(f.layout) && dispBiz(catOf(f.layout).business)) || '—')}>${esc((catOf(f.layout) && dispBiz(catOf(f.layout).business)) || '—')}</td>
+        <td class="col-org result-org"${cellTip(organizationNameOf(fileOrganizationId(f)))}>${esc(organizationNameOf(fileOrganizationId(f)))}</td>
         <td class="col-type result-type"${cellTip(dispLayout(f.layout))}>${esc(dispLayout(f.layout))}</td>
         <td class="col-size result-size"${cellTip(fmtSize(f.size))}>${fmtSize(f.size)}</td>
         <td class="col-status"><span class="st ${stCls(f.status)}"${cellTip((STATUS[f.status] || {}).label || f.status)}>${esc((STATUS[f.status] || {}).label || f.status)}${f.status === 'classifying' || f.status === 'reading' ? '<span class="spin"></span>' : ''}</span>${exportDiffBadge(f)}</td>
@@ -3415,6 +3437,7 @@ function renderTable() {
         <col class="col-pick">
         <col class="col-name">
         <col class="col-biz">
+        <col class="col-org">
         <col class="col-type">
         <col class="col-size">
         <col class="col-status">
@@ -3430,6 +3453,7 @@ function renderTable() {
         <th class="col-pick"><input type="checkbox" class="cb" data-pickall="1" aria-label="このページを全選択" ${rows.length && rows.every((f) => state.picked[f.id]) ? 'checked' : ''} /></th>
         <th data-sort="name" class="col-name" style="cursor:pointer">ファイル名${arrow('name')}</th>
         ${th('biz', '業務シーン', 'class="col-biz"')}
+        ${th('organization', '組織', 'class="col-org"')}
         ${th('layout', '帳票タイプ', 'class="col-type"')}
         ${th('size', 'ファイルサイズ', 'class="col-size"')}
         ${th('status', 'ステータス', 'class="col-status"')}
@@ -4827,6 +4851,54 @@ function toggleGroupSelection(ids, gid, checked) {
 }
 function expandGroupSelection(ids) {
   return [...new Set(ids.flatMap((id) => [id, ...groupDescendantIds(id)]))];
+}
+
+/** ユーザーの直属組織。最上位組織に直属するユーザーも含む。 */
+function directOrganizationIds(uid) {
+  const me = uid || (typeof state !== 'undefined' ? state.currentUser : null);
+  if (!me) return [];
+  return GROUPS.filter((g) => (g.userIds || []).includes(me)).map((g) => g.id);
+}
+
+/** 读取结果的数据范围：自部门＋下位部門。 */
+function organizationScopeIds(uid) {
+  const direct = directOrganizationIds(uid);
+  return new Set(direct.flatMap((id) => [id, ...groupDescendantIds(id)]));
+}
+
+function organizationNameOf(id) {
+  return (byId(GROUPS, id) || {}).name || '—';
+}
+
+/** 同一モック内で組織割当を安定させるための短いハッシュ。 */
+function stableHash(value) {
+  return String(value || '').split('').reduce((n, ch) => ((n * 31) + ch.charCodeAt(0)) >>> 0, 0);
+}
+
+/** 業務シーンの直接的なデータ権限組織。親組織を子へ過剰展開しない。 */
+function sceneSourceOrganizationIds(scene) {
+  const groups = [...new Set((((scene || {}).departmentIds) || []).map((id) => byId(GROUPS, id)).filter(Boolean))];
+  const departments = groups.filter((g) => !g.root).map((g) => g.id);
+  return departments.length ? departments : groups.map((g) => g.id);
+}
+
+/** ファイルの来源組織。自動取込はシーンに設定された取込元組織、手動はアップロード者の所属組織。 */
+function fileOrganizationId(file) {
+  if (!file) return '';
+  if (file.organizationId) return file.organizationId;
+  const ownerOrg = directOrganizationIds(file.createdBy || file.updatedBy)[0];
+  if (file.intake !== 'auto' && ownerOrg) return ownerOrg;
+  const scene = sceneForLayout(file.layout);
+  const candidates = sceneSourceOrganizationIds(scene);
+  if (candidates.length) return candidates[stableHash(file.id) % candidates.length];
+  return (GROUPS.find((g) => g.root) || {}).id || '';
+}
+
+/** 读取结果で現在ユーザーが見られる組織か。閲覧結果は管理者も組織範囲で絞る。 */
+function canAccessResultOrganization(file, uid) {
+  const me = uid || state.currentUser;
+  const orgId = fileOrganizationId(file);
+  return !!orgId && organizationScopeIds(me).has(orgId);
 }
 
 /** 同一親のグループ並べ替え（左ツリーのドラッグ） */
@@ -10948,6 +11020,16 @@ function initializePhaseOneAccess() {
  SECURITY.logs.forEach(l=>{l.user=String(l.user||'').split('@')[0];if(!AUTH_EVENTS.includes(l.type)){l.feature=l.feature||({'アップロード':'新規アップロード','自動取込':'新規アップロード','自動':'新規アップロード','手動':'新規アップロード','設定変更':'帳票タイプ設定','読取':'読取結果一覧','出力':'読取結果一覧','確認':'読取結果一覧'}[l.type]||'読取結果一覧');if(l.type==='自動取込'||l.type==='取込')l.source=l.source||'auto';else if(l.type==='アップロード')l.source=l.source||'manual';l.action=logActionLabel(l.action||l.type,l.source);l.target=l.target||'';}});
  BIZ_SCENES.forEach(sc=>{sc.departmentIds=GROUPS.filter(g=>(g.userIds||[]).some(uid=>(sc.userIds||[]).includes(uid))).map(g=>g.id);});
 }
+
+/** 既存モックと追加サンプルにも来源組織を付与し、画面表示と絞り込みで同じ値を使う。 */
+function initializeFileOrganizations() {
+  FILES_DATA.forEach((f) => {
+    if (!f.organizationId) f.organizationId = fileOrganizationId(f);
+  });
+  state.uploads.forEach((u) => {
+    if (!u.organizationId) u.organizationId = fileOrganizationId(u);
+  });
+}
 function rolesFromOrganizationSeed(uid) {
  const user=entUserByUid(uid);return [...new Set(((user&&user.soloPermIds)||[]).concat((ROLE_MEMBERS.R1||[]).includes(uid)?['R1']:[],GROUPS.filter(g=>(g.userIds||[]).includes(uid)).flatMap(g=>permIdsOfGroup(g))))];
 }
@@ -10955,12 +11037,16 @@ function rolesFromOrganizationSeed(uid) {
 applyHash();
 seedAdditionalDemoData();
 initializePhaseOneAccess();
+initializeFileOrganizations();
 window.addEventListener('hashchange', () => { applyHash(); render(); });
 if (state._seedClassify) { const c = state._seedClassify; delete state._seedClassify; startClassifying(c); }
 render();
 window.__demo = {
   state,
   sceneCanAccessFile,
+  fileOrganizationId,
+  canAccessResultOrganization,
+  organizationScopeIds,
   WATCH,
   watchRuleOf,
   FILES_DATA,
