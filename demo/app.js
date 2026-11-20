@@ -4839,14 +4839,11 @@ function groupDescendantIds(gid) {
   return out;
 }
 
-/** 親の選択は全子孫を含む。子を解除したら祖先の全選択も解除する。 */
+/** 親の選択は全子孫を含む。子を解除しても親の選択は保持する。 */
 function toggleGroupSelection(ids, gid, checked) {
   const affected = [gid, ...groupDescendantIds(gid)];
   const selected = new Set(ids);
   affected.forEach((id) => checked ? selected.add(id) : selected.delete(id));
-  if (!checked) GROUPS.forEach((g) => {
-    if (groupDescendantIds(g.id).includes(gid)) selected.delete(g.id);
-  });
   return [...selected];
 }
 function expandGroupSelection(ids) {
@@ -6518,6 +6515,15 @@ function sceneForLayout(layoutId) {
    return id===(type&&type.id) || (form && ((type&&form.name===type.name)||(layout&&form.name===layout.name)));
  })) || null;
 }
+/** 旧データの親組織IDは初回だけ配下へ展開し、以後は子組織の個別解除を保持する。 */
+function ensureSceneDepartmentSelection(scene) {
+  if (!scene) return scene;
+  if (!scene._departmentSelectionInitialized) {
+    scene.departmentIds = expandGroupSelection(scene.departmentIds || []);
+    scene._departmentSelectionInitialized = true;
+  }
+  return scene;
+}
 function sceneCanAccessFile(file,uid) {
  const me=uid || state.currentUser;
  if(isTenantAdmin(me))return true;
@@ -6526,8 +6532,9 @@ function sceneCanAccessFile(file,uid) {
  return (scene.userIds||[]).includes(me) && sceneAccessUsers(scene).some(u=>u.id===me);
 }
 function sceneAccessUsers(sc) {
- const ids = expandGroupSelection(sc.departmentIds || []);
- return USERS.filter(u=>GROUPS.some(g=>ids.includes(g.id) && (g.userIds||[]).includes(u.id)));
+ ensureSceneDepartmentSelection(sc);
+ const ids = new Set(sc.departmentIds || []);
+ return USERS.filter(u=>GROUPS.some(g=>ids.has(g.id) && (g.userIds||[]).includes(u.id)));
 }
 function syncSceneUsers(sc) {
  const users = sceneAccessUsers(sc).map(u=>u.id);
@@ -6538,13 +6545,14 @@ function syncAllSceneUsers() {
  BIZ_SCENES.forEach(syncSceneUsers);
 }
 function renderSceneAccess(sc) {
+ ensureSceneDepartmentSelection(sc);
  syncSceneUsers(sc);
  return `<div class="wiz-field"><span class="wl req">データ権限組織</span>${wizMulti('sceneDepartments','組織を選択してください',groupOptsWithDepth(),sc.departmentIds || [])}</div>`;
 }
 function bindSceneAccess() {
  document.querySelectorAll('[data-wmsbtn]').forEach(b=>{if(!b.dataset.wmsbtn.startsWith('scene'))return;b.onclick=()=>{state.dd=state.dd===b.dataset.wmsbtn?null:b.dataset.wmsbtn;render();placeOpenDropdown();};});
- document.querySelectorAll('[data-wmsopt]').forEach(cb=>{if(!cb.dataset.wmsopt.startsWith('scene'))return;cb.onchange=()=>{const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;if(!cb.checked&&watchUsesOrgScene(sc.id,cb.value)){cb.checked=true;toast('この組織は自動取込設定で使用されています。関連付けを解除してから変更してください。','error');return;}const set=new Set(sc.departmentIds||[]);cb.checked?set.add(cb.value):set.delete(cb.value);sc.departmentIds=[...set];syncSceneUsers(sc);render();placeOpenDropdown();};});
- ['wmsclear','wmsdel'].forEach(attr=>document.querySelectorAll('[data-'+attr+']').forEach(b=>{if(!b.dataset[attr].startsWith('scene'))return;b.onclick=e=>{e.stopPropagation();const [,value]=b.dataset[attr].split(':');const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;const removing=value?[value]:(sc.departmentIds||[]);if(watchUsesOrgScene(sc.id,removing)){toast('この組織は自動取込設定で使用されています。関連付けを解除してから変更してください。','error');return;}sc.departmentIds=value?(sc.departmentIds||[]).filter(v=>v!==value):[];syncSceneUsers(sc);render();};}));
+ document.querySelectorAll('[data-wmsopt]').forEach(cb=>{if(!cb.dataset.wmsopt.startsWith('scene'))return;cb.onchange=()=>{const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;ensureSceneDepartmentSelection(sc);if(!cb.checked&&watchUsesOrgScene(sc.id,cb.value)){cb.checked=true;toast('この組織は自動取込設定で使用されています。関連付けを解除してから変更してください。','error');return;}sc.departmentIds=toggleGroupSelection(sc.departmentIds||[],cb.value,cb.checked);syncSceneUsers(sc);render();placeOpenDropdown();};});
+ ['wmsclear','wmsdel'].forEach(attr=>document.querySelectorAll('[data-'+attr+']').forEach(b=>{if(!b.dataset[attr].startsWith('scene'))return;b.onclick=e=>{e.stopPropagation();const [,value]=b.dataset[attr].split(':');const sc=byId(BIZ_SCENES,state.sceneId);if(!sc)return;ensureSceneDepartmentSelection(sc);const removing=value?[value,...groupDescendantIds(value)]:(sc.departmentIds||[]);if(watchUsesOrgScene(sc.id,removing)){toast('この組織は自動取込設定で使用されています。関連付けを解除してから変更してください。','error');return;}sc.departmentIds=value?toggleGroupSelection(sc.departmentIds||[],value,false):[];syncSceneUsers(sc);render();};}));
 }
 function sceneEditor(sc) {
   const stepNo = state.sceneStep || 1;
@@ -7138,7 +7146,12 @@ function typePane(step, t) {
     const groupKeyHelp = `<span class="info-i" data-tip="${esc(groupKeyTip)}">i</span>`;
     const lid = layoutIdOfTicketType(t);
     /* データ権限：操作グループのみ。選択した組織に所属するユーザー全員が対象。 */
-    const pickedGroups = expandGroupSelection(t.groupIds || []);
+    /* 初回だけ旧データの親IDを配下へ展開する。以後は子の個別解除を保持する。 */
+    if (!t._groupSelectionInitialized) {
+      t.groupIds = expandGroupSelection(t.groupIds || []);
+      t._groupSelectionInitialized = true;
+    }
+    const pickedGroups = (t.groupIds || []).slice();
     const groupOpts = groupOptsWithDepth();
     const groupBlock = [
       '<div class="wiz-field"><span class="wl req">データ権限組織</span>',

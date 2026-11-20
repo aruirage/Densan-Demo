@@ -1401,16 +1401,42 @@ test('batch CSV packages two type-specific files into one ZIP', () => {
   assert.deepEqual(result.statuses, ['exported','exported','exported']);
 });
 
-test('group selection cascades through descendants and inherited permissions include child members', () => {
+test('group selection cascades through descendants while keeping parents when a child is unchecked', () => {
   const run = app();
   const data = JSON.parse(run(`
     GROUPS.push({id:'cascade-parent',parentId:null,userIds:[]},{id:'cascade-child',parentId:'cascade-parent',userIds:['cascade-user']},{id:'cascade-grand',parentId:'cascade-child',userIds:[]});
-    JSON.stringify({selected: toggleGroupSelection([], 'cascade-parent', true), cleared: toggleGroupSelection(['cascade-parent','cascade-child','cascade-grand'], 'cascade-parent', false), members: groupMemberIds('cascade-parent'), mine: groupsOfUser('cascade-user').map(g=>g.id)});
+    JSON.stringify({selected: toggleGroupSelection([], 'cascade-parent', true), childRemoved: toggleGroupSelection(['cascade-parent','cascade-child','cascade-grand'], 'cascade-child', false), cleared: toggleGroupSelection(['cascade-parent','cascade-child','cascade-grand'], 'cascade-parent', false), members: groupMemberIds('cascade-parent'), mine: groupsOfUser('cascade-user').map(g=>g.id)});
   `));
   assert.deepEqual(data.selected, ['cascade-parent','cascade-child','cascade-grand']);
+  assert.deepEqual(data.childRemoved, ['cascade-parent']);
   assert.deepEqual(data.cleared, []);
   assert.ok(data.members.includes('cascade-user'));
   assert.ok(data.mine.includes('cascade-parent'));
+});
+
+test('scene department selection selects children from a parent and keeps the parent after a child is removed', () => {
+  const run = app();
+  const data = JSON.parse(run(`
+    GROUPS.push(
+      {id:'scene-parent-2',parentId:null,userIds:['u1']},
+      {id:'scene-child-2',parentId:'scene-parent-2',userIds:['u9']},
+      {id:'scene-grand-2',parentId:'scene-child-2',userIds:[]}
+    );
+    const sc = BIZ_SCENES[0];
+    sc.departmentIds = ['scene-parent-2'];
+    delete sc._departmentSelectionInitialized;
+    delete sc.userIds;
+    const before = sceneAccessUsers(sc).map(u => u.id);
+    const afterIds = toggleGroupSelection(sc.departmentIds, 'scene-child-2', false);
+    sc.departmentIds = afterIds;
+    const after = sceneAccessUsers(sc).map(u => u.id);
+    JSON.stringify({ before, afterIds, after });
+  `));
+  assert.ok(data.before.includes('u1') && data.before.includes('u9'));
+  assert.ok(data.afterIds.includes('scene-parent-2'));
+  assert.ok(!data.afterIds.includes('scene-child-2'));
+  assert.ok(data.after.includes('u1'));
+  assert.ok(!data.after.includes('u9'));
 });
 
 
