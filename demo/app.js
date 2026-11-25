@@ -216,6 +216,9 @@ const STATUS = {
 };
 /** 読取結果一覧のステータス。分類確認が必要なファイルだけ新規アップロード画面に残す。 */
 const STATUS_ORDER = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];
+/** 確認完了後にだけダウンロードできる。PDF 出力ではステータスを変更しない。 */
+const DOWNLOAD_READY_STATUSES = ['confirmed', 'approved', 'exported'];
+function canDownloadFile(f) { return !!f && DOWNLOAD_READY_STATUSES.includes(f.status); }
 /** 読取結果一覧に表示する6ステータス。 */
 const TAB_STATUS = ['waiting', 'reading', 'done', 'failed', 'confirmed', 'exported'];
 /** ステータスタブ（上記＋すべて） */
@@ -3354,14 +3357,16 @@ function resultActionsCell(f) {
   /* 状態タブは表示の絞り込みだけ。使えない操作は「—」で表示し、押せない。 */
   const canRedo = ['waiting', 'done', 'failed'].includes(f.status);
   const canMutate = f.status === 'done';
-  const canDownload = ['done', 'confirmed', 'exported'].includes(f.status);
+  const canDownload = canDownloadFile(f);
   const btn = (act, tip, ico) => `<button class="act" data-act="${act}" data-file="${f.id}" data-tip="${tip}" aria-label="${tip}"><span class="ico ${ico}" aria-hidden="true"></span></button>`;
   const na = '<span class="act-na" aria-hidden="true">—</span>';
   const parts = [];
   if (userHasOp('redo')) parts.push(canRedo ? btn('redo', f.status === 'waiting' ? '読取' : '再読取', 'i-scan') : na);
   if (userHasOp('confirm')) parts.push(canMutate ? btn('confirm', '確認', 'i-check') : na);
-  if (userHasOp('export') && canDownload) {
-    parts.push(`<button class="act" data-dlmenu="${f.id}" aria-haspopup="menu" aria-label="ダウンロード"><span class="ico i-download" aria-hidden="true"></span></button>`);
+  if (userHasOp('export')) {
+    parts.push(canDownload
+      ? `<button class="act" data-dlmenu="${f.id}" aria-haspopup="menu" aria-label="ダウンロード"><span class="ico i-download" aria-hidden="true"></span></button>`
+      : na);
   }
   if (userHasOp('delete')) parts.push(`<button class="act danger" data-act="delete" data-file="${f.id}" data-tip="削除" aria-label="削除"><span class="ico i-delete" aria-hidden="true"></span></button>`);
   return `<td class="result-actions-cell col-actions"><div class="acts act-icons">${parts.join('')}</div></td>`;
@@ -4184,6 +4189,10 @@ function exportDiffBadge(f) {
 function commitExport(id, fmt) {
   if (!['csv', 'json', 'pdf'].includes(fmt)) return false;
   const f = byId(FILES_DATA, id);
+  if (!canDownloadFile(f)) {
+    toast('確認完了前の帳票はダウンロードできません');
+    return false;
+  }
   const delta = exportDelta(id);
   if (!delta.first && delta.changed.length === 0) {
     toast('前回出力以降の差分がないため、同一データの重複出力をスキップしました');
@@ -4203,7 +4212,8 @@ function commitExport(id, fmt) {
     const built = buildExportCsv([id]);
     csvDownload(base + suffix + '.csv', built.text, built.enc);
   }
-  if (f) {
+  /* PDF は帳票原本のダウンロードとして扱い、出力済みへの状態遷移は行わない。 */
+  if (fmt !== 'pdf') {
     f.exportSnapshot = JSON.stringify(delta.now);
     f.status = 'exported';
     f.exportedAt = nowStamp();
@@ -4460,10 +4470,14 @@ function seedExportSnapshots() {
 
   /** 選択ファイルを帳票タイプごとにまとめ、各タイプの列設定で出力する。 */
   function downloadGroupedCsv(ids) {
+    const files = ids.map((id) => byId(FILES_DATA, id)).filter(Boolean);
+    if (!files.length) return 0;
+    if (!files.every(canDownloadFile)) {
+      toast('確認完了前の帳票はダウンロードできません');
+      return 0;
+    }
     const groups = new Map();
-    ids.forEach((id) => {
-      const f = byId(FILES_DATA, id);
-      if (!f) return;
+    files.forEach((f) => {
       const key = (byId(LAYOUT, f.layout) || {}).category || f.layout || '';
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(f);
@@ -9304,7 +9318,7 @@ function renderReview() {
                 <span>項目合計 <b>: ${totalCount}</b></span>
                 <span>修正済み <b class="accent-warm">: ${dirtyCount}</b></span>
               </div>`;
-  const canReviewDownload = userHasOp('export');
+  const canReviewDownload = userHasOp('export') && canDownloadFile(f);
   const ocrTopRow = isApproveUi ? '' : `<div class="rv-ocr-top-row">
           <div class="rv-ocr-top-left">
             <div class="rv-stat-groups">${confirmStatGroups}</div>
@@ -10810,6 +10824,10 @@ function bindUploadPanel() {
       const fmt = b.dataset.batchdl;
       const ids = Object.keys(state.picked).filter((id) => state.picked[id]);
       if (!ids.length) { toast('ダウンロードするファイルを選択してください'); return; }
+      if (ids.some((id) => !canDownloadFile(byId(FILES_DATA, id)))) {
+        toast('確認完了前の帳票はダウンロードできません');
+        return;
+      }
       if (fmt === 'csv') {
         const count = downloadGroupedCsv(ids);
         toast(count ? `${ids.length} 件を帳票タイプ別に ${count} ファイルにまとめて出力しました` : '出力できるデータがありません');

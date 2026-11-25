@@ -538,7 +538,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 </tr>
 <tr>
 <td>操作可用状态</td>
-<td>読取失敗：再读取、删除；確認済み／出力済み：再读取、确认显示「—」，下载、删除可用；読取完了：全部可用</td>
+<td>読取失敗：再读取、删除；読取完了：再读取、确认、删除可用，下载显示「—」；確認済み／出力済み：再读取、确认显示「—」，下载、删除可用</td>
 <td>状态 Tab 只切换显示范围，点击不切换 Tab</td>
 </tr>
 </tbody></table>
@@ -1342,6 +1342,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 <p>同类别有多个输入文件时，每个文件各占 CSV 一行，使用相同表头。业务场景下有多个类别时，分别生成各类别的 CSV，再将多个输出文件打包为 ZIP。</p>
 <h4>JSON 与 PDF</h4>
 <p>JSON、PDF 的输出内容、数据结构及生成方式沿用既有产品。两种格式均按输入文件分别生成输出。本期定制的类别合并、横向展开和固定 N 组规则适用于 CSV。</p>
+<p>文件必须完成确认后才能下载。PDF 下载仅获取帐票数据，不改变工作流状态，也不写入输出时间和输出快照。CSV 输出成功后，文件状态更新为「出力済み」。</p>
 <h4>命名与编码</h4>
 <p>系统按导出对象自动确定文件名称：</p>
 <ul>

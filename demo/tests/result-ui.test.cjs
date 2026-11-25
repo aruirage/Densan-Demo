@@ -114,23 +114,28 @@ test('result table has fourteen columns, compact rows, four action slots and pag
   assert.doesNotMatch(html, /Excelをダウンロード/);
   assert.match(html, /JSONをダウンロード/);
   assert.match(html, /PDFをダウンロード/);
-  const row = html.match(/<tr[^>]*data-row="[^"]+"[\s\S]*?<\/tr>/)[0];
-  /* 行アクション：再読取／確認／削除。ダウンロードは hover メニュー（data-dlmenu）なので data-act は3つ */
-  assert.equal((row.match(/data-act="/g) || []).length, 3);
-  for (const act of ['redo', 'confirm', 'delete']) assert.match(row, new RegExp(`data-act="${act}"`), act);
-  assert.doesNotMatch(row, /data-act="fix"/);
-  assert.doesNotMatch(row, /data-act="download"/);
-  assert.match(row, /data-dlmenu="[^"]+"/);
+  const readyRow = html.match(/<tr[^>]*data-row="f10"[\s\S]*?<\/tr>/)[0];
+  /* 確認済み行は再読取・確認が「—」、ダウンロードと削除だけが操作可能 */
+  assert.equal((readyRow.match(/data-act="/g) || []).length, 1);
+  assert.match(readyRow, /data-act="delete"/);
+  assert.doesNotMatch(readyRow, /data-act="redo"|data-act="confirm"|data-act="fix"|data-act="download"/);
+  assert.equal((readyRow.match(/class="act-na"/g) || []).length, 2);
+  assert.match(readyRow, /data-dlmenu="f10"/);
   /* ダウンロードは hover でメニューを出すため、ツールチップ用の data-tip は付けない */
-  assert.doesNotMatch(row, /data-dlmenu="[^"]+"[^>]*data-tip=/);
-  assert.match(row, /aria-haspopup="menu"/);
-  assert.match(row, /i-download/);
+  assert.doesNotMatch(readyRow, /data-dlmenu="[^"]+"[^>]*data-tip=/);
+  assert.match(readyRow, /aria-haspopup="menu"/);
+  assert.match(readyRow, /i-download/);
   /* 並び順：再読取 → 確認 → ダウンロード → 削除 */
-  assert.ok(row.indexOf('data-act="redo"') < row.indexOf('data-act="confirm"'));
-  assert.ok(row.indexOf('data-act="confirm"') < row.indexOf('data-dlmenu='));
-  assert.ok(row.indexOf('data-dlmenu=') < row.indexOf('data-act="delete"'));
-  assert.doesNotMatch(row, /data-act="approve"|data-act="reapprove"/);
-  assert.match(row, /class="fn link"/);
+  assert.ok(readyRow.indexOf('data-dlmenu=') < readyRow.indexOf('data-act="delete"'));
+  assert.doesNotMatch(readyRow, /data-act="approve"|data-act="reapprove"/);
+  assert.match(readyRow, /class="fn link"/);
+  const doneRow = html.match(/<tr[^>]*data-row="f30"[\s\S]*?<\/tr>/)[0];
+  assert.match(doneRow, /data-act="redo"[^>]*data-tip="再読取"/);
+  assert.match(doneRow, /data-act="confirm"[^>]*data-tip="確認"/);
+  assert.doesNotMatch(doneRow, /data-dlmenu=/);
+  assert.match(doneRow, /class="act-na"/);
+  assert.ok(doneRow.indexOf('data-act="redo"') < doneRow.indexOf('data-act="confirm"'));
+  assert.ok(doneRow.indexOf('data-act="confirm"') < doneRow.indexOf('data-act="delete"'));
 });
 test('file tree shows no counts and the table has no scope-count line', () => {
   const run = app();
@@ -1382,7 +1387,7 @@ test('batch CSV packages two type-specific files into one ZIP', () => {
   const run = app();
   const result = JSON.parse(run(`
     const sample = FILES_DATA[0];
-    FILES_DATA.push({...sample,id:'group-a1',layout:'group-a',name:'a1.pdf'}, {...sample,id:'group-b1',layout:'group-b',name:'b1.pdf'}, {...sample,id:'group-a2',layout:'group-a',name:'a2.pdf'});
+    FILES_DATA.push({...sample,id:'group-a1',layout:'group-a',name:'a1.pdf',status:'confirmed'}, {...sample,id:'group-b1',layout:'group-b',name:'b1.pdf',status:'confirmed'}, {...sample,id:'group-a2',layout:'group-a',name:'a2.pdf',status:'confirmed'});
     const downloads = [];
     csvDownload = (name,text,enc) => downloads.push({name,text,enc});
     let archive;
@@ -1399,6 +1404,83 @@ test('batch CSV packages two type-specific files into one ZIP', () => {
   assert.match(result.downloads[1].text, /b1\.pdf/);
   assert.notEqual(result.downloads[0].name, result.downloads[1].name);
   assert.deepEqual(result.statuses, ['exported','exported','exported']);
+});
+
+test('downloads require confirmation while PDF leaves the workflow status unchanged', () => {
+  const run = app();
+  const pdf = JSON.parse(run(`
+    const pdfFile = byId(FILES_DATA, 'f10');
+    pdfFile.status = 'confirmed';
+    pdfFile.exportedAt = '2026-10-20 09:00:00';
+    pdfFile.exportSnapshot = '{"memo":"before"}';
+    pdfFile.history = '確認済み';
+    globalThis.pdfCalls = [];
+    downloadText = (name, text, mime) => pdfCalls.push({name, mime});
+    const pdfBefore = JSON.stringify({status:pdfFile.status, exportedAt:pdfFile.exportedAt, exportSnapshot:pdfFile.exportSnapshot, history:pdfFile.history});
+    const ok = downloadResultFile(pdfFile.id, 'pdf');
+    const pdfAfter = JSON.stringify({status:pdfFile.status, exportedAt:pdfFile.exportedAt, exportSnapshot:pdfFile.exportSnapshot, history:pdfFile.history});
+    JSON.stringify({ok, before:pdfBefore, after:pdfAfter, calls:pdfCalls});
+  `));
+  assert.equal(pdf.ok, undefined); // downloadResultFile does not expose commitExport's return value
+  assert.equal(pdf.before, pdf.after);
+  assert.equal(pdf.calls.length, 1);
+  assert.match(pdf.calls[0].name, /\.txt$/);
+
+  const blocked = JSON.parse(run(`
+    const blockedPdfFile = byId(FILES_DATA, 'f11');
+    blockedPdfFile.status = 'done';
+    blockedPdfFile.history = '読取完了';
+    blockedPdfFile.exportedAt = null;
+    blockedPdfFile.exportSnapshot = null;
+    globalThis.pdfCalls = [];
+    const blockedBefore = JSON.stringify({status:blockedPdfFile.status, exportedAt:blockedPdfFile.exportedAt, exportSnapshot:blockedPdfFile.exportSnapshot, history:blockedPdfFile.history});
+    downloadResultFile(blockedPdfFile.id, 'pdf');
+    const blockedAfter = JSON.stringify({status:blockedPdfFile.status, exportedAt:blockedPdfFile.exportedAt, exportSnapshot:blockedPdfFile.exportSnapshot, history:blockedPdfFile.history});
+    JSON.stringify({before:blockedBefore, after:blockedAfter, calls:pdfCalls.length});
+  `));
+  assert.equal(blocked.before, blocked.after);
+  assert.equal(blocked.calls, 0);
+});
+
+test('CSV export still marks confirmed files as exported', () => {
+  const run = app();
+  const result = JSON.parse(run(`
+    const f = byId(FILES_DATA, 'f10');
+    f.status = 'confirmed';
+    f.exportedAt = null;
+    f.exportSnapshot = null;
+    f.history = '確認済み';
+    globalThis.csvCalls = 0;
+    csvDownload = () => { csvCalls += 1; };
+    const ok = commitExport(f.id, 'csv');
+    JSON.stringify({ok, status:f.status, exportedAt:!!f.exportedAt, snapshot:!!f.exportSnapshot, history:f.history, calls:csvCalls});
+  `));
+  assert.equal(result.ok, true);
+  assert.equal(result.status, 'exported');
+  assert.equal(result.exportedAt, true);
+  assert.equal(result.snapshot, true);
+  assert.match(result.history, /出力済み/);
+  assert.equal(result.calls, 1);
+});
+
+test('batch CSV refuses unconfirmed files and allows confirmed files', () => {
+  const run = app();
+  const result = JSON.parse(run(`
+    const f = byId(FILES_DATA, 'f10');
+    globalThis.csvCalls = [];
+    csvDownload = (name) => csvCalls.push(name);
+    f.status = 'done';
+    const blockedCount = downloadGroupedCsv([f.id]);
+    const blockedStatus = f.status;
+    f.status = 'confirmed';
+    const allowedCount = downloadGroupedCsv([f.id]);
+    JSON.stringify({blockedCount, blockedStatus, allowedCount, calls:csvCalls, finalStatus:f.status});
+  `));
+  assert.equal(result.blockedCount, 0);
+  assert.equal(result.blockedStatus, 'done');
+  assert.equal(result.allowedCount, 1);
+  assert.equal(result.calls.length, 1);
+  assert.equal(result.finalStatus, 'exported');
 });
 
 test('group selection cascades through descendants while keeping parents when a child is unchecked', () => {
@@ -1566,7 +1648,7 @@ test('new scene categories need no folder mappings',()=>{
  const result = JSON.parse(run(`
  const sample = FILES_DATA[0];
  const ids = [];
- for(let i=0;i<10;i++){const id='scene-export-'+i; ids.push(id); FILES_DATA.push({...sample,id,name:id+'.pdf',layout:i<3?'l1':i<6?'l2':'l3'});}
+ for(let i=0;i<10;i++){const id='scene-export-'+i; ids.push(id); FILES_DATA.push({...sample,id,name:id+'.pdf',layout:i<3?'l1':i<6?'l2':'l3',status:'confirmed'});}
  let archive; downloadZip = entries => {archive=entries};
  const count=downloadGroupedCsv(ids);
  JSON.stringify({count,entries:archive.map(e=>({name:e.name,rows:e.text.trim().split('\\r\\n').length-1}))});
@@ -2020,13 +2102,14 @@ test('completed and failed rows show dashes for unavailable actions', () => {
   const failed = run('resultActionsCell(byId(FILES_DATA, "f11"))');
   assert.match(failed, /data-act="redo"[^>]*data-tip="再読取"/);
   assert.doesNotMatch(failed, /data-act="confirm"|data-dlmenu=/);
-  assert.equal((failed.match(/class="act-na"/g) || []).length, 1);
+  assert.equal((failed.match(/class="act-na"/g) || []).length, 2);
   assert.match(failed, /data-act="delete"/);
   run('byId(FILES_DATA, "f11").status = "done";');
   const done = run('resultActionsCell(byId(FILES_DATA, "f11"))');
   assert.match(done, /data-act="redo"/);
   assert.match(done, /data-act="confirm"/);
-  assert.match(done, /data-dlmenu=/);
+  assert.doesNotMatch(done, /data-dlmenu=/);
+  assert.match(done, /class="act-na"/);
 });
 
 test('row actions never switch the selected status tab', () => {
