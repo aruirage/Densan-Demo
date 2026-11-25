@@ -66,7 +66,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 <li>菜单权限在用户处通过个人角色授予。业务画面以画面为单位授权，确认和导出包含在所属业务画面的权限内；只有设定类画面的部分项目细分追加、編集、削除。业务场景的授权组织只决定数据范围。因此同一组织内不同用户的权限可以不同。</li>
 <li>业务场景关联帳票タイプ，并保存授权组织。选择组织后，默认包含该组织及下级组织的全部成员。后台监听组织成员变化，并同步场景关联用户。</li>
 <li>文件属于租户和帳票タイプ。文件一览按类别所属场景的授权范围显示文件。</li>
-<li>每个租户 VM 配置一条监视路径和一条处理后路径。每条取入配置保存业务场景和一个或多个文件夹相对路径；每个文件夹及其全部子目录统一递归扫描 PDF／TIFF／JPEG／PNG。物理目录用于划定扫描范围。</li>
+<li>每个租户 VM 配置一条监视路径和一条处理后路径。每条取入配置保存业务场景和一个或多个文件夹相对路径；每个文件夹及其全部子目录统一递归扫描 PDF／JPG／JPEG／PNG／HEIC。物理目录用于划定扫描范围。</li>
 <li>帳票タイプ的表格配置包括读取字段和最大列数；读取与输出共用同一个最大列数。导出配置包括输出列、列顺序、文本与表格字段映射、编码和文件命名设置。</li>
 </ul>
 <pre class="mermaid">flowchart LR
@@ -152,7 +152,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 <li>保存时仅校验：文件夹是否重复或上下级重叠、该场景是否有关联帳票タイプ。未选择文件夹时允许保存，该场景不参与自动取入。</li>
 </ul>
 <h4>递归扫描与父子文件夹归属</h4>
-<p>每个已选文件夹都会递归扫描其全部子文件夹，PDF／TIFF／JPEG／PNG 都是取入对象。父文件夹和子文件夹分别配置给不同场景时，子文件夹内的文件采用子文件夹的配置。</p>
+<p>每个已选文件夹都会递归扫描其全部子文件夹，PDF／JPG／JPEG／PNG／HEIC 都是取入对象。父文件夹和子文件夹分别配置给不同场景时，子文件夹内的文件采用子文件夹的配置。</p>
 <pre class="mermaid">flowchart LR
   R[&quot;監視ルート&quot;] --&gt; F1[&quot;税務窓口&quot;]
   F1 --&gt; F2[&quot;住民税&quot;]
@@ -332,7 +332,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 <tbody><tr>
 <td>上传区</td>
 <td>業務シーン、拖放区、ファイル選択</td>
-<td>支持 JPG、JPEG、PNG、HEIC、TIF、TIFF、PDF、ZIP；单文件最大 50MB、最多 50 页</td>
+<td>支持 JPG、JPEG、PNG、HEIC、PDF、ZIP；单文件最大 50MB、最多 50 页</td>
 </tr>
 <tr>
 <td>アップロード済ファイル</td>
@@ -350,7 +350,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 <td>判別中只读；要確認时可选择或修改</td>
 </tr>
 </tbody></table>
-<p>上传文件按最后一个「.」之后的后缀判断格式，后缀转为小写后比较。ZIP 解压后仅接收 JPG、JPEG、PNG、HEIC、TIF、TIFF、PDF；ZIP 文件本身不进入文件列表。</p>
+<p>上传文件按最后一个「.」之后的后缀判断格式，后缀转为小写后比较。ZIP 解压后仅接收 JPG、JPEG、PNG、HEIC、PDF；ZIP 文件本身不进入文件列表。</p>
 <table>
 <thead>
 <tr>
@@ -367,7 +367,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 <td><mark>同一请求只提交一次；处理期间按钮不可重复提交</mark></td>
 </tr>
 <tr>
-<td><mark>多页 PDF／TIFF 超过 50 页</mark></td>
+<td><mark>多页 PDF 超过 50 页</mark></td>
 <td><mark>该文件不上传，并提示超过页数上限</mark></td>
 </tr>
 <tr>
@@ -616,7 +616,7 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 </tr>
 <tr>
 <td>取入対象</td>
-<td>仅 PDF、TIFF、JPEG、PNG；扩展名、路径和文件名按固定规则正规化后判定</td>
+<td>仅 PDF、JPG、JPEG、PNG、HEIC；扩展名、路径和文件名按固定规则正规化后判定</td>
 </tr>
 <tr>
 <td>关闭状态</td>
@@ -1125,8 +1125,8 @@ mark{background:#fff3cd;color:inherit;border-radius:3px;padding:1px 3px;box-deco
 </thead>
 <tbody><tr>
 <td>允许取入的扩展名</td>
-<td>仅 PDF、TIFF、JPEG、PNG 取入，对应 <code>.pdf</code>、<code>.tif</code>、<code>.tiff</code>、<code>.jpg</code>、<code>.jpeg</code>、<code>.png</code></td>
-<td><code>scan001.pdf</code>、<code>scan002.TIF</code></td>
+<td>仅 PDF、JPG、JPEG、PNG、HEIC 取入，对应 <code>.pdf</code>、<code>.jpg</code>、<code>.jpeg</code>、<code>.png</code>、<code>.heic</code></td>
+<td><code>scan001.pdf</code>、<code>scan002.HEIC</code></td>
 </tr>
 <tr>
 <td>扩展名判断</td>

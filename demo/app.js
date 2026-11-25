@@ -5907,9 +5907,8 @@ const WATCH_NOTIFY_ON = { fail: '失敗したときだけ', always: '毎回' };
 /** 対象ファイルは glob ではなく定型から選ぶ（現場が拡張子を書かないため） */
 const WATCH_PATTERNS = [
   ['*.pdf', 'PDF（*.pdf）'],
-  ['*.pdf,*.tif,*.tiff', 'PDF・TIFF（*.pdf, *.tif, *.tiff）'],
-  ['*.tif,*.tiff', 'TIFF（*.tif, *.tiff）'],
-  ['*.jpg,*.jpeg,*.png', '画像（*.jpg, *.jpeg, *.png）'],
+  ['*.pdf,*.jpg,*.jpeg,*.png,*.heic', 'PDF・画像（*.pdf, *.jpg, *.jpeg, *.png, *.heic）'],
+  ['*.jpg,*.jpeg,*.png,*.heic', '画像（*.jpg, *.jpeg, *.png, *.heic）'],
   ['*.*', 'すべてのファイル'],
 ];
 
@@ -6438,9 +6437,9 @@ function sceneTestPane(sc) {
       + '<path d="M13 26h22a7 7 0 0 0 .6-13.9A10 10 0 0 0 16 10.5 6.5 6.5 0 0 0 13 26Z"/>'
       + '<path d="M24 33V19m0 0-5 5m5-5 5 5"/></svg>'
       + '<p class="sd-title">ここにファイルをドラッグ・ドロップ</p>'
-      + '<p class="sd-note">単一のファイルをアップロードできます。最大20MB、各ファイルは最大10ページです。ファイル形式は png, jpg, jpeg, pdf, tif, tiff です。</p>'
+      + '<p class="sd-note">単一のファイルをアップロードできます。最大20MB、各ファイルは最大10ページです。ファイル形式は png, jpg, jpeg, heic, pdf です。</p>'
       + '<button class="btn primary" id="scPickFile"><span class="ico i-upload"></span>ファイル選択</button>'
-      + '<input type="file" id="scFile" accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff" hidden />'
+      + '<input type="file" id="scFile" accept=".png,.jpg,.jpeg,.heic,.pdf" hidden />'
       + '</div></div>';
   }
   const pages = t.pageCount || 8;
@@ -6460,7 +6459,7 @@ function sceneTestPane(sc) {
     + '<div class="sc-test-actions">'
     + '<button class="btn primary" id="scPickFile">ファイル選択</button>'
     + '<button class="btn primary" id="scRunTest">テスト</button>'
-    + '<input type="file" id="scFile" accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff" hidden />'
+    + '<input type="file" id="scFile" accept=".png,.jpg,.jpeg,.heic,.pdf" hidden />'
     + '</div></div>';
 }
 
@@ -8411,9 +8410,9 @@ function renderUpload() {
       <path d="M24 33V19m0 0-5 5m5-5 5 5"/>
     </svg>
     <div class="dz-title">ここにファイルをドラッグ・ドロップ</div>
-        <div class="dz-note">単一または複数のファイル、およびZIP圧縮パッケージをアップロードできます。最大50MB、各ファイルは最大50ページです。ファイル形式はJPG、JPEG、PNG、HEIC、TIF、TIFF、PDF、ZIPです。</div>
+        <div class="dz-note">単一または複数のファイル、およびZIP圧縮パッケージをアップロードできます。最大50MB、各ファイルは最大50ページです。ファイル形式はJPG、JPEG、PNG、HEIC、PDF、ZIPです。</div>
     <button class="btn primary" id="pickBtn"><span class="ico i-upload"></span>ファイル選択</button>
-        <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.heic,.tif,.tiff,.zip" hidden />
+        <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.heic,.zip" hidden />
   </div>` : `<div class="dropzone nl-dropzone up-no-perm" aria-disabled="true">
     <div class="dz-title">アップロード権限がありません</div>
     <div class="dz-note">現在のユーザーに割り当てられたアップロード権限のある業務シーンがありません。帳票権限管理でアップロード担当を設定してください。</div>

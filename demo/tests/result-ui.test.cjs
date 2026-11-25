@@ -1708,12 +1708,20 @@ test('自動取込設定: 重複防止は内容ハッシュ固定で画面から
   assert.doesNotMatch(html, /同一ファイルを除外|判定方法|dupGuard|dupMethod/);
 });
 
-test('新規アップロード: TIF・TIFF・ZIPを選択でき、案内にも表示する', () => {
+test('アップロード形式: TIF・TIFFを除外し、自動取込と共通の画像形式を使う', () => {
   const run = app();
   const html = run('renderUpload()');
-  assert.match(html, /TIF、TIFF/);
-  assert.match(html, /ZIP/);
-  assert.match(html, /accept="[^"]*\.tif,[^"]*\.tiff,[^"]*\.zip/);
+  assert.match(html, /JPG、JPEG、PNG、HEIC、PDF、ZIP/);
+  assert.match(html, /accept="\.pdf,\.jpg,\.jpeg,\.png,\.heic,\.zip"/);
+  assert.doesNotMatch(html, /TIF|TIFF|\.tif|\.tiff/i);
+  const patterns = JSON.parse(run('JSON.stringify(WATCH_PATTERNS)'));
+  const patternText = patterns.flat().join(' ');
+  assert.match(patternText, /PDF/);
+  assert.match(patternText, /jpg/);
+  assert.match(patternText, /jpeg/);
+  assert.match(patternText, /png/);
+  assert.match(patternText, /heic/);
+  assert.doesNotMatch(patternText, /tif|tiff/i);
 });
 
 test('自動取込設定: 業務シーンから対象部門と帳票タイプを自動表示する', () => {
