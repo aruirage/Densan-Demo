@@ -1708,12 +1708,22 @@ test('自動取込設定: 重複防止は内容ハッシュ固定で画面から
   assert.doesNotMatch(html, /同一ファイルを除外|判定方法|dupGuard|dupMethod/);
 });
 
-test('アップロード形式: TIF・TIFFを除外し、自動取込と共通の画像形式を使う', () => {
+test('アップロード形式: TIF・TIFFを除外し、自動取込と共通の画像形式とZIPを使う', () => {
   const run = app();
   const html = run('renderUpload()');
   assert.match(html, /JPG、JPEG、PNG、HEIC、PDF、ZIP/);
   assert.match(html, /accept="\.pdf,\.jpg,\.jpeg,\.png,\.heic,\.zip"/);
   assert.doesNotMatch(html, /TIF|TIFF|\.tif|\.tiff/i);
+
+  const sourceExtensions = JSON.parse(run('JSON.stringify(WATCH_SOURCE_EXTENSIONS)'));
+  const innerExtensions = JSON.parse(run('JSON.stringify(WATCH_INNER_EXTENSIONS)'));
+  assert.deepEqual(sourceExtensions, ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'zip']);
+  assert.deepEqual(innerExtensions, ['pdf', 'jpg', 'jpeg', 'png', 'heic']);
+  assert.equal(
+    run('WATCH_DEFAULT_PATTERN'),
+    '*.pdf,*.jpg,*.jpeg,*.png,*.heic,*.zip'
+  );
+
   const patterns = JSON.parse(run('JSON.stringify(WATCH_PATTERNS)'));
   const patternText = patterns.flat().join(' ');
   assert.match(patternText, /PDF/);
@@ -1721,7 +1731,12 @@ test('アップロード形式: TIF・TIFFを除外し、自動取込と共通�
   assert.match(patternText, /jpeg/);
   assert.match(patternText, /png/);
   assert.match(patternText, /heic/);
+  assert.match(patternText, /zip/);
   assert.doesNotMatch(patternText, /tif|tiff/i);
+
+  const watchHtml = run('renderWatch()');
+  assert.match(watchHtml, /ZIP は展開して対応形式の内包ファイルを個別に取り込み、ZIP 自体はファイル一覧に登録しません/);
+  assert.doesNotMatch(watchHtml, /TIF|TIFF|\.tif|\.tiff/i);
 });
 
 test('自動取込設定: 業務シーンから対象部門と帳票タイプを自動表示する', () => {

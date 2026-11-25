@@ -5834,6 +5834,9 @@ function renderDictDialogs() {
  *     自動取込の ON/OFF を持つ
  *  ③ 二重取込防止は内容ハッシュ（SHA-256）で常時有効。失敗時の再実行は全パス共通
  *  業務シーンは選ばせない（帳票タイプ→業務シーンは従属なので導出できる）。 */
+const WATCH_SOURCE_EXTENSIONS = Object.freeze(['pdf', 'jpg', 'jpeg', 'png', 'heic', 'zip']);
+const WATCH_INNER_EXTENSIONS = Object.freeze(['pdf', 'jpg', 'jpeg', 'png', 'heic']);
+const WATCH_DEFAULT_PATTERN = WATCH_SOURCE_EXTENSIONS.map((ext) => '*.' + ext).join(',');
 let WATCH = {
   on: true,
   /* ① 監視パス。after は取り込み成功後の扱い（del=削除 / keep=そのまま） */
@@ -5848,14 +5851,14 @@ let WATCH = {
 };
 /* 帳票タイプの数だけルール行を作る（帳票タイプを増やしたら行も増える） */
 WATCH.rules = CATEGORY.map((c) => ({
-  cat: c.id, folder: c.name, pattern: '*.pdf', on: true,
+  cat: c.id, folder: c.name, pattern: WATCH_DEFAULT_PATTERN, on: true,
 }));
 /** 帳票タイプ ID → ルール。後から追加した帳票タイプも既定値で作る */
 function watchRuleOf(catId) {
   let r = WATCH.rules.find((q) => q.cat === catId);
   if (!r) {
     const c = byId(CATEGORY, catId) || byId(TICKET_TYPES, catId) || {};
-    r = { cat: catId, folder: c.name || catId, pattern: '*.pdf', on: true };
+    r = { cat: catId, folder: c.name || catId, pattern: WATCH_DEFAULT_PATTERN, on: true };
     WATCH.rules.push(r);
   }
   return r;
@@ -5907,8 +5910,9 @@ const WATCH_NOTIFY_ON = { fail: '失敗したときだけ', always: '毎回' };
 /** 対象ファイルは glob ではなく定型から選ぶ（現場が拡張子を書かないため） */
 const WATCH_PATTERNS = [
   ['*.pdf', 'PDF（*.pdf）'],
-  ['*.pdf,*.jpg,*.jpeg,*.png,*.heic', 'PDF・画像（*.pdf, *.jpg, *.jpeg, *.png, *.heic）'],
-  ['*.jpg,*.jpeg,*.png,*.heic', '画像（*.jpg, *.jpeg, *.png, *.heic）'],
+  ['*.pdf,*.zip', 'PDF・ZIP（*.pdf, *.zip）'],
+  ['*.pdf,*.jpg,*.jpeg,*.png,*.heic,*.zip', 'PDF・画像・ZIP（*.pdf, *.jpg, *.jpeg, *.png, *.heic, *.zip）'],
+  ['*.jpg,*.jpeg,*.png,*.heic,*.zip', '画像・ZIP（*.jpg, *.jpeg, *.png, *.heic, *.zip）'],
   ['*.*', 'すべてのファイル'],
 ];
 
@@ -6236,7 +6240,7 @@ function renderWatch() {
     <section class="watch-sec"><h3 class="watch-sec-head">業務シーン別取込設定</h3>
     <p class="watch-sec-desc">業務シーンごとにデータ権限組織と帳票タイプを自動表示し、親フォルダを選択すると、配下のすべてのフォルダが対象になります。</p>
     <div class="watch-dept-columns"><span>${canReachPage('bizScenes')?'<a class="watch-scene-link" href="#page=bizScenes" data-watch-scene-settings title="業務シーン設定を開く">業務シーン <span aria-hidden="true">↗</span></a>':'業務シーン'}</span><span>帳票タイプ</span><span>データ権限組織（下位組織含む）</span><span>フォルダ（子フォルダを含む） <small class="watch-dept-gate-note" ${x.pathVerified&&!x.pathLoading?'hidden':''}>${x.pathLoading?'読取中':'要テスト'}</small></span></div><div class="watch-dept-scroll">${departmentCards}</div></section>
-    <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">実行間隔ごとにフォルダーを確認し、アップロード失敗時のみ再試行します（読み取り失敗は再試行しません）。</p><div class="watch-setting-rows">${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('アップロード再試行',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
+    <section class="watch-sec"><h3 class="watch-sec-head">取込・再試行設定</h3><p class="watch-sec-desc">取込対象は PDF、JPG、JPEG、PNG、HEIC、ZIP です。ZIP は展開して対応形式の内包ファイルを個別に取り込み、ZIP 自体はファイル一覧に登録しません。実行間隔ごとにフォルダーを確認し、アップロード失敗時のみ再試行します（読み取り失敗は再試行しません）。</p><div class="watch-setting-rows">${row('実行間隔',`<div class="watch-inline"><input class="fld" type="number" min="1" max="9999" data-wf="retryGap" value="${esc(x.retryGap)}" /><select class="fld" data-wf="retryUnit"><option ${(!x.retryUnit||x.retryUnit==='分')?'selected':''}>分</option><option ${x.retryUnit==='時間'?'selected':''}>時間</option><option ${x.retryUnit==='日'?'selected':''}>日</option><option ${x.retryUnit==='週'?'selected':''}>週</option><option ${x.retryUnit==='月'?'selected':''}>月</option></select></div>`)}${row('アップロード再試行',`<div class="watch-inline"><input class="fld" type="number" min="0" max="10" data-wf="retry" value="${esc(x.retry)}" /><span>回</span></div>`)}</div></section>
   </fieldset><div class="cfg-actions watch-actions"><button type="button" class="btn" data-watchclose="1">閉じる</button><button type="button" class="btn primary" data-watchsave="1">保存</button></div></div>`;
 }
 let watchLineObserver;
@@ -11078,6 +11082,9 @@ window.__demo = {
   canAccessResultOrganization,
   organizationScopeIds,
   WATCH,
+  WATCH_SOURCE_EXTENSIONS,
+  WATCH_INNER_EXTENSIONS,
+  WATCH_DEFAULT_PATTERN,
   watchRuleOf,
   FILES_DATA,
   openTab,
